@@ -1,0 +1,49 @@
+{
+  "entries": {
+    "app/scripts/web-bases-checks.mjs": {
+      "maxLines": 1205,
+      "reason": "浏览器契约模块：Wave D（#263）后 1205 行的既有债务（不在 #263 拆分之列）",
+      "plan": "只缩不涨；后续按 K2 方式按域拆分（拆分前不得增长）"
+    },
+    "app/scripts/probe-host-tool-discovery.mjs": {
+      "maxLines": 1629,
+      "reason": "一次性 probe harness",
+      "plan": "后续拆分或归档"
+    },
+    "app/scripts/tool-discovery-production-eval.mjs": {
+      "maxLines": 1310,
+      "reason": "离线评估脚本：Wave 1 描述符锚 + parity/eager 工件契约 + 声明式 output 扩张投影（get_base.revision）",
+      "plan": "若再逼近上限，把 PROBE_RECIPES/fixture 评估拆成独立模块；本轮 +16 行仅为把已存在的 wave1ComparableOutputSchema 接进 compareToolCatalog 并加三条反证"
+    },
+    "app/test/live-events.test.js": {
+      "maxLines": 1075,
+      "reason": "测试矩阵（用例密集）",
+      "plan": "后续拆分"
+    },
+    "app/scripts/host-controlled-matrix.mjs": {
+      "maxLines": 1023,
+      "reason": "matrix harness",
+      "plan": "保持（只缩不涨）"
+    },
+    "app/scripts/tool-discovery-cost-gate.mjs": {
+      "maxLines": 1008,
+      "reason": "cost gate",
+      "plan": "保持（只缩不涨）"
+    },
+    "app/test/server-oauth.test.js": {
+      "maxLines": 897,
+      "reason": "W3 Option B: accounts/keys id from data-id (+create fetch); was 886",
+      "plan": "保持（只缩不涨）"
+    },
+    "app/test/web-catalog-store.test.js": {
+      "maxLines": 832,
+      "reason": "测试矩阵",
+      "plan": "保持（只缩不涨）"
+    },
+    "app/scripts/render-parity-phase0.mjs": {
+      "maxLines": 823,
+      "reason": "parity 探针",
+      "plan": "保持（只缩不涨）"
+    }
+  }
+}

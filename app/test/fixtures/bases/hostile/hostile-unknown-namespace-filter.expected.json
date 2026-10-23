@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "W0-D：filter 里的未知 namespace（this.…）现在 fail closed（unsupported），不再当成 undefined 静默匹配 0 行",
+  "flipIn": "W0-D"
+}

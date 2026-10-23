@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "未知的 filter 合取键（nand）→ fail closed（unsupported），filter 对象面是 fail-closed 的",
+  "flipIn": null
+}

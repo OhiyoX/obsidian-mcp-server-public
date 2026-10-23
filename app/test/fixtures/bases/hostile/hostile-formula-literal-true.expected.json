@@ -1,0 +1,15 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "INT-A 接线后：true/false/null 是类型化字面量，不再被当成属性名或被 fail closed（reject→accept 于 INT-A 翻转）",
+  "flipIn": null,
+  "flippedIn": "INT-A"
+}

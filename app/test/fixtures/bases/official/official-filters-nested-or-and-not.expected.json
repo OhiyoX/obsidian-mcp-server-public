@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "官方 syntax 页的 or/and/not 递归过滤器（hasTag/hasLink/inFolder）在当前实现下按 AND-of-clauses 语义接受并返回全部 5 条记录",
+  "flipIn": null
+}

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "dup-id-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/First-Wins.md",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "dup-id-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Second-Dropped.md",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "dup-doc-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/First-Wins.md",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    }
+  ]
+}

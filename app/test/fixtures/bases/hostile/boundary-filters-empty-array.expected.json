@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "filters: [] 视为恒真（空数组 every() → true），全部记录通过",
+  "flipIn": null
+}

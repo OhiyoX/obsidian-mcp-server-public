@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "description": "Explicit allowed differences for the Phase 0 Reader-vs-Live render parity harness. Every entry must carry a category and a reason; the harness fails on any unclassified difference. Entries describe the current, measured baseline only - they are not evidence that the underlying token drift should stay.",
+  "tolerancePx": 1,
+  "policy": {
+    "typography": "Same semantic kind should match font family/size/weight/style, line-height, letter-spacing and text decoration. The entries below that relax this are recorded as typography-token-drift for a later Phase 1 slice.",
+    "box": "padding/border/radius should match exactly unless the allowlist records a host-model reason.",
+    "geometry": "Glyph and box geometry use a <=1px tolerance; larger deltas require a per-field allowlist entry.",
+    "chrome": "Markdown source chrome, caret/selection paint, the Live fence padding band and Reader overflow containers are permitted structural differences; they are recorded here rather than silently ignored.",
+    "scope": "Only non-deferred probes gate the run. table-cell and hr are measured and reported but excluded from the Phase 0 gate (Phase 3 concern)."
+  },
+  "deferred": [
+    "indented-code",
+    "callout",
+    "embed-image",
+    "task-list",
+    "footnote",
+    "frontmatter-properties",
+    "table-cell",
+    "community-theme-baseline"
+  ],
+  "entries": [
+    {
+      "category": "host-text-model",
+      "reason": "CodeMirror renders every source line with white-space:break-spaces; Reader HTML uses the CSS default normal. Text wrapping is a host mechanism, not a semantic token.",
+      "comparisons": [
+        "*"
+      ],
+      "kinds": [
+        "*"
+      ],
+      "fields": [
+        "style.whiteSpace"
+      ]
+    },
+    {
+      "category": "host-box-model",
+      "reason": "Reader headings are block boxes with vertical margins; Live headings are inline text spans inside a line box. The Live block spacing lives on the line (paddingTop on .cm-live-h*) rather than on the styled text span.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "heading1",
+        "heading2",
+        "heading3",
+        "heading4",
+        "heading5",
+        "heading6"
+      ],
+      "fields": [
+        "style.display",
+        "style.marginTop",
+        "style.marginBottom",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.boxWidth",
+        "metrics.boxHeight"
+      ]
+    },
+    {
+      "category": "host-box-model",
+      "reason": "Reader paragraphs carry .72em vertical margins; CodeMirror paragraphs are lines with no margin. Block spacing is host-managed.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "paragraph"
+      ],
+      "fields": [
+        "style.marginTop",
+        "style.marginBottom",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.boxWidth"
+      ]
+    },
+    {
+      "category": "host-box-model",
+      "reason": "Reader list items are display:list-item with vertical margins; Live list text is an inline span inside a line and the marker is a separate widget.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "list-item"
+      ],
+      "fields": [
+        "style.display",
+        "style.marginTop",
+        "style.marginBottom",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.boxWidth",
+        "metrics.boxHeight",
+        "metrics.glyphTopFromBoxTop"
+      ]
+    },
+    {
+      "category": "inline-code-hidden-mark-reserve",
+      "reason": "Phase 1 inline-code slice aligned the chip padding token across Reader and Live, so chip padding, box height and glyph offset now match. The only remaining measured difference is width: Live keeps the two source backticks in layout as visibility:hidden placeholders so entering edit mode can never resize the capsule (2 monospace glyphs = ~15.84px). Reader has no source marks. This reserve is a required host-model difference, not token drift.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "inline-code"
+      ],
+      "fields": [
+        "metrics.boxWidth"
+      ]
+    },
+    {
+      "category": "external-link-reader-icon",
+      "reason": "Reader external links append the visible ↗ pseudo-element while Live edits only the link label/source. Text paint is aligned; the remaining width is intentional Reader chrome.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "link-external"
+      ],
+      "fields": [
+        "metrics.boxWidth"
+      ]
+    },
+    {
+      "category": "wiki-source-width",
+      "reason": "Idle Live Preview replaces [[target|label]] with the visible label, while active/selected state exposes editable Markdown source. Semantic link class and underline stay stable; only raw-source width is intentionally larger.",
+      "comparisons": [
+        "idle-active",
+        "idle-selection"
+      ],
+      "kinds": [
+        "link-wiki"
+      ],
+      "fields": [
+        "metrics.boxWidth"
+      ]
+    },
+    {
+      "category": "host-box-model",
+      "reason": "Reader blockquotes use a 3px left border with symmetric padding; Live quotes use an inset box-shadow with paddingLeft only, so the element box and margins are modelled differently.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "blockquote"
+      ],
+      "fields": [
+        "style.borderLeftWidth",
+        "style.borderLeftStyle",
+        "style.borderLeftColor",
+        "style.paddingTop",
+        "style.paddingBottom",
+        "style.paddingLeft",
+        "style.paddingRight",
+        "style.marginTop",
+        "style.marginBottom",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.paddingTopPx",
+        "metrics.paddingBottomPx",
+        "metrics.boxWidth",
+        "metrics.boxHeight",
+        "metrics.glyphTopFromBoxTop"
+      ]
+    },
+    {
+      "category": "live-fence-padding-band",
+      "reason": "Reader fenced code is one pre box with padding, radius and a full border; Live builds the card from source lines with a 13px fence padding band and per-line borders. Font family/size/line-height already match; the remaining structure is the Phase 3 code-block slice.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "code-fenced-lang"
+      ],
+      "fields": [
+        "style.paddingTop",
+        "style.paddingBottom",
+        "style.marginTop",
+        "style.marginBottom",
+        "style.borderTopStyle",
+        "style.borderBottomStyle",
+        "style.borderTopColor",
+        "style.borderBottomColor",
+        "style.borderTopLeftRadius",
+        "style.borderTopRightRadius",
+        "style.borderBottomLeftRadius",
+        "style.borderBottomRightRadius",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.paddingTopPx",
+        "metrics.paddingBottomPx",
+        "metrics.boxWidth",
+        "metrics.boxHeight",
+        "metrics.glyphTopFromBoxTop"
+      ]
+    },
+    {
+      "category": "hr-hidden-source-host",
+      "reason": "Reader <hr> owns 32px external margins around a 1px rule. Live must keep the equivalent whitespace inside the CodeMirror line box so every pixel maps to a source position; its literal --- source is hidden with zero font metrics. The gated flowBlockHeight, border, width and paint must still match.",
+      "comparisons": [
+        "reader-liveIdle"
+      ],
+      "kinds": [
+        "hr"
+      ],
+      "fields": [
+        "style.fontSize",
+        "style.lineHeight",
+        "style.color",
+        "style.marginTop",
+        "style.marginBottom",
+        "style.paddingTop",
+        "style.paddingBottom",
+        "metrics.fontSizePx",
+        "metrics.lineHeightPx",
+        "metrics.marginTopPx",
+        "metrics.marginBottomPx",
+        "metrics.paddingTopPx",
+        "metrics.paddingBottomPx",
+        "metrics.boxHeight",
+        "metrics.glyphHeight"
+      ]
+    }
+  ]
+}

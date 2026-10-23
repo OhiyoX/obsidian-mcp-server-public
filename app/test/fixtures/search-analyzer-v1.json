@@ -1,0 +1,1305 @@
+{
+  "purpose": "behavior-contract",
+  "relevanceLabels": null,
+  "normalization": "raw fragment -> NFKC -> String.prototype.toLowerCase (locale-independent)",
+  "kindRank": {
+    "word": 0,
+    "identifier.whole": 1,
+    "identifier.part": 2,
+    "cjk.run": 3,
+    "cjk.unigram": 4,
+    "cjk.bigram": 5,
+    "phrase.literal": 6,
+    "ascii_fold": 7
+  },
+  "textCases": [
+    {
+      "name": "plain-words",
+      "input": "foo bar",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "foo",
+            "rawStart": 0,
+            "rawEnd": 3,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "bar",
+            "rawStart": 4,
+            "rawEnd": 7,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "quotes-negatives-or",
+      "input": "\"foo bar\" -baz OR tag:x",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "foo",
+            "rawStart": 1,
+            "rawEnd": 4,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "bar",
+            "rawStart": 5,
+            "rawEnd": 8,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "baz",
+            "rawStart": 11,
+            "rawEnd": 14,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "or",
+            "rawStart": 15,
+            "rawEnd": 17,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "tag",
+            "rawStart": 18,
+            "rawEnd": 21,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "x",
+            "rawStart": 22,
+            "rawEnd": 23,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "snake-identifier",
+      "input": "restore_from_trash",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "restore",
+            "rawStart": 0,
+            "rawEnd": 7,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "restore_from_trash",
+            "rawStart": 0,
+            "rawEnd": 18,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "from",
+            "rawStart": 8,
+            "rawEnd": 12,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "trash",
+            "rawStart": 13,
+            "rawEnd": 18,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "camel-acronym",
+      "input": "HTTPServerV2",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "http",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "httpserverv2",
+            "rawStart": 0,
+            "rawEnd": 12,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "server",
+            "rawStart": 4,
+            "rawEnd": 10,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "v2",
+            "rawStart": 10,
+            "rawEnd": 12,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "camel-lower",
+      "input": "fooBarV2",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "foo",
+            "rawStart": 0,
+            "rawEnd": 3,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "foobarv2",
+            "rawStart": 0,
+            "rawEnd": 8,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "bar",
+            "rawStart": 3,
+            "rawEnd": 6,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "v2",
+            "rawStart": 6,
+            "rawEnd": 8,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "kebab-identifier",
+      "input": "search-v2",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "search",
+            "rawStart": 0,
+            "rawEnd": 6,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "search-v2",
+            "rawStart": 0,
+            "rawEnd": 9,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "v2",
+            "rawStart": 7,
+            "rawEnd": 9,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "slash-path",
+      "input": "app/src/search/analyzer.js",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "app",
+            "rawStart": 0,
+            "rawEnd": 3,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "app/src/search/analyzer.js",
+            "rawStart": 0,
+            "rawEnd": 26,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "src",
+            "rawStart": 4,
+            "rawEnd": 7,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "search",
+            "rawStart": 8,
+            "rawEnd": 14,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "analyzer",
+            "rawStart": 15,
+            "rawEnd": 23,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "js",
+            "rawStart": 24,
+            "rawEnd": 26,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "dotted-version",
+      "input": "v2026.10.03",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "v2026",
+            "rawStart": 0,
+            "rawEnd": 5,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "v2026.10.03",
+            "rawStart": 0,
+            "rawEnd": 11,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "10",
+            "rawStart": 6,
+            "rawEnd": 8,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "03",
+            "rawStart": 9,
+            "rawEnd": 11,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "dotted-domain",
+      "input": "example.com",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "identifier.part",
+            "value": "example",
+            "rawStart": 0,
+            "rawEnd": 7,
+            "sources": [
+              "identifier.split"
+            ]
+          },
+          {
+            "kind": "identifier.whole",
+            "value": "example.com",
+            "rawStart": 0,
+            "rawEnd": 11,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "identifier.part",
+            "value": "com",
+            "rawStart": 8,
+            "rawEnd": 11,
+            "sources": [
+              "identifier.split"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "commit-hash",
+      "input": "4062b5a547504012b44da573ca7904292c6e7296",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "4062b5a547504012b44da573ca7904292c6e7296",
+            "rawStart": 0,
+            "rawEnd": 40,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ligature",
+      "input": "ﬃ",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "ffi",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "combining-nfd",
+      "input": "é",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "é",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "ascii_fold",
+            "value": "e",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "ascii.fold"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "astral-between",
+      "input": "a😀b",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "a",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "b",
+            "rawStart": 3,
+            "rawEnd": 4,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "turkish-case",
+      "input": "I İ ı",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "i",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "i̇",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "ascii_fold",
+            "value": "i",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "ascii.fold"
+            ]
+          },
+          {
+            "kind": "word",
+            "value": "ı",
+            "rawStart": 4,
+            "rawEnd": 5,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "accent-fold",
+      "input": "café",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "café",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "ascii_fold",
+            "value": "cafe",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "ascii.fold"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "accent-fold-disabled",
+      "input": "café",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "café",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "lexical"
+            ]
+          }
+        ]
+      },
+      "options": {
+        "asciiFold": false
+      }
+    },
+    {
+      "name": "cjk-single",
+      "input": "中",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.run",
+            "value": "中",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "中",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "cjk-pair",
+      "input": "中文",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.unigram",
+            "value": "中",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "中文",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "中文",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "文",
+            "rawStart": 1,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "cjk-run",
+      "input": "中文搜索",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.unigram",
+            "value": "中",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "中文",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "中文搜索",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "文",
+            "rawStart": 1,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "文搜",
+            "rawStart": 1,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "搜",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "搜索",
+            "rawStart": 2,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "索",
+            "rawStart": 3,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mixed-latin-cjk",
+      "input": "openwrt网络故障",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "word",
+            "value": "openwrt",
+            "rawStart": 0,
+            "rawEnd": 7,
+            "sources": [
+              "lexical"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "网",
+            "rawStart": 7,
+            "rawEnd": 8,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "网络",
+            "rawStart": 7,
+            "rawEnd": 9,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "网络故障",
+            "rawStart": 7,
+            "rawEnd": 11,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "络",
+            "rawStart": 8,
+            "rawEnd": 9,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "络故",
+            "rawStart": 8,
+            "rawEnd": 10,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "故",
+            "rawStart": 9,
+            "rawEnd": 10,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "故障",
+            "rawStart": 9,
+            "rawEnd": 11,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "障",
+            "rawStart": 10,
+            "rawEnd": 11,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expected": {
+        "tokens": []
+      }
+    },
+    {
+      "name": "kana-boundary-nfkc-expansion",
+      "input": "ヿ",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.run",
+            "value": "コト",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "コト",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "cjk-ext-b-astral",
+      "input": "𠀀",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.run",
+            "value": "𠀀",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "𠀀",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "kana-punctuation-separates-runs",
+      "input": "カ・ナ",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.run",
+            "value": "カ",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "カ",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "ナ",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "ナ",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "kana-mark-retained",
+      "input": "コーヒー",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.unigram",
+            "value": "コ",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "コー",
+            "rawStart": 0,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "コーヒー",
+            "rawStart": 0,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "ー",
+            "rawStart": 1,
+            "rawEnd": 2,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "ーヒ",
+            "rawStart": 1,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "ヒ",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.bigram",
+            "value": "ヒー",
+            "rawStart": 2,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.bigram"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "ー",
+            "rawStart": 3,
+            "rawEnd": 4,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "kana-symbol-not-cjk",
+      "input": "カ゛ナ",
+      "expected": {
+        "tokens": [
+          {
+            "kind": "cjk.run",
+            "value": "カ",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "カ",
+            "rawStart": 0,
+            "rawEnd": 1,
+            "sources": [
+              "cjk.unigram"
+            ]
+          },
+          {
+            "kind": "cjk.run",
+            "value": "ナ",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.run"
+            ]
+          },
+          {
+            "kind": "cjk.unigram",
+            "value": "ナ",
+            "rawStart": 2,
+            "rawEnd": 3,
+            "sources": [
+              "cjk.unigram"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "clauseCases": [
+    {
+      "name": "phrase-basic",
+      "input": [
+        {
+          "text": "exact phrase",
+          "kind": "phrase"
+        }
+      ],
+      "expected": {
+        "clauses": [
+          {
+            "clauseIndex": 0,
+            "kind": "phrase",
+            "tokens": [
+              {
+                "kind": "word",
+                "value": "exact",
+                "rawStart": 0,
+                "rawEnd": 5,
+                "sources": [
+                  "lexical"
+                ]
+              },
+              {
+                "kind": "phrase.literal",
+                "value": "exact phrase",
+                "rawStart": 0,
+                "rawEnd": 12,
+                "sources": [
+                  "phrase.literal"
+                ]
+              },
+              {
+                "kind": "word",
+                "value": "phrase",
+                "rawStart": 6,
+                "rawEnd": 12,
+                "sources": [
+                  "lexical"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "phrase-padded",
+      "input": [
+        {
+          "text": "  Exact   Phrase  ",
+          "kind": "phrase"
+        }
+      ],
+      "expected": {
+        "clauses": [
+          {
+            "clauseIndex": 0,
+            "kind": "phrase",
+            "tokens": [
+              {
+                "kind": "phrase.literal",
+                "value": "  exact   phrase  ",
+                "rawStart": 0,
+                "rawEnd": 18,
+                "sources": [
+                  "phrase.literal"
+                ]
+              },
+              {
+                "kind": "word",
+                "value": "exact",
+                "rawStart": 2,
+                "rawEnd": 7,
+                "sources": [
+                  "lexical"
+                ]
+              },
+              {
+                "kind": "word",
+                "value": "phrase",
+                "rawStart": 10,
+                "rawEnd": 16,
+                "sources": [
+                  "lexical"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "term-identifier",
+      "input": [
+        {
+          "text": "restore_from_trash",
+          "kind": "term"
+        }
+      ],
+      "expected": {
+        "clauses": [
+          {
+            "clauseIndex": 0,
+            "kind": "term",
+            "tokens": [
+              {
+                "kind": "identifier.part",
+                "value": "restore",
+                "rawStart": 0,
+                "rawEnd": 7,
+                "sources": [
+                  "identifier.split"
+                ]
+              },
+              {
+                "kind": "identifier.whole",
+                "value": "restore_from_trash",
+                "rawStart": 0,
+                "rawEnd": 18,
+                "sources": [
+                  "lexical"
+                ]
+              },
+              {
+                "kind": "identifier.part",
+                "value": "from",
+                "rawStart": 8,
+                "rawEnd": 12,
+                "sources": [
+                  "identifier.split"
+                ]
+              },
+              {
+                "kind": "identifier.part",
+                "value": "trash",
+                "rawStart": 13,
+                "rawEnd": 18,
+                "sources": [
+                  "identifier.split"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mixed-clauses",
+      "input": [
+        {
+          "text": "fooBar",
+          "kind": "term"
+        },
+        {
+          "text": "中文",
+          "kind": "phrase"
+        }
+      ],
+      "expected": {
+        "clauses": [
+          {
+            "clauseIndex": 0,
+            "kind": "term",
+            "tokens": [
+              {
+                "kind": "identifier.part",
+                "value": "foo",
+                "rawStart": 0,
+                "rawEnd": 3,
+                "sources": [
+                  "identifier.split"
+                ]
+              },
+              {
+                "kind": "identifier.whole",
+                "value": "foobar",
+                "rawStart": 0,
+                "rawEnd": 6,
+                "sources": [
+                  "lexical"
+                ]
+              },
+              {
+                "kind": "identifier.part",
+                "value": "bar",
+                "rawStart": 3,
+                "rawEnd": 6,
+                "sources": [
+                  "identifier.split"
+                ]
+              }
+            ]
+          },
+          {
+            "clauseIndex": 1,
+            "kind": "phrase",
+            "tokens": [
+              {
+                "kind": "cjk.unigram",
+                "value": "中",
+                "rawStart": 0,
+                "rawEnd": 1,
+                "sources": [
+                  "cjk.unigram"
+                ]
+              },
+              {
+                "kind": "cjk.run",
+                "value": "中文",
+                "rawStart": 0,
+                "rawEnd": 2,
+                "sources": [
+                  "cjk.run"
+                ]
+              },
+              {
+                "kind": "cjk.bigram",
+                "value": "中文",
+                "rawStart": 0,
+                "rawEnd": 2,
+                "sources": [
+                  "cjk.bigram"
+                ]
+              },
+              {
+                "kind": "phrase.literal",
+                "value": "中文",
+                "rawStart": 0,
+                "rawEnd": 2,
+                "sources": [
+                  "phrase.literal"
+                ]
+              },
+              {
+                "kind": "cjk.unigram",
+                "value": "文",
+                "rawStart": 1,
+                "rawEnd": 2,
+                "sources": [
+                  "cjk.unigram"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

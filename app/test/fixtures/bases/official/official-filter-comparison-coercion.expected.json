@@ -1,0 +1,10 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md"
+  ],
+  "note": "== 用 String(left) === String(right) 兜底，所以数值 3 与字符串 \"3\" 相等（跨类型比较语义 PENDING-VERIFY）",
+  "flipIn": null
+}

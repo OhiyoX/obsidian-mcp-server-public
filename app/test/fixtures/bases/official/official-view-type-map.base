@@ -1,0 +1,5 @@
+views:
+  - type: map
+    name: Map
+    order:
+      - file.name

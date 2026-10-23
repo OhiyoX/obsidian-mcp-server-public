@@ -1,0 +1,7 @@
+formulas:
+  x: file.asLink(if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, if(title, file.name, file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name), file.name))
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

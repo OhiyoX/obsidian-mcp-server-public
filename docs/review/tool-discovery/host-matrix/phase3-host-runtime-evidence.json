@@ -1,0 +1,178 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-10-02T10:03:23.253Z",
+  "host": {
+    "bridge": "custom user extension (~/.pi/agent/extensions/obsidian-mcp/index.ts), eager registerTool of every MCP tool",
+    "piCliVersion": "0.99.2",
+    "nodeVersion": "v26.3.0",
+    "requestedProvider": "opencode-go",
+    "requestedModel": "deepseek-v4.1-flash",
+    "providerModelProvenance": "configured --provider/--model alias passed to the nested Pi process; not provider-attested model identity and not a provider request-payload measurement"
+  },
+  "policy": {
+    "readOnlyServer": "OBSIDIAN_READ_ONLY=true (not a blanket gate: manage_publish writes DATA_PATH publish state and reindex_vault queues)",
+    "guard": "post-hoc assertion that every host tool call is in the readOnlyHint:true set from the live tools/list (not an execution gate)",
+    "key": "ephemeral crypto.randomBytes, passed only through spawn env"
+  },
+  "mutationGuard": {
+    "tool": "write_note",
+    "attempted": true,
+    "denied": true,
+    "fileCreated": false
+  },
+  "runs": [
+    {
+      "taskId": "full-roadmap-status",
+      "profile": "full",
+      "toolsets": "",
+      "expect": "active",
+      "status": "ok",
+      "catalog": {
+        "ok": true,
+        "count": 86,
+        "readOnlyCount": 51,
+        "schemaBytes": 142841,
+        "descriptorBytesSum": 142754,
+        "schemaBytesScope": "serialized tools/list ARRAY (Buffer.byteLength(JSON.stringify(tools))), includes [ ] and , framing"
+      },
+      "host": {
+        "announcedToolCount": 86,
+        "announcedSample": [
+          "mcp_obsidian_agent_bootstrap",
+          "mcp_obsidian_append_to_note",
+          "mcp_obsidian_apply_note_plan",
+          "mcp_obsidian_cancel_file_upload",
+          "mcp_obsidian_compare_note_versions"
+        ],
+        "executedToolCalls": [
+          "mcp_obsidian_get_note"
+        ],
+        "executedToolCallCount": 1,
+        "mutationCalls": [],
+        "readOnlyGuardPassed": true
+      },
+      "answer": "active",
+      "taskMatch": true,
+      "latencyMs": 5952,
+      "hostExitCode": 0,
+      "hostTimeout": false,
+      "hostSettled": true,
+      "stderrSummary": "",
+      "mutationGuard": {
+        "tool": "write_note",
+        "attempted": true,
+        "denied": true,
+        "fileCreated": false
+      },
+      "answerMatch": true
+    },
+    {
+      "taskId": "core-roadmap-status",
+      "profile": "core",
+      "toolsets": "",
+      "expect": "active",
+      "status": "ok",
+      "catalog": {
+        "ok": true,
+        "count": 6,
+        "readOnlyCount": 6,
+        "schemaBytes": 15117,
+        "descriptorBytesSum": 15110,
+        "schemaBytesScope": "serialized tools/list ARRAY (Buffer.byteLength(JSON.stringify(tools))), includes [ ] and , framing"
+      },
+      "host": {
+        "announcedToolCount": 6,
+        "announcedSample": [
+          "mcp_obsidian_agent_bootstrap",
+          "mcp_obsidian_get_note",
+          "mcp_obsidian_list_notes",
+          "mcp_obsidian_recall",
+          "mcp_obsidian_search_notes"
+        ],
+        "executedToolCalls": [
+          "mcp_obsidian_get_note"
+        ],
+        "executedToolCallCount": 1,
+        "mutationCalls": [],
+        "readOnlyGuardPassed": true
+      },
+      "answer": "active",
+      "taskMatch": true,
+      "latencyMs": 4746,
+      "hostExitCode": 0,
+      "hostTimeout": false,
+      "hostSettled": true,
+      "stderrSummary": "",
+      "mutationGuard": {
+        "tool": "write_note",
+        "attempted": true,
+        "denied": true,
+        "fileCreated": false
+      },
+      "answerMatch": true
+    },
+    {
+      "taskId": "module-roadmap-search",
+      "profile": "module",
+      "toolsets": "info,search,context",
+      "expect": "yes",
+      "status": "ok",
+      "catalog": {
+        "ok": true,
+        "count": 7,
+        "readOnlyCount": 7,
+        "schemaBytes": 16202,
+        "descriptorBytesSum": 16194,
+        "schemaBytesScope": "serialized tools/list ARRAY (Buffer.byteLength(JSON.stringify(tools))), includes [ ] and , framing"
+      },
+      "host": {
+        "announcedToolCount": 7,
+        "announcedSample": [
+          "mcp_obsidian_agent_bootstrap",
+          "mcp_obsidian_get_note_context",
+          "mcp_obsidian_list_notes",
+          "mcp_obsidian_list_recent",
+          "mcp_obsidian_list_tags"
+        ],
+        "executedToolCalls": [
+          "mcp_obsidian_search_notes",
+          "mcp_obsidian_search_notes"
+        ],
+        "executedToolCallCount": 2,
+        "mutationCalls": [],
+        "readOnlyGuardPassed": true
+      },
+      "answer": "Yes",
+      "taskMatch": true,
+      "latencyMs": 5162,
+      "hostExitCode": 0,
+      "hostTimeout": false,
+      "hostSettled": true,
+      "stderrSummary": "",
+      "mutationGuard": {
+        "tool": "write_note",
+        "attempted": true,
+        "denied": true,
+        "fileCreated": false
+      },
+      "answerMatch": true
+    }
+  ],
+  "limits": [
+    "Three fixtures, one task each, on a scratch vault; `full` and `core` share one prompt/expectation while `module` uses a different prompt. This is a bounded characterization, not a controlled cross-profile success/latency comparison and not a statistical sample.",
+    "The Pi bridge is a custom user extension that eagerly registers all MCP tools; it is not provider-native deferred loading. Native Pi provider auto-defer/tool-search remains unknown, and no host deferred/search mechanism is claimed.",
+    "The nested Pi host runs with -nbt (no built-in tools), so only bridge tools are callable.",
+    "Model/provider errors are recorded as evidence, not as task success.",
+    "Requested provider/model is the configured --provider/--model alias, not provider-attested identity, and schemaBytes is the server's serialized tools/list ARRAY (including [ ] and , framing), not a provider request-payload cost.",
+    "OBSIDIAN_READ_ONLY is not a blanket execution gate: manage_publish still writes scratch DATA_PATH publish state and reindex_vault still queues work. The direct write_note probe was denied and created no file; the per-run guard is a post-hoc readOnlyHint assertion, not an execution gate.",
+    "Catalog byte totals are per-snapshot: a schema change between revisions changes the descriptor sum, while the `count + 1` framing relation holds only within one snapshot. Byte totals are not comparable across revisions.",
+    "No production Vault, production server, Web UI, or global credential file was read or written."
+  ],
+  "elapsedMs": 18251,
+  "metrics": {
+    "schemaBytes": "Buffer.byteLength(JSON.stringify(tools)) over the whole tools/list array; includes [ ] and , framing",
+    "descriptorBytesSum": "sum of Buffer.byteLength(JSON.stringify(tool)) per descriptor",
+    "framingRelation": "within one snapshot schemaBytes - descriptorBytesSum === count + 1 framing bytes; this is not schema drift, and byte totals are per-snapshot",
+    "providerModel": "requested --provider/--model alias only; not provider-attested identity and not a provider request-payload measurement"
+  }
+}

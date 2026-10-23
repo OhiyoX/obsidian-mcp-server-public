@@ -1,0 +1,34 @@
+/*
+ * Render-parity Phase 1-B shared geometry fixture.
+ *
+ * This file is written into an isolated test Vault at
+ * `.obsidian/themes/RenderParityGeometry/theme.css` and served unchanged through
+ * the production `/api/web/v1/theme.css` endpoint, exactly like a real community
+ * theme. It plays the role of the Vault's authoritative theme.css for geometry.
+ *
+ * The Web declares the same `--md-*` geometry tokens as its own fallback
+ * (app.css loads first); this file overrides them through the normal cascade.
+ * The sentinels are deliberately unlike the app defaults, so a probe that
+ * measures the sentinel proves both hosts consumed the shared token from the
+ * theme rather than each keeping a private magic number.
+ *
+ * Do not copy these sentinel values into production CSS.
+ */
+
+:root {
+  /* heading before/after spacing, in px so the assertion is independent of the
+     per-level font size and the two hosts must agree exactly. */
+  --md-heading-space-before: 23px;
+  --md-heading-space-after: 19px;
+  --md-block-gap: 27px;
+  --md-list-item-gap: 11px;
+  /* table host geometry: inline-size / box model / overflow policy. The policy
+     sentinels are deliberately different from the app.css fallback
+     (border-box / hidden / auto) so the primary run also proves consumption
+     rather than only the negative control. */
+  --md-table-inline-size: 360px;
+  --md-table-box-sizing: content-box;
+  --md-table-overflow-x: auto;
+  --md-table-overflow-x-active: scroll;
+  --md-table-overflow-tolerance: 3px;
+}

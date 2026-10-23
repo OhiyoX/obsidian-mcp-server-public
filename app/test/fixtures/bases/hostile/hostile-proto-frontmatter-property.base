@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: '__proto__ == "shadow"'
+    order:
+      - file.name

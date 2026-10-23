@@ -1,0 +1,193 @@
+{
+  "target": "base-expression",
+  "group": "unsupported-official",
+  "title": "官方存在但本刀（P1-A）故意不支持的语法：正则、list/object 字面量、方括号索引、值成员访问、日期单位运算、duration",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Regular expression type → ### matches()",
+      "quote": "Functions you can use with a regular expression pattern. Example: `/abc/`.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Types → ### Objects and lists",
+      "quote": "Access list elements using square brackets, and a 0-based index. For example, `property[0]` returns the first element from the list. Access object elements using square brackets and the element name or dot notation. For example, `property.subprop` or `property[\"subprop\"]`.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Date arithmetic",
+      "quote": "To modify or offset Date objects, use the `+` or `-` operator with a duration string. For example, `date + \"1M\"` adds 1 month to the date, while `date - \"2h\"` subtracts 2 hours from the date.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Global → ### duration()（符号行 + 说明项）",
+      "quote": "Parses a string as a duration.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Date type → ### format() / ### Fields",
+      "quote": "`date.format(format: string): string` … | `date.year` | `number` | The year of the date |",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Object type（首句）",
+      "quote": "Functions you can use with a collection of key-value pairs such as `{\"a\": 1, \"b\": 2}`.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§4 明确非目标 + §8 函数与类型策略",
+      "quote": "正则 / 任意脚本 / 用户可注入代码执行能力。… list map/filter/sort 等高阶函数最后做 … plugin functions 永久不自动执行。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    }
+  ],
+  "note": "每条 case 的 `disposition` 取值：`P1-C`（后续内置函数/类型波次）| `P1-F`（custom summaries / values list）| `permanent`（永不支持，契约 §4）。HANDOFF 的「官方有但不支持」清单由本组 + 04 组生成。",
+  "cases": [
+    {
+      "id": "unsupported-regex-literal",
+      "input": "/abc/",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "permanent",
+      "messageTemplate": "Unsupported regular expression literal at position {position}",
+      "note": "官方 Regular expression type；但契约 §4 明确不引入正则/可注入执行 → 永久 unsupported（tokenizer 也不会把它降级成除法链）"
+    },
+    {
+      "id": "unsupported-regex-matches-call",
+      "input": "/abc/.matches(\"abcde\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "permanent",
+      "messageTemplate": "Unsupported regular expression literal at position {position}",
+      "note": "官方示例 `/abc/.matches(\"abcde\")`；先把正则字面量作为一个整体拒绝"
+    },
+    {
+      "id": "unsupported-list-literal",
+      "input": "[1, 2, 3]",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported expression syntax \"{token}\" at position {position}",
+      "note": "官方 Types → Lists（`[1, 2, 3]`）；list 字面量与 list 值语义一起做"
+    },
+    {
+      "id": "unsupported-object-literal",
+      "input": "{\"a\": 1}",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported expression syntax \"{token}\" at position {position}",
+      "note": "官方 Formulas.md Data types → Objects（`{\"name\": \"value\"}`）"
+    },
+    {
+      "id": "unsupported-list-index-access",
+      "input": "tags[0]",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 4,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported index access at position {position}",
+      "note": "官方 `property[0]`；索引访问需要 list/object 值语义 → P1-C"
+    },
+    {
+      "id": "unsupported-object-index-access",
+      "input": "note[\"my-prop\"]",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 4,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported index access at position {position}",
+      "note": "官方 `property[\"subprop\"]`；也是带连字符/非 ASCII 键的唯一官方写法 → 现在 fail closed（不是静默 mis-parse）"
+    },
+    {
+      "id": "unsupported-date-field-access",
+      "input": "\"2025-01-02\".year",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 12,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported member access \"{token}\" at position {position}",
+      "note": "官方 date.year 字段；日期字段/方法属 P1-C（需要 injected clock 契约）"
+    },
+    {
+      "id": "unsupported-string-method-call",
+      "input": "\"hello\".lower()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 7,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported member access \"{token}\" at position {position}",
+      "note": "官方 String 方法（lower/title/trim…）→ P1-C allowlist"
+    },
+    {
+      "id": "unsupported-number-method-call",
+      "input": "(3.14159).toFixed(2)",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 9,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported member access \"{token}\" at position {position}",
+      "note": "官方 number.toFixed()（示例 `(3.14159).toFixed(2)`）→ P1-C"
+    },
+    {
+      "id": "unsupported-object-function-call",
+      "input": "file.properties.keys()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 object.keys()；file.properties 本刀也不取值（见 08 组）"
+    },
+    {
+      "id": "unsupported-duration-call",
+      "input": "duration(\"5h\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 duration 类型/函数；需要日期-时长模型 → P1-C"
+    },
+    {
+      "id": "unsupported-date-constructor-call",
+      "input": "date(\"2025-01-01 12:00:00\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "position": 0,
+      "disposition": "P1-C",
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 date() 构造（Bases syntax.md Types → Dates and durations 用同一示例）→ P1-C"
+    },
+    {
+      "id": "unsupported-date-arithmetic-parses",
+      "input": "file.mtime + \"1d\"",
+      "outcome": "accept",
+      "astType": "binary",
+      "note": "诚实记录：官方 Date arithmetic 在 P1-A 解析层是合法表达式（`+` 与字符串字面量），所以这里必须 accept；拒绝发生在求值层（08 组 `binary-add-date-duration` → unsupported），不是解析层假装拒绝"
+    },
+    {
+      "id": "unsupported-file-backlinks-parses",
+      "input": "file.backlinks",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "file", "name": "backlinks", "explicit": true },
+      "note": "官方 file 字段表列出 file.backlinks（性能重）；解析层合法，base-values 对未实现的 file 字段 fail closed（08 组 resolve-file-backlinks → unsupported），不静默给 missing"
+    }
+  ]
+}

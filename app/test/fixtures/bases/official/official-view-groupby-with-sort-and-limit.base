@@ -1,0 +1,13 @@
+views:
+  - type: table
+    name: Main
+    limit: 2
+    groupBy:
+      property: status
+      direction: ASC
+    sort:
+      - property: file.name
+        direction: DESC
+    order:
+      - file.name
+      - status

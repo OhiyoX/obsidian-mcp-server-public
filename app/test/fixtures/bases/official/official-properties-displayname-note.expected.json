@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "非 formula 的 properties.<note prop>.displayName 现在是该列的 label（2026-10-21 desktop-re/bases-ui-parity-2 按协调席 BRIEF-DELTA：声明优先、未声明才回退 key 尾巴；官方 fixture 里 status 声明为 Status）。file.ext 的 displayName 不进入列集（file.ext 不在 view.order）。",
+  "flipIn": null
+}

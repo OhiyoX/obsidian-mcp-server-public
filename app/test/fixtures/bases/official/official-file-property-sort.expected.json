@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Nested/Deep.md",
+    "Notes/Delta.md",
+    "Archive/Gamma.md",
+    "Notes/Beta.md",
+    "Notes/Alpha.md"
+  ],
+  "note": "file.size 可作为 sort property（数值降序），证明 filter/sort 侧的 file.* 面比公式侧宽",
+  "flipIn": null
+}

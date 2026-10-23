@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "description": "Frozen Phase-0 characterization corpus for Search v2. Covers Chinese, mixed CJK/Latin, technical identifiers, exact phrases, and hard-filter metadata. The `raw` field is the exact Markdown written to a temporary Vault; `tags`, `aliases`, `frontmatter`, and `content` are the deterministic record projection used by evaluator/hybrid tests.",
+  "frozenAt": "2026-09-25",
+  "notes": [
+    {
+      "path": "Notes/Network Troubleshooting.md",
+      "tags": ["project/openwrt"],
+      "aliases": [],
+      "frontmatter": { "title": "网络故障排查", "tags": ["project/openwrt"] },
+      "raw": "---\ntitle: 网络故障排查\ntags:\n  - project/openwrt\n---\n# 网络故障排查\n\nOpenWrt 路由器网络故障处理方法。\n\n## 步骤\n\n重启后检查日志。\n",
+      "content": "# 网络故障排查\n\nOpenWrt 路由器网络故障处理方法。\n\n## 步骤\n\n重启后检查日志。\n"
+    },
+    {
+      "path": "Notes/Search Design.md",
+      "tags": ["project/search", "status/active"],
+      "aliases": ["查询设计"],
+      "frontmatter": { "title": "Search Design", "aliases": ["查询设计"], "tags": ["project/search", "status/active"] },
+      "raw": "---\ntitle: Search Design\naliases:\n  - 查询设计\ntags:\n  - project/search\n  - status/active\n---\n# Search Design\n\nIntro exact phrase here.\n\n## API\n\nThe restore_from_trash helper and planRestoreVersion are documented.\n\n## Paths\n\nSee app/src/search.js for details.\n",
+      "content": "# Search Design\n\nIntro exact phrase here.\n\n## API\n\nThe restore_from_trash helper and planRestoreVersion are documented.\n\n## Paths\n\nSee app/src/search.js for details.\n"
+    },
+    {
+      "path": "Notes/Release Notes.md",
+      "tags": ["status/active"],
+      "aliases": [],
+      "frontmatter": { "title": "Release Notes", "tags": ["status/active"] },
+      "raw": "---\ntitle: Release Notes\ntags:\n  - status/active\n---\n# Release Notes\n\nCommit dfba2c1 fixed the issue on example.org.\n\nVersion v1.2.3 shipped.\n",
+      "content": "# Release Notes\n\nCommit dfba2c1 fixed the issue on example.org.\n\nVersion v1.2.3 shipped.\n"
+    },
+    {
+      "path": "Notes/中文说明.md",
+      "tags": [],
+      "aliases": [],
+      "frontmatter": { "title": "中文说明" },
+      "raw": "---\ntitle: 中文说明\n---\n# 中文说明\n\n这是中文内容，包含故障与网络。\n\n## 排障\n\n处理步骤见此。\n",
+      "content": "# 中文说明\n\n这是中文内容，包含故障与网络。\n\n## 排障\n\n处理步骤见此。\n"
+    },
+    {
+      "path": "Archive/Old Search.md",
+      "tags": ["status/archived", "project/search"],
+      "aliases": [],
+      "frontmatter": { "title": "Old Search", "tags": ["status/archived", "project/search"] },
+      "raw": "---\ntitle: Old Search\ntags:\n  - status/archived\n  - project/search\n---\n# Old Search\n\nDeprecated exact phrase content. Legacy restore_from_trash notes.\n",
+      "content": "# Old Search\n\nDeprecated exact phrase content. Legacy restore_from_trash notes.\n"
+    }
+  ]
+}

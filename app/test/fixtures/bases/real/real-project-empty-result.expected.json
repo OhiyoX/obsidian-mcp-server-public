@@ -1,0 +1,8 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [],
+  "note": "过滤后空结果仍是 accept（supportedSubset true，rows 为空），不是 error",
+  "flipIn": null
+}

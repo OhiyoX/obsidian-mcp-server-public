@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: 'file.backlinks.contains("Alpha")'
+    order:
+      - file.name

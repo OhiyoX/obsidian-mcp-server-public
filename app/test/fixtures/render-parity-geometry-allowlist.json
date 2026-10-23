@@ -1,0 +1,5 @@
+{
+  "tolerancePx": 1,
+  "knownEnvironmentFailures": [],
+  "note": "Phase 1-B shared geometry gate. tolerancePx is the only permitted slack (sub-pixel rounding) and must stay tiny. knownEnvironmentFailures must stay empty: geometry is a hard gate, so an environment difference is a failure to investigate, not to allow-list."
+}

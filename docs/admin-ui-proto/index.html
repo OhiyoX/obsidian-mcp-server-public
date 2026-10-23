@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101318">
+<title>Obsidian MCP · 授权管理</title>
+<style>
+/* ============================================================
+   Obsidian MCP Admin — prototype
+   Layout system: 4px grid · spacing 4/8/12/16/24/32
+   Type: 13 / 14 / 16 / 20 · weights 400 / 600
+   Headers: 52px (sidebar brand / page bar / drawer head)
+   Tokens mirror ui-proto (Message Server) 1:1
+   ============================================================ */
+:root{
+  --font: Inter, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px;
+  --hh:52px; --item:32px; --r:6px; --r2:8px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#101318; --side:#101318; --pane:#14171d; --elev:#1b1f27; --field:#191c23;
+  --line:#23272f; --line2:#2e333d;
+  --hover:rgba(255,255,255,.035); --sel:rgba(255,255,255,.065);
+  --tx:#e6e8eb; --tx2:#a0a6b0; --tx3:#6c727c; --tx4:#454a53;
+  --accent:#3a84ee; --accent-tx:#82c4ff; --accent-bg:rgba(58,132,238,.14);
+  --ok:#4cc38a; --ok-bg:rgba(76,195,138,.12);
+  --amber:#ffb454; --amber-bg:rgba(255,180,84,.12);
+  --danger:#f07070; --danger-bg:rgba(240,112,112,.10); --danger-fill:#e5484d;
+  --shadow:0 16px 48px rgba(0,0,0,.5),0 0 0 1px var(--line2); --scrim:rgba(0,0,0,.55);
+}
+[data-theme=light]{
+  color-scheme:light;
+  --bg:#f7f7f8; --side:#f7f7f8; --pane:#ffffff; --elev:#ffffff; --field:#f4f4f5;
+  --line:#ececee; --line2:#dfdfe3;
+  --hover:rgba(0,0,0,.03); --sel:rgba(0,0,0,.055);
+  --tx:#17181b; --tx2:#5c6068; --tx3:#8a8f97; --tx4:#c2c5ca;
+  --accent:#2f74e0; --accent-tx:#2f74e0; --accent-bg:rgba(47,116,224,.10);
+  --ok:#1f9d63; --ok-bg:rgba(31,157,99,.10);
+  --amber:#d9860b; --amber-bg:rgba(240,154,28,.12);
+  --danger:#d64545; --danger-bg:rgba(214,69,69,.07); --danger-fill:#d64545;
+  --shadow:0 16px 48px rgba(0,0,0,.14),0 0 0 1px var(--line2); --scrim:rgba(20,20,25,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:400 14px/20px var(--font);-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit;letter-spacing:inherit}
+button{cursor:pointer;background:none;border:0;padding:0;text-align:left}
+a{color:var(--accent-tx);text-decoration:none}
+a:hover{text-decoration:underline}
+svg.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+svg.i.xs{width:12px;height:12px}
+.scroll{overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.muted{color:var(--tx3)} .tx2{color:var(--tx2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:13px}
+.grow{flex:1}
+.nowrap{white-space:nowrap}
+.ell{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+kbd{font:400 13px/16px var(--mono);color:var(--tx3);border:1px solid var(--line2);border-radius:4px;padding:0 4px;min-width:20px;text-align:center;display:inline-block}
+:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:var(--r)}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--tx3);flex:none}
+.dot.ok{background:var(--ok)} .dot.amber{background:var(--amber)} .dot.danger{background:var(--danger)} .dot.acc{background:var(--accent)}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);height:100vh;height:100dvh}
+.side{background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.main{background:var(--pane);display:flex;flex-direction:column;min-height:0;min-width:0}
+.bar{height:var(--hh);flex:none;display:flex;align-items:center;gap:var(--s2);padding:0 var(--s6);border-bottom:1px solid var(--line)}
+.bar h1{margin:0;font-size:16px;line-height:24px;font-weight:600;display:flex;align-items:baseline;gap:var(--s2);min-width:0;white-space:nowrap}
+.bar h1 .crumbp{color:var(--tx3);font-weight:400}
+.bar h1 .crumbp:hover{color:var(--tx);text-decoration:none}
+.bar .cnt{font-size:13px;color:var(--tx3);font-weight:400}
+.ibtn{width:28px;height:28px;border-radius:var(--r);display:grid;place-items:center;color:var(--tx3);flex:none;transition:background .12s,color .12s}
+.ibtn:hover{background:var(--hover);color:var(--tx)}
+.brand{gap:var(--s2);padding:0 var(--s4);border-bottom:1px solid var(--line)}
+.brand .logo{width:20px;height:20px;flex:none}
+.brand b{font-size:14px;font-weight:600}
+.brand span{font-size:13px;color:var(--tx3)}
+.side-body{flex:1;min-height:0;padding:var(--s2)}
+.ni{display:flex;align-items:center;gap:var(--s2);width:100%;height:var(--item);padding:0 var(--s2);border-radius:var(--r);color:var(--tx2);font-size:13px;transition:background .12s,color .12s}
+.ni:hover{background:var(--hover);color:var(--tx);text-decoration:none}
+.ni.on{background:var(--sel);color:var(--tx)}
+.ni .i{color:var(--tx3)} .ni.on .i{color:var(--tx)}
+.ni .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ni .cnt{font-size:13px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.ni kbd{border:0;padding:0;min-width:0;color:var(--tx4)}
+.sec-h{display:flex;align-items:center;height:var(--item);padding:0 var(--s2);margin-top:var(--s3);font-size:13px;color:var(--tx3)}
+.side-foot{height:var(--hh);border-top:1px solid var(--line);padding:0 var(--s2);display:flex;align-items:center;gap:var(--s1)}
+.ver{font:400 13px/16px var(--mono);color:var(--tx3);padding:0 var(--s2)}
+.content{flex:1;min-height:0}
+.page{max-width:1120px;margin:0 auto;padding:var(--s6)}
+.page.wide{max-width:1280px}
+.lede{color:var(--tx2);font-size:13px;margin:0 0 var(--s4)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 var(--s3);border-radius:var(--r);border:1px solid var(--line2);background:var(--elev);color:var(--tx);font-size:13px;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--hover);border-color:var(--tx4);text-decoration:none}
+.btn.sm{height:28px;padding:0 var(--s2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:none;color:var(--tx2)}
+.btn.ghost:hover{background:var(--hover);color:var(--tx)}
+.btn.danger-o{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,transparent);background:none}
+.btn.danger-o:hover{background:var(--danger-bg)}
+.btn.danger{background:var(--danger-fill);border-color:var(--danger-fill);color:#fff;font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn .i{width:14px;height:14px}
+
+/* ---------- chips / badges ---------- */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--tx2);white-space:nowrap}
+.st.ok{color:var(--tx)} .st.ok .dot{background:var(--ok)}
+.st.amber .dot{background:var(--amber)} .st.danger{color:var(--danger)} .st.danger .dot{background:var(--danger)}
+.st.off .dot{background:var(--tx4)}
+.tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 6px;border-radius:4px;background:var(--sel);color:var(--tx2);font-size:13px;line-height:20px;white-space:nowrap}
+.tag.acc{background:var(--accent-bg);color:var(--accent-tx)}
+.tag.amber{background:var(--amber-bg);color:var(--amber)}
+.tag.danger{background:var(--danger-bg);color:var(--danger)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.kind{font-size:13px;color:var(--tx3);border:1px solid var(--line2);border-radius:4px;padding:0 5px;line-height:18px;white-space:nowrap}
+.idc{display:inline-flex;align-items:center;gap:4px;font:400 13px/18px var(--mono);color:var(--tx3);border-radius:4px;padding:0 2px;margin-left:-2px;max-width:100%}
+.idc:hover{color:var(--tx);background:var(--hover)}
+.idc .i{width:12px;height:12px;opacity:0;transition:opacity .12s}
+.idc:hover .i,.idc:focus-visible .i{opacity:1}
+
+/* ---------- toolbar / inputs ---------- */
+.toolbar{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s3);flex-wrap:wrap}
+.search{display:flex;align-items:center;gap:var(--s2);height:32px;padding:0 var(--s2);border:1px solid var(--line2);border-radius:var(--r);background:var(--field);color:var(--tx3);min-width:240px}
+.search input{border:0;background:none;outline:0;flex:1;min-width:0;font-size:13px;color:var(--tx)}
+.search:focus-within{border-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--r);padding:2px;gap:2px;background:var(--field)}
+.seg button{height:26px;padding:0 10px;border-radius:4px;font-size:13px;color:var(--tx2);white-space:nowrap}
+.seg button:hover{color:var(--tx)}
+.seg button.on{background:var(--elev);color:var(--tx);box-shadow:0 0 0 1px var(--line2)}
+.seg button .n{color:var(--tx3);margin-left:4px;font-variant-numeric:tabular-nums}
+.inp,.sel{height:32px;border:1px solid var(--line2);border-radius:var(--r);background:var(--field);padding:0 var(--s2);font-size:14px;outline:0;color:var(--tx);min-width:0;width:100%}
+.inp:focus,.sel:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--tx4);font-style:italic}
+.sel{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--tx3) 50%),linear-gradient(135deg,var(--tx3) 50%,transparent 50%);background-position:calc(100% - 14px) 14px,calc(100% - 10px) 14px;background-size:4px 4px;background-repeat:no-repeat}
+.sel.sm,.inp.sm{height:28px;font-size:13px;width:auto}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fld > label,.fld > .l{font-size:13px;color:var(--tx2);display:flex;gap:6px;align-items:baseline}
+.fld small,.sub{font:400 13px/16px var(--mono);color:var(--tx4)}
+.help{font-size:13px;color:var(--tx3);line-height:18px}
+.help.warn{color:var(--amber)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3) var(--s4)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3) var(--s4)}
+.pw{position:relative} .pw .inp{padding-right:36px} .pw .ibtn{position:absolute;right:2px;top:2px}
+
+.chk{display:flex;align-items:flex-start;gap:var(--s2);padding:6px var(--s2);border-radius:var(--r);cursor:pointer;font-size:14px}
+.chk:hover{background:var(--hover)}
+.chk input{margin:2px 0 0;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.chk .d{display:block;font-size:13px;color:var(--tx3)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{height:32px;min-width:44px;padding:0 var(--s3);border-radius:var(--r);border:1px solid var(--line2);background:var(--field);color:var(--tx2);font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.chip:hover{color:var(--tx);border-color:var(--tx4)}
+.chip.on{background:var(--accent-bg);border-color:color-mix(in srgb,var(--accent) 55%,transparent);color:var(--accent-tx);font-weight:600}
+.switch{position:relative;width:32px;height:18px;border-radius:9px;background:var(--line2);flex:none;transition:background .15s;cursor:pointer;border:0}
+.switch::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s var(--ease)}
+.switch.on{background:var(--accent)} .switch.on::after{transform:translateX(14px)}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- cards / sections ---------- */
+.card{border:1px solid var(--line);border-radius:var(--r2);background:var(--pane)}
+.sect{margin-top:var(--s8)}
+.sect:first-child{margin-top:0}
+.sect-h{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s3);min-height:28px}
+.sect-h h2{margin:0;font-size:14px;font-weight:600}
+.sect-h .muted{font-size:13px}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);border:1px solid var(--line);border-radius:var(--r2)}
+.kv > div{padding:10px var(--s3);border-top:1px solid var(--line);min-width:0;font-size:14px}
+.kv > div:nth-child(-n+2){border-top:0}
+.kv > .k{color:var(--tx3);font-size:13px}
+.banner{display:flex;gap:var(--s2);align-items:flex-start;padding:10px var(--s3);border-radius:var(--r2);font-size:13px;line-height:18px;border:1px solid var(--line);background:var(--field);color:var(--tx2);margin-bottom:var(--s4)}
+.banner .i{margin-top:1px}
+.banner.amber{border-color:color-mix(in srgb,var(--amber) 35%,transparent);background:var(--amber-bg);color:var(--tx)}
+.banner.amber .i{color:var(--amber)}
+.banner.danger{border-color:color-mix(in srgb,var(--danger) 35%,transparent);background:var(--danger-bg);color:var(--tx)}
+.banner.danger .i{color:var(--danger)}
+.banner.acc .i{color:var(--accent-tx)}
+.banner b{font-weight:600}
+
+/* ---------- table ---------- */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:14px}
+.tw{border:1px solid var(--line);border-radius:var(--r2);overflow:hidden}
+.tbl th{height:36px;text-align:left;font-weight:400;font-size:13px;color:var(--tx3);padding:0 var(--s3);border-bottom:1px solid var(--line);background:var(--bg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl td{padding:10px var(--s3);border-bottom:1px solid var(--line);vertical-align:middle;min-width:0;overflow:hidden}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr{transition:background .1s}
+.tbl tbody tr.click{cursor:pointer}
+.tbl tbody tr:hover{background:var(--hover)}
+.tbl tbody tr.cur{background:var(--sel)}
+.tbl tbody tr.fail{background:var(--danger-bg)}
+.tbl tbody tr.fail:hover{background:color-mix(in srgb,var(--danger) 14%,transparent)}
+.tbl tbody tr.dim td > *:not(.act){opacity:.55}
+.tbl td.act{width:48px;text-align:right;padding-right:var(--s2)}
+.tbl th.act{width:48px}
+.nm{display:flex;flex-direction:column;min-width:0}
+.nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm .sub2{font-size:13px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:6px;align-items:center}
+.cellt{font-size:13px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cellt .muted{font-size:13px}
+.grp td{background:var(--bg);font-size:13px;color:var(--tx3);padding:6px var(--s3)}
+.pager{display:flex;align-items:center;gap:var(--s2);justify-content:space-between;margin-top:var(--s3);font-size:13px;color:var(--tx3)}
+.pager .pg{display:flex;gap:4px;align-items:center}
+.pager .pg button{min-width:28px;height:28px;border-radius:var(--r);color:var(--tx2);text-align:center;font-variant-numeric:tabular-nums}
+.pager .pg button:hover{background:var(--hover)}
+.pager .pg button.on{background:var(--sel);color:var(--tx)}
+.uax{font:400 13px/18px var(--mono);color:var(--tx3);padding:8px var(--s3) 12px;word-break:break-all;background:var(--bg)}
+
+/* ---------- overview ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s3)}
+.stat{display:flex;flex-direction:column;gap:var(--s1);padding:var(--s4);border:1px solid var(--line);border-radius:var(--r2);background:var(--pane);color:var(--tx);transition:border-color .12s,background .12s;min-width:0}
+.stat:hover{border-color:var(--line2);background:var(--hover);text-decoration:none}
+.stat .t{display:flex;align-items:center;gap:var(--s2);font-size:13px;color:var(--tx2)}
+.stat .t .i{color:var(--tx3)}
+.stat .n{font-size:20px;line-height:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat .d{font-size:13px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .d .w{color:var(--amber)}
+.ov2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:var(--s4);margin-top:var(--s6)}
+.list{border:1px solid var(--line);border-radius:var(--r2)}
+.li{display:flex;align-items:center;gap:var(--s3);min-height:44px;padding:var(--s2) var(--s3);border-top:1px solid var(--line);font-size:13px;color:var(--tx2);min-width:0}
+.li:first-child{border-top:0}
+.li b{color:var(--tx);font-weight:400;font-size:14px}
+a.li:hover{background:var(--hover);text-decoration:none}
+.li .r{margin-left:auto;color:var(--tx3);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ---------- overlays ---------- */
+.scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .15s;z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:560px;max-width:100vw;background:var(--pane);box-shadow:var(--shadow);transform:translateX(102%);transition:transform .2s var(--ease);z-index:41;display:flex;flex-direction:column}
+.drawer:not(.on){box-shadow:none;visibility:hidden;transition:transform .2s var(--ease),visibility 0s .2s}
+.drawer.on{transform:none}
+.drawer .bar{padding:0 var(--s4) 0 var(--s6)}
+.dbody{flex:1;min-height:0;padding:var(--s6)}
+.dfoot{flex:none;display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s6);border-top:1px solid var(--line)}
+.dfoot .help{flex:1}
+.dsec{margin-top:var(--s6)} .dsec:first-child{margin-top:0}
+.dsec > h3{margin:0 0 var(--s2);font-size:13px;font-weight:600;color:var(--tx2)}
+.danger-zone{border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);border-radius:var(--r2)}
+.dz{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);border-top:1px solid color-mix(in srgb,var(--danger) 18%,transparent)}
+.dz:first-child{border-top:0}
+.dz .t{flex:1;min-width:0;font-size:13px;color:var(--tx3)} .dz .t b{display:block;color:var(--tx);font-size:14px;font-weight:600}
+.modal{position:fixed;left:50%;top:22vh;transform:translate(-50%,8px);width:440px;max-width:calc(100vw - 32px);background:var(--elev);border-radius:12px;box-shadow:var(--shadow);padding:var(--s6);z-index:51;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s var(--ease)}
+.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.modal h3{margin:0 0 var(--s2);font-size:16px;line-height:24px;font-weight:600}
+.modal p{margin:0 0 var(--s3);color:var(--tx2);font-size:14px;line-height:22px}
+.modal p b{color:var(--tx);font-weight:600}
+.modal ul{margin:0 0 var(--s3);padding-left:18px;color:var(--tx2);font-size:13px;line-height:20px}
+.modal .acts{display:flex;justify-content:flex-end;gap:var(--s2);margin-top:var(--s4)}
+.modal .tc{font-size:13px;color:var(--tx3);margin-bottom:6px} .modal .tc code{font-family:var(--mono);color:var(--tx);background:var(--sel);padding:0 4px;border-radius:4px}
+#mscrim{z-index:50}
+.menu{position:fixed;min-width:180px;background:var(--elev);border-radius:var(--r2);box-shadow:var(--shadow);padding:var(--s1);z-index:45;display:none}
+.menu.on{display:block}
+.menu button{display:flex;align-items:center;gap:var(--s2);width:100%;height:32px;padding:0 var(--s2);border-radius:4px;font-size:13px;color:var(--tx)}
+.menu button:hover,.menu button.kb{background:var(--hover)}
+.menu button .i{color:var(--tx3)}
+.menu button.dz2{color:var(--danger)} .menu button.dz2 .i{color:var(--danger)}
+.menu button:disabled{opacity:.4;cursor:not-allowed}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,12px);background:var(--elev);color:var(--tx);box-shadow:var(--shadow);border-radius:var(--r2);padding:10px var(--s4);font-size:13px;display:flex;gap:var(--s3);align-items:center;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s var(--ease);z-index:60}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast .i{color:var(--ok)} .toast.err .i{color:var(--danger)}
+.toast button{color:var(--accent-tx);font-size:13px}
+.kbdp{width:560px}
+.kbdp .cols{display:grid;grid-template-columns:1fr 1fr;gap:4px var(--s6)}
+.kbdp .row{display:flex;justify-content:space-between;align-items:center;height:28px;font-size:13px;color:var(--tx2)}
+.kbdp h4{grid-column:1/-1;margin:var(--s3) 0 0;font-size:13px;color:var(--tx3);font-weight:400}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:56px var(--s6);gap:var(--s2);color:var(--tx3);font-size:13px}
+.empty .ic{width:40px;height:40px;border-radius:10px;background:var(--sel);display:grid;place-items:center;color:var(--tx2);margin-bottom:var(--s2)}
+.empty b{color:var(--tx);font-size:14px;font-weight:600}
+.secret{display:flex;align-items:center;gap:var(--s2);padding:var(--s3);border:1px dashed color-mix(in srgb,var(--amber) 50%,transparent);border-radius:var(--r2);background:var(--amber-bg);font:400 13px/18px var(--mono);word-break:break-all}
+
+/* ---------- policy editor ---------- */
+.ped{display:grid;grid-template-columns:minmax(0,1fr) 400px;min-height:100%}
+.ped-form{padding:var(--s6) var(--s8) 96px;max-width:760px}
+.ped-side{border-left:1px solid var(--line);background:var(--bg);padding:var(--s6)}
+.ped-side .stick{position:sticky;top:0}
+.fs{border:0;padding:0;margin:0 0 var(--s8)}
+.fs > legend{padding:0;margin-bottom:var(--s3);font-size:14px;font-weight:600;display:flex;gap:var(--s2);align-items:baseline;width:100%}
+.fs > legend .muted{font-weight:400;font-size:13px}
+.mode{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.mode button{border:1px solid var(--line2);border-radius:var(--r2);padding:var(--s3);background:var(--field);display:flex;flex-direction:column;gap:2px}
+.mode button b{font-weight:600;font-size:14px;display:flex;gap:var(--s2);align-items:center}
+.mode button span{font-size:13px;color:var(--tx3);line-height:18px}
+.mode button.on{border-color:var(--accent);background:var(--accent-bg)}
+.mode button.on.rv{border-color:var(--danger);background:var(--danger-bg)}
+.radio{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--tx4);flex:none;display:inline-block}
+.on > b > .radio{border:4px solid var(--accent)} .on.rv > b > .radio{border-color:var(--danger)}
+.wrow{display:grid;grid-template-columns:auto 120px 16px 120px 28px;gap:var(--s2);align-items:center;margin-top:var(--s2)}
+.wrow .lab{font-size:13px;color:var(--tx3);min-width:84px}
+.drow{display:grid;grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr) 28px;gap:var(--s2);align-items:center;margin-top:var(--s2)}
+.addl{display:inline-flex;align-items:center;gap:6px;color:var(--accent-tx);font-size:13px;height:28px;margin-top:var(--s2)}
+.picker{border:1px solid var(--line2);border-radius:var(--r2);background:var(--pane);overflow:hidden}
+.picker .search{border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;min-width:0}
+.pick-list{max-height:280px}
+.pick-g{font-size:13px;color:var(--tx3);padding:8px var(--s3) 4px;display:flex;justify-content:space-between}
+.pick{display:flex;align-items:center;gap:var(--s3);padding:6px var(--s3);cursor:pointer;min-height:44px}
+.pick:hover{background:var(--hover)}
+.pick input{accent-color:var(--accent);width:16px;height:16px;margin:0;flex:none}
+.pick .nm{flex:1}
+.selrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:var(--s2)}
+.pill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 4px 0 var(--s2);border-radius:var(--r);background:var(--sel);font-size:13px;max-width:100%}
+.pill .kind{border:0;padding:0;color:var(--tx3)}
+.pill button{width:20px;height:20px;display:grid;place-items:center;color:var(--tx3);border-radius:4px}
+.pill button:hover{background:var(--hover);color:var(--tx)}
+.cap-g{border-top:1px solid var(--line)}
+.cap-g:first-child{border-top:0}
+.cap-h{display:flex;align-items:center;gap:var(--s2);width:100%;height:40px;padding:0 var(--s3);font-size:13px;color:var(--tx2)}
+.cap-h:hover{background:var(--hover)}
+.cap-h b{color:var(--tx);font-weight:600;font-size:14px}
+.cap-h .chev{transition:transform .15s var(--ease);color:var(--tx3)}
+.cap-h.open .chev{transform:rotate(90deg)}
+.cap-b{padding:0 var(--s2) var(--s2) 28px;display:grid;grid-template-columns:1fr 1fr;gap:0 var(--s2)}
+.cap-b .chk .mono{color:var(--tx4);font-size:13px}
+.tl{display:grid;grid-template-columns:28px minmax(0,1fr);gap:6px 8px;align-items:center;font-size:13px;color:var(--tx3)}
+.tl .tr{position:relative;height:16px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px calc(100%/24)),var(--field)}
+.tl .tr .w{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.85}
+.tl .tr .now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--amber);border-radius:1px}
+.tl .ax{display:flex;justify-content:space-between;font:400 13px/16px var(--mono);color:var(--tx4)}
+.tl .today{color:var(--tx)}
+.sumbox{padding:var(--s3);border-radius:var(--r2);border:1px solid var(--line);background:var(--pane);font-size:13px;line-height:20px;color:var(--tx2)}
+.sumbox b{color:var(--tx);font-weight:600}
+.verdict{display:flex;align-items:center;gap:var(--s2);padding:var(--s3);border-radius:var(--r2);font-size:13px;margin-top:var(--s2)}
+.verdict.ok{background:var(--ok-bg)} .verdict.ok .i{color:var(--ok)}
+.verdict.no{background:var(--danger-bg)} .verdict.no .i{color:var(--danger)}
+.ped-foot{position:sticky;bottom:0;display:flex;gap:var(--s2);align-items:center;padding:var(--s3) var(--s8);border-top:1px solid var(--line);background:var(--pane);z-index:3}
+.vcard{border:1px solid var(--line);border-radius:var(--r2);padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3);background:var(--pane)}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.vh{display:flex;align-items:center;gap:var(--s2)}
+.vh b{font-size:16px;font-weight:600}
+.caps{display:flex;flex-wrap:wrap;gap:4px}
+.cap{font-size:13px;color:var(--tx2);display:inline-flex;gap:6px;align-items:center;height:24px;padding:0 8px;border-radius:12px;border:1px solid var(--line)}
+.cap.off{color:var(--tx3);border-style:dashed}
+
+/* ---------- login ---------- */
+.login{min-height:100vh;display:grid;place-items:center;padding:var(--s6);background:var(--bg)}
+.login .box{width:360px;max-width:100%;display:flex;flex-direction:column;gap:var(--s4)}
+.login h1{margin:0;font-size:20px;line-height:28px;font-weight:600;display:flex;align-items:center;gap:var(--s2)}
+.login .btn.primary{width:100%;height:40px;font-size:14px}
+.login .foot{display:flex;justify-content:space-between;font-size:13px;color:var(--tx3)}
+
+/* ---------- mobile ---------- */
+.mnav{display:none}
+.mcards{display:none}
+@media (max-width:1100px){
+  .ped{grid-template-columns:minmax(0,1fr)} .ped-side{border-left:0;border-top:1px solid var(--line)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .main{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+  .bar{padding:0 var(--s4)}
+  .page{padding:var(--s4)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2)}
+  .stat{padding:var(--s3)}
+  .ov2{grid-template-columns:minmax(0,1fr)}
+  .li > span.ell{display:none}
+  .banner:has(.bm){flex-wrap:wrap} .banner > div{min-width:0;flex:1 1 0} .banner .bm{width:100%;padding-left:24px}
+  .tw.hide-m{display:none}
+  .mcards{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r2)}
+  .mc{display:flex;gap:var(--s3);padding:var(--s3);border-top:1px solid var(--line);align-items:flex-start;min-width:0}
+  .mc:first-child{border-top:0}
+  .mc .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .mc .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;color:var(--tx3)}
+  .mc.fail{background:var(--danger-bg)}
+  .search{min-width:0;flex:1}
+  .toolbar .hide-m{display:none}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .drawer{width:100vw;top:auto;height:92dvh;border-radius:12px 12px 0 0;transform:translateY(102%)}
+  .drawer.on{transform:none}
+  .dbody{padding:var(--s4)} .dfoot{padding:var(--s3) var(--s4)}
+  .ped-form{padding:var(--s4) var(--s4) 96px}
+  .ped-side{padding:var(--s4)}
+  .ped-foot{padding:var(--s3) var(--s4);bottom:0}
+  .wrow{grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr) 28px}
+  .wrow .lab{grid-column:1/-1;margin-top:var(--s1)}
+  .cap-b{grid-template-columns:1fr}
+  .mode{grid-template-columns:1fr}
+  .vgrid{grid-template-columns:1fr}
+  .kv{grid-template-columns:96px minmax(0,1fr)}
+  .mnav{display:flex;position:fixed;left:0;right:0;bottom:0;height:calc(56px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--pane);border-top:1px solid var(--line);z-index:30}
+  .mnav a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;color:var(--tx3)}
+  .mnav a:hover{text-decoration:none}
+  .mnav a.on{color:var(--tx)}
+  .mnav .i{width:20px;height:20px}
+  .hide-m,.bar .hide-m{display:none!important}
+  .modal{top:auto;bottom:16px}
+  .kbdp .cols{grid-template-columns:1fr}
+}
+/* ---------- planned (future) markers: hidden with ?dev=1&future=0 ---------- */
+.fut{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border-radius:9px;font-size:13px;line-height:18px;color:#a78bfa;background:rgba(167,139,250,.12);border:1px dashed rgba(167,139,250,.45);white-space:nowrap;font-weight:400;vertical-align:middle}
+[data-theme=light] .fut{color:#7c3aed;background:rgba(124,58,237,.07)}
+.futbox{border:1px dashed rgba(167,139,250,.45);border-radius:var(--r2);padding:var(--s3)}
+body.nofut .fut,body.nofut .futonly{display:none!important}
+.lock-note{font-size:13px;color:var(--danger)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7"/><path d="M6 9.5V20h12V9.5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l2 2M14 9l2 2"/></symbol>
+    <symbol id="i-app" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9h17M7 6.8h.01M9.5 6.8h.01"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M12 13v3l2 1"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7.5" ry="2.5"/><path d="M4.5 6v12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V6M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5"/></symbol>
+    <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6.5" cy="5.5" r="2"/><circle cx="6.5" cy="18.5" r="2"/><circle cx="17.5" cy="8" r="2"/><path d="M6.5 7.5v9M17.5 10c0 4-5 3-9.5 7"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-kbd" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M7.5 14h9"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18.5" cy="12" r="1.2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-checkc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.3 2.4 2.4 4.8-5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M10 7V5h4v2M6.5 7l1 12.5h9l1-12.5"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4.5 19.5h4l10-10-4-4-10 10z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10M19.5 4.5 11 13M17 14v4.5a1 1 0 0 1-1 1H5.5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1H10"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4.5h4.5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H14M10 16l-4-4 4-4M6 12h9.5"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 5.5v13l11-6.5z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3L19.5 9"/><path d="M19.5 4.5V9H15"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v6c0 4.2-3 7.2-7 8.5-4-1.3-7-4.3-7-8.5V6z"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5.5h16l-6 7.5v5l-4 2v-7z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M6.5 3.5h7l4 4v13h-11z"/><path d="M13.5 3.5v4h4"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="logo" viewBox="0 0 24 24"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z" fill="#7c5cff" stroke="none"/><path d="M12 6.5 16 9v6l-4 2.5L8 15V9z" fill="#fff" fill-opacity=".9" stroke="none"/></symbol>
+  </defs>
+</svg>
+<div id="root"></div>
+<div class="scrim" id="dscrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true"></aside>
+<div class="scrim" id="mscrim"></div>
+<div class="modal" id="modal" role="alertdialog" aria-modal="true"></div>
+<div class="menu" id="menu" role="menu"></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+/* Obsidian MCP Admin — prototype (static, mock data, no deps)
+   Data shapes mirror app/src/admin/** @ main 3bc97da:
+   oauthUser {id, username, displayName, scopes[], vaults[], enabled, createdAt, lastLogin{at,ip}}
+   apiKey    {id, label, prefix, scopes[], vaults[], createdAt, lastUsed{at,ip,agent}, env?}
+   client    {clientId, clientName, redirectUris[], domains[{host,src}], createdAt, lastCall, transfer?}
+   token     {id, grant, type access|refresh, clientId, userId, resource, scopes, vaults, status active|rotated|revoked|expired}
+   policy    {id, label, mode suspend|revoke, enabled, timezone, startsAt, expiresAt, weekly[{day,from,to}], dateRanges[{from,to}], subjects[], capabilities[]}
+   All ids are dummy. No real secrets. */
+"use strict";
+const NOW = new Date("2026-10-10T10:30:00+08:00"); // Saturday
+const VERSION = "1.0.0";
+const H = 3600e3, D = 24 * H, M = 60e3;
+const ago = (ms) => new Date(NOW - ms).toISOString();
+
+const SCOPES = [
+  { key: "obsidian.read", name: "读取", desc: "读取笔记、搜索、查看历史" },
+  { key: "obsidian.write", name: "写入", desc: "创建、修改、移动笔记" },
+  { key: "obsidian.files", name: "文件", desc: "上传与管理附件文件" },
+];
+
+const VAULTS = [
+  { id: "vault", name: "vault", label: "主库", primary: true, root: "/data/vaults/vault", editable: true,
+    git: { enabled: true, autoCommit: true, autoPush: true, autoCommitSweep: true, debounceSeconds: 30, maxDelaySeconds: 300, sweepIntervalSeconds: 900, remote: "origin", branch: "main" },
+    repo: { state: "clean", head: "a1c9e07", lastCommit: ago(14 * M), lastPush: ago(13 * M), ahead: 0, behind: 0, msg: "auto: 3 notes updated" },
+    verified: { ok: true, at: ago(2 * D) }, configSource: "admin", updatedAt: ago(5 * D),
+    caps: { notes: 1, files: 1, history: 1, trash: 1, plans: 1, retrieval: 1, semantic: 0, webCatalog: 0, publish: 1, git: 1, events: 0, memory: 1, skills: 1 } },
+  { id: "research", name: "research", label: "研究库", primary: false, root: "/data/vaults/research", editable: true,
+    git: { enabled: false, autoCommit: false, autoPush: false, autoCommitSweep: false, debounceSeconds: 30, maxDelaySeconds: 300, sweepIntervalSeconds: 900, remote: "origin", branch: "main" },
+    repo: { state: "norepo" }, verified: null, configSource: "default", updatedAt: null,
+    caps: { notes: 1, files: 1, history: 1, trash: 1, plans: 1, retrieval: 1, semantic: 0, webCatalog: 0, publish: 1, git: 0, events: 0, memory: 1, skills: 0 } },
+];
+const CAP_LABELS = { notes: "笔记读写", files: "文件与上传", history: "历史版本", trash: "回收站", plans: "变更方案", retrieval: "检索索引", semantic: "语义检索", webCatalog: "Web 目录", publish: "发布", git: "Git", events: "实时事件", memory: "记忆", skills: "技能" };
+const CAP_HINTS = { semantic: "本机未配置向量服务，检索仍按关键词工作", webCatalog: "属于 Web 端能力，MCP 不使用", events: "属于 Web 端实时推送，MCP 不使用", git: "该库尚未初始化 Git 仓库", skills: "该库没有 skills 目录" };
+
+const ACCOUNTS = [
+  { id: "2819e4a9-6c1d-4b8e-9f20-5a7c3e1d0b42", username: "alice", displayName: "Alice Chen", scopes: ["obsidian.read", "obsidian.write", "obsidian.files"], vaults: ["vault", "research"], enabled: true, createdAt: ago(41 * D), lastLogin: { at: ago(2 * H), ip: "192.168.1.24" } },
+  { id: "6b03f7d2-11a8-4c5e-8d74-e2b9c0a51f63", username: "bob", displayName: "Bob Li", scopes: ["obsidian.read"], vaults: ["research"], enabled: true, createdAt: ago(18 * D), lastLogin: { at: ago(3 * D), ip: "10.0.0.8" } },
+  { id: "c4d8a0e1-73b5-4f19-a6c2-98e1d3f7b250", username: "audit-user", displayName: "", scopes: ["obsidian.read"], vaults: ["vault"], enabled: false, createdAt: ago(6 * D), lastLogin: null },
+];
+
+const KEYS = [
+  { id: "configured-env", env: true, label: "环境配置 API_KEY", prefix: null, scopes: ["obsidian.read", "obsidian.write", "obsidian.files"], vaults: ["vault", "research"], createdAt: null, lastUsed: { at: ago(25 * M), ip: "127.0.0.1", agent: "Claude Code" } },
+  { id: "87ca7263-0f4e-4a1b-b6d9-3c5e81f20a7d", label: "Research bot", prefix: "obmcp_a97db1bd", scopes: ["obsidian.read"], vaults: ["research"], createdAt: ago(12 * D), lastUsed: { at: ago(19 * H), ip: "10.0.0.31", agent: "research-bot/0.4" } },
+  { id: "3c09aa30-5d2e-4e8f-a1b7-6f9c04d2e815", label: "NAS 同步脚本", prefix: "obmcp_3c09aa30", scopes: ["obsidian.read", "obsidian.write", "obsidian.files"], vaults: ["vault"], createdAt: ago(30 * D), lastUsed: { at: ago(4 * M), ip: "192.168.1.5", agent: "undici" } },
+  { id: "e51b8c47-92a0-4d6f-8e13-7b2a9d0c4f61", label: "", prefix: "obmcp_e51b8c47", scopes: ["obsidian.read"], vaults: ["vault"], createdAt: ago(9 * D), lastUsed: null },
+];
+
+const CLIENTS = [
+  { clientId: "0f6a2d91-8b47-4c3e-a5d1-2e9b7c4f8a60", clientName: "Claude Desktop", redirectUris: ["http://127.0.0.1:33418/callback", "https://claude.ai/api/mcp/auth_callback"], domains: [{ host: "obsidian.example.com", src: ["授权", "调用"] }], createdAt: ago(40 * D), lastCall: { at: ago(9 * M), ip: "192.168.1.24" },
+    transfer: { from: ACCOUNTS[0].id, to: ACCOUNTS[2].id, at: ago(50 * M) } },
+  { clientId: "a9d3e7b0-24c6-4f81-9e5a-1b8d6c0f3e27", clientName: "ChatGPT Connector", redirectUris: ["https://chatgpt.com/connector_platform_oauth_redirect"], domains: [{ host: "obsidian.example.com", src: ["注册", "授权", "调用"] }], createdAt: ago(17 * D), lastCall: { at: ago(3 * D), ip: "198.51.100.8" } },
+  { clientId: "5e7c1b02-d9a4-4e63-b8f0-a2c6e91d4b73", clientName: "Cursor IDE", redirectUris: ["cursor://anysphere.cursor-retrieval/oauth/callback"], domains: [{ host: "obsidian.example.com", src: ["授权", "调用"] }], createdAt: ago(8 * D), lastCall: { at: ago(36 * M), ip: "192.168.1.24" } },
+  { clientId: "d20e4f8a-6b13-47c9-91e5-c3a7b0f2d846", clientName: "", redirectUris: ["http://localhost:6274/oauth/callback"], domains: [], createdAt: ago(2 * D), lastCall: null },
+];
+
+/* tokens: one grant = access + refresh pair */
+const TOKENS = [];
+(() => {
+  let n = 0;
+  const hex = () => (Math.abs(Math.sin(++n * 9301 + 49297)) * 1e17).toString(16).replace(".", "").padEnd(12, "7").slice(0, 8);
+  const mk = (clientIdx, userIdx, status, created, scopes, vaults, used) => {
+    const grant = "g_" + hex();
+    for (const type of ["access", "refresh"]) {
+      const st = type === "access" && status === "active" && created > 1 * H ? "expired" : status;
+      TOKENS.push({ id: hex() + "-" + hex().slice(0, 4) + "-4" + hex().slice(0, 3) + "-" + hex().slice(0, 4) + "-" + hex() + hex().slice(0, 4), grant, type, clientId: CLIENTS[clientIdx].clientId, userId: ACCOUNTS[userIdx].id, resource: "https://obsidian.example.com/mcp", scopes, vaults, status: type === "refresh" ? status : st, createdAt: ago(created), lastUsed: used == null ? null : { at: ago(used), ip: userIdx === 1 ? "198.51.100.8" : "192.168.1.24" } });
+    }
+  };
+  mk(0, 0, "revoked", 40 * M, ["obsidian.read", "obsidian.write"], ["vault", "research"], 9 * M);
+  mk(2, 0, "active", 3 * H, ["obsidian.read", "obsidian.write", "obsidian.files"], ["vault"], 36 * M);
+  mk(1, 1, "active", 2 * D, ["obsidian.read"], ["research"], 3 * D);
+  mk(0, 0, "rotated", 1 * D, ["obsidian.read", "obsidian.write"], ["vault", "research"], 1 * D);
+  mk(0, 0, "rotated", 2 * D, ["obsidian.read", "obsidian.write"], ["vault", "research"], 2 * D);
+  mk(2, 0, "revoked", 6 * D, ["obsidian.read"], ["vault"], 6 * D);
+  mk(1, 1, "rotated", 9 * D, ["obsidian.read"], ["research"], 9 * D);
+  mk(1, 2, "revoked", 5 * D, ["obsidian.read"], ["vault"], null);
+})();
+
+const PUBLISHES = [
+  { id: "pZ8kq2Lm4Rt7", vault: "vault", path: "Projects/Alpha.md", title: "Alpha 项目简报", status: "active", by: { kind: "client", name: "Claude Desktop", user: "alice" }, at: ago(3 * D), views: 41 },
+  { id: "vN3xw9Bc1Hs5", vault: "research", path: "Reading/2026 Q3 reading list.md", title: "2026 Q3 书单", status: "active", by: { kind: "key", name: "Research bot" }, at: ago(8 * D), views: 7 },
+  { id: "tQ6yd0Fe2Jk8", vault: "vault", path: "Drafts/Old idea.md", title: "Old idea", status: "orphaned", by: { kind: "client", name: "Cursor IDE", user: "alice" }, at: ago(20 * D), views: 2 },
+];
+
+/* audit — action keys mirror server keys; zh labels for display */
+const ACTIONS = {
+  "admin.login": ["管理员登录", "管理"], "admin.logout": ["管理员退出", "管理"], "audit.clear": ["清空审计日志", "管理"],
+  "oauth.authorize": ["OAuth 同意授权", "OAuth"], "oauth.token": ["签发 Token", "OAuth"], "oauth.refresh": ["刷新 Token", "OAuth"], "oauth.register": ["注册客户端", "OAuth"],
+  "oauth.client.transfer.begin": ["发起授权转移", "OAuth"], "oauth.user.password": ["重置账户密码", "管理"], "oauth.user.create": ["创建 OAuth 账户", "管理"],
+  "apikey.create": ["创建 API Key", "管理"], "authz.policy.update": ["修改定时授权", "管理"],
+  "mcp.initialize": ["MCP 连接", "MCP"], "mcp.tools/call": ["MCP 工具调用", "MCP"], "mcp.notifications/initialized": ["MCP 初始化完成", "MCP"], "mcp.resources/read": ["MCP 读取资源", "MCP"],
+  "web.login": ["Web 登录", "Web"], "publish.create": ["发布文档", "Web"], "authz.denied": ["定时授权拒绝", "MCP"],
+};
+const CRED_KIND = { "oauth-access": "OAuth Token", "oauth-refresh": "刷新 Token", "api-key": "API Key", "admin-session": "管理会话", "none": "匿名" };
+const UAS = {
+  claude: "Claude-User/1.0 (Macintosh; Intel Mac OS X 10_15_7) node-fetch/3.3.2 mcp-remote/0.1.29",
+  chatgpt: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)",
+  cursor: "Cursor/1.7.38 (darwin arm64) @modelcontextprotocol/sdk/1.18.0",
+  undici: "undici", browser: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36",
+  bot: "research-bot/0.4 python-httpx/0.27.2",
+};
+const AUDIT = [];
+(() => {
+  const C = CLIENTS, A = ACCOUNTS, K = KEYS;
+  const ev = (minAgo, action, ok, cred, extra = {}) => AUDIT.push({ id: "au_" + (1000 + AUDIT.length), at: ago(minAgo * M), action, ok, cred, origin: "obsidian.example.com", ...extra });
+  const claude = { kind: "oauth-access", client: C[0].clientId, user: A[0].id };
+  const cursor = { kind: "oauth-access", client: C[2].clientId, user: A[0].id };
+  const gpt = { kind: "oauth-access", client: C[1].clientId, user: A[1].id };
+  const nas = { kind: "api-key", key: K[2].id }, bot = { kind: "api-key", key: K[1].id }, env = { kind: "api-key", key: "configured-env" };
+  const adm = { kind: "admin-session" }, none = { kind: "none" };
+  ev(1, "mcp.tools/call", true, nas, { tool: "write_note", src: "192.168.1.5", ua: UAS.undici, agent: "undici" });
+  ev(4, "mcp.tools/call", true, nas, { tool: "list_notes", src: "192.168.1.5", ua: UAS.undici, agent: "undici" });
+  ev(9, "mcp.tools/call", true, claude, { tool: "search_notes", src: "192.168.1.24", ua: UAS.claude, agent: "Claude Desktop" });
+  ev(11, "mcp.resources/read", true, claude, { tool: "vault://notes/Inbox.md", src: "192.168.1.24", ua: UAS.claude, agent: "Claude Desktop" });
+  ev(18, "authz.denied", false, bot, { tool: "get_note", src: "10.0.0.31", ua: UAS.bot, agent: "research-bot", reason: "定时授权「Research bot 工作时间」：当前不在允许窗口（周六）" });
+  ev(25, "mcp.tools/call", true, env, { tool: "git_status", src: "127.0.0.1", ua: UAS.claude, agent: "Claude Code" });
+  ev(36, "mcp.tools/call", true, cursor, { tool: "get_note", src: "192.168.1.24", ua: UAS.cursor, agent: "Cursor IDE" });
+  ev(41, "oauth.refresh", true, { kind: "oauth-refresh", client: C[0].clientId, user: A[0].id }, { src: "192.168.1.24", ua: UAS.claude });
+  ev(50, "oauth.client.transfer.begin", true, adm, { src: "192.168.1.24", ua: UAS.browser, detail: "Claude Desktop：alice → audit-user（待重新授权）" });
+  ev(52, "admin.login", true, adm, { src: "192.168.1.24", ua: UAS.browser });
+  ev(58, "admin.login", false, none, { src: "198.51.100.7", ua: "python-requests/2.32.3", reason: "管理密码错误" });
+  ev(59, "admin.login", false, none, { src: "198.51.100.7", ua: "python-requests/2.32.3", reason: "管理密码错误" });
+  ev(61, "admin.login", false, none, { src: "198.51.100.7", ua: "python-requests/2.32.3", reason: "管理密码错误" });
+  ev(95, "mcp.initialize", true, cursor, { src: "192.168.1.24", ua: UAS.cursor, agent: "Cursor IDE" });
+  ev(96, "mcp.notifications/initialized", true, cursor, { src: "192.168.1.24", ua: UAS.cursor, agent: "Cursor IDE" });
+  ev(180, "oauth.token", true, cursor, { src: "192.168.1.24", ua: UAS.cursor });
+  ev(181, "oauth.authorize", true, { kind: "admin-session", user: A[0].id, client: C[2].clientId }, { src: "192.168.1.24", ua: UAS.browser, detail: "alice 同意 Cursor IDE：读取、写入、文件 · vault" });
+  ev(240, "mcp.tools/call", false, gpt, { tool: "write_note", src: "198.51.100.8", ua: UAS.chatgpt, agent: "ChatGPT Connector", reason: "权限不足：缺少「写入」" });
+  ev(300, "web.login", true, { kind: "none", user: A[0].id }, { src: "192.168.1.24", ua: UAS.browser });
+  ev(420, "publish.create", true, claude, { tool: "Projects/Alpha.md", src: "192.168.1.24", ua: UAS.claude, agent: "Claude Desktop" });
+  ev(19 * 60, "mcp.tools/call", true, bot, { tool: "search_notes", src: "10.0.0.31", ua: UAS.bot, agent: "research-bot" });
+  ev(26 * 60, "oauth.token", false, { kind: "oauth-refresh", client: C[1].clientId, user: A[2].id }, { src: "198.51.100.8", ua: UAS.chatgpt, reason: "刷新 Token 已撤销" });
+  ev(30 * 60, "authz.policy.update", true, adm, { src: "192.168.1.24", ua: UAS.browser, detail: "Research bot 工作时间 · 修订 3" });
+  ev(48 * 60, "oauth.register", true, none, { src: "127.0.0.1", ua: "node", detail: "未命名客户端（localhost:6274）" });
+  ev(3 * 24 * 60, "mcp.tools/call", true, gpt, { tool: "search_notes", src: "198.51.100.8", ua: UAS.chatgpt, agent: "ChatGPT Connector" });
+  ev(5 * 24 * 60, "oauth.user.create", true, adm, { src: "192.168.1.24", ua: UAS.browser, detail: "audit-user" });
+  for (let i = 0; i < 22; i++) ev(6 * 24 * 60 + i * 97, i % 5 === 3 ? "oauth.refresh" : "mcp.tools/call", i % 9 !== 4, i % 2 ? nas : claude, { tool: ["list_notes", "get_note", "search_notes", "write_note"][i % 4], src: i % 2 ? "192.168.1.5" : "192.168.1.24", ua: i % 2 ? UAS.undici : UAS.claude, agent: i % 2 ? "undici" : "Claude Desktop", reason: i % 9 === 4 ? "笔记不存在" : undefined });
+})();
+
+/* AuthZ — capability catalog (scope / toolset / tool / resource) */
+const CAPS = [
+  { g: "all", name: "全部能力", items: [{ k: "all", n: "全部", d: "所有 Scope、工具与资源" }] },
+  { g: "scope", name: "权限范围", items: SCOPES.map((s) => ({ k: "scope:" + s.key, n: s.name, d: s.desc })) },
+  { g: "toolset", name: "工具集", items: [
+    { k: "toolset:notes", n: "笔记", d: "读写、移动、删除笔记" }, { k: "toolset:search", n: "检索", d: "关键词 / 语义检索" },
+    { k: "toolset:files", n: "文件", d: "附件上传与下载" }, { k: "toolset:git", n: "Git", d: "提交、推送、日志" },
+    { k: "toolset:publish", n: "发布", d: "公开分享笔记" }, { k: "toolset:memory", n: "记忆", d: "capture / recall" } ] },
+  { g: "tool", name: "单个工具", items: [
+    { k: "tool:get_note", n: "读取笔记" }, { k: "tool:write_note", n: "写入笔记" }, { k: "tool:delete_note", n: "删除笔记" },
+    { k: "tool:list_notes", n: "列出笔记" }, { k: "tool:search_notes", n: "搜索笔记" }, { k: "tool:git_commit", n: "Git 提交" },
+    { k: "tool:git_push", n: "Git 推送" }, { k: "tool:manage_publish", n: "管理发布" } ] },
+  { g: "resource", name: "资源", items: [{ k: "resource:vault://notes", n: "笔记资源" }, { k: "resource:vault://files", n: "文件资源" }] },
+];
+const TIMEZONES = ["Asia/Shanghai", "Asia/Tokyo", "Asia/Singapore", "Europe/London", "Europe/Berlin", "America/New_York", "America/Los_Angeles", "UTC"];
+const POLICIES = [
+  { id: "4f2a9c1e-7b3d-4e86-a0f5-9d1c2b8e6a73", label: "Research bot 工作时间", mode: "suspend", enabled: true, timezone: "Asia/Shanghai", startsAt: "", expiresAt: "",
+    weekly: [1, 2, 3, 4, 5].map((day) => ({ day, from: "09:00", to: "18:00" })), dateRanges: [], subjects: ["api-key:" + KEYS[1].id], capabilities: ["scope:obsidian.read", "toolset:search"], updatedAt: ago(30 * H) },
+  { id: "b81e3d07-c5a2-4f9b-8e64-1a7d0c3f2e95", label: "ChatGPT 仅限国庆后试用", mode: "revoke", enabled: true, timezone: "Asia/Shanghai", startsAt: "2026-10-08T09:00", expiresAt: "2026-10-31T23:59",
+    weekly: [], dateRanges: [], subjects: ["oauth-client:" + CLIENTS[1].clientId, "oauth-user:" + ACCOUNTS[1].id], capabilities: ["all"], updatedAt: ago(4 * D) },
+  { id: "e7c40b9d-2a18-4d5e-b3f6-08a9e1c7d254", label: "NAS 同步夜间窗口", mode: "suspend", enabled: false, timezone: "Asia/Shanghai", startsAt: "", expiresAt: "",
+    weekly: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, from: "01:00", to: "06:00" })), dateRanges: [{ from: "2026-10-01", to: "2026-10-07" }], subjects: ["api-key:" + KEYS[2].id, "api-key:5a0d7f3e-orphan"], capabilities: ["toolset:git", "tool:write_note"], updatedAt: ago(9 * D) },
+];
+const AUTHZ = { enabled: true, revision: 3 };
+</script>
+<script>
+"use strict";
+// ---------------------------------------------------------------- helpers
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const ic = (n, cls = "") => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
+const fut = (src) => `<span class="fut" title="规划中，尚未实现">规划中${src ? " · " + esc(src) : ""}</span>`;
+const pad = (n) => String(n).padStart(2, "0");
+function rel(iso) {
+  if (!iso) return "—";
+  const d = NOW - new Date(iso);
+  if (d < 60e3) return "刚刚";
+  if (d < H) return Math.round(d / M) + " 分钟前";
+  if (d < D) return Math.round(d / H) + " 小时前";
+  if (d < 30 * D) return Math.round(d / D) + " 天前";
+  return fmtDate(iso);
+}
+const sh = (iso) => new Date(new Date(iso).getTime() + 8 * H); // display in Asia/Shanghai regardless of host tz
+function fmtDate(iso) { const t = sh(iso); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; }
+function fmt(iso) { if (!iso) return "—"; const t = sh(iso); return `${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())} ${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}`; }
+function fmtFull(iso) { if (!iso) return "—"; const t = sh(iso); return `${fmtDate(iso)} ${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}:${pad(t.getUTCSeconds())}`; }
+const short = (id) => (id && id.length > 12 ? id.slice(0, 8) + "…" : id || "");
+const idc = (id, label) => `<button class="idc" data-copy="${esc(id)}" title="${esc(id)} · 点击复制">${esc(label ?? short(id))}${ic("copy")}</button>`;
+const scopeName = (k) => SCOPES.find((s) => s.key === k)?.name ?? k;
+const vaultLabel = (id) => VAULTS.find((v) => v.id === id)?.label ?? id;
+const scopeTags = (arr) => arr.length === SCOPES.length ? `<span class="tag">全部权限</span>` : arr.map((k) => `<span class="tag" title="${esc(k)}">${esc(scopeName(k))}</span>`).join("");
+const vaultTags = (arr) => arr.map((v) => `<span class="tag acc" title="Vault id: ${esc(v)}">${esc(v)}</span>`).join("");
+const acct = (id) => ACCOUNTS.find((a) => a.id === id);
+const acctName = (a) => (a ? a.displayName || a.username : "已删除 / 未知");
+const client = (id) => CLIENTS.find((c) => c.clientId === id);
+const clientName = (c) => (c ? c.clientName || "未命名客户端" : "已删除 / 未知");
+const keyOf = (id) => KEYS.find((k) => k.id === id);
+const keyName = (k) => (k ? k.label || "未命名 Key" : "已删除 / 未知");
+const linkedAccounts = (cid) => [...new Set(TOKENS.filter((t) => t.clientId === cid && t.status === "active").map((t) => t.userId))].map(acct).filter(Boolean);
+const linkedClients = (uid) => [...new Set(TOKENS.filter((t) => t.userId === uid && t.status === "active").map((t) => t.clientId))].map(client).filter(Boolean);
+const TOKEN_ST = { active: ["有效", "ok"], rotated: ["已轮换", "off"], revoked: ["已撤销", "danger"], expired: ["已过期", "off"] };
+const stTag = (s) => { const [l, c] = TOKEN_ST[s]; return `<span class="st ${c}" title="${s}"><span class="dot"></span>${l}</span>`; };
+const MODE = { suspend: { n: "暂停", d: "窗口外暂停访问，已有会话与授权保留，回到窗口内自动恢复" }, revoke: { n: "撤销", d: "窗口外撤销该主体的全部授权与会话，需重新授权；能力必须为「全部」" } };
+const DAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const KIND_LABEL = { "api-key": "API Key", "oauth-client": "OAuth 客户端", "oauth-user": "OAuth 账户" };
+
+/* subject view-model (#455)：名称 + 类型 + 缩略 id；未命名 / 已删除 两种区分 */
+function subjectView(s) {
+  const i = s.indexOf(":"), kind = s.slice(0, i), id = s.slice(i + 1);
+  let name = null, missing = false, sub = "";
+  if (kind === "api-key") {
+    if (id === "configured-env") { name = "环境配置 API_KEY"; sub = "部署环境变量"; }
+    else { const k = keyOf(id); if (!k) missing = true; else name = k.label || null; sub = k?.prefix ? k.prefix + "…" : ""; }
+  } else if (kind === "oauth-client") {
+    const c = client(id); if (!c) missing = true; else { name = c.clientName || null; sub = linkedAccounts(id).map(acctName).join("、"); }
+  } else if (kind === "oauth-user") {
+    const a = acct(id); if (!a) missing = true; else { name = a.displayName || a.username; sub = a.displayName ? a.username : ""; }
+  }
+  return { s, kind, id, kindLabel: KIND_LABEL[kind] ?? kind, name: missing ? "已删除 / 未知" : name ?? "未命名", unnamed: !missing && !name, missing, sub, shortId: id === "configured-env" ? id : short(id) };
+}
+function subjectCell(s) {
+  const v = subjectView(s);
+  return `<div class="nm"><b class="${v.missing ? "muted" : ""}" style="${v.unnamed || v.missing ? "font-style:italic;font-weight:400" : ""}">${esc(v.name)}</b><span class="sub2"><span class="kind">${esc(v.kindLabel)}</span>${idc(v.s, v.shortId)}</span></div>`;
+}
+function capName(k) { for (const g of CAPS) for (const it of g.items) if (it.k === k) return it.n; return k; }
+const capTags = (arr) => arr.map((k) => `<span class="tag ${k === "all" ? "amber" : ""}" title="${esc(k)}">${esc(capName(k))}</span>`).join("");
+
+/* window semantics (#434)：摘要文本 */
+function windowSummary(p) {
+  const parts = [];
+  if (p.weekly.length) {
+    const byRange = {};
+    for (const w of p.weekly) (byRange[w.from + "–" + w.to] ??= []).push(w.day);
+    for (const [r, days] of Object.entries(byRange)) {
+      const ds = days.sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+      let dl = ds.map((d) => DAYS[d]).join("、");
+      const key = ds.join(",");
+      if (key === "1,2,3,4,5") dl = "工作日"; else if (ds.length === 7) dl = "每天"; else if (key === "6,0") dl = "周末";
+      parts.push(`${dl} ${r}`);
+    }
+  } else parts.push("每天全天");
+  const marks = [];
+  if (p.startsAt) marks.push(p.startsAt.slice(5, 10).replace("-", "/") + " 起");
+  if (p.expiresAt) marks.push("至 " + p.expiresAt.slice(5, 10).replace("-", "/"));
+  for (const r of p.dateRanges) marks.push(`限 ${r.from.slice(5).replace("-", "/")}–${r.to.slice(5).replace("-", "/")}`);
+  return { text: parts.join("；"), marks };
+}
+/* is-allowed-now evaluation for preview (prototype logic, policy tz = Asia/Shanghai only) */
+function inWindow(p, t = NOW) {
+  const local = sh(t.toISOString()), day = local.getUTCDay(), hm = pad(local.getUTCHours()) + ":" + pad(local.getUTCMinutes()), dstr = fmtDate(t.toISOString());
+  const ldt = dstr + "T" + hm;
+  if (p.startsAt && ldt < p.startsAt) return { ok: false, why: "尚未到生效起点" };
+  if (p.expiresAt && ldt > p.expiresAt) return { ok: false, why: "已过失效终点" };
+  if (p.dateRanges.length && !p.dateRanges.some((r) => dstr >= r.from && dstr <= r.to)) return { ok: false, why: "今天不在限定日期内" };
+  if (p.weekly.length && !p.weekly.some((w) => w.day === day && hm >= w.from && hm < w.to)) return { ok: false, why: `${DAYS[day]} ${hm} 不在每周窗口内` };
+  return { ok: true, why: "在允许窗口内" };
+}
+function timeline(p) {
+  const today = sh(NOW.toISOString()).getUTCDay(), nowPct = ((sh(NOW.toISOString()).getUTCHours() * 60 + sh(NOW.toISOString()).getUTCMinutes()) / 1440) * 100;
+  const toPct = (s) => { const [h, m] = s.split(":").map(Number); return ((h * 60 + m) / 1440) * 100; };
+  let rows = "";
+  for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+    const ws = p.weekly.length ? p.weekly.filter((w) => w.day === d && w.to > w.from) : [{ from: "00:00", to: "24:00" }];
+    rows += `<span class="${d === today ? "today" : ""}">${DAYS[d].slice(1)}</span><div class="tr">${ws.map((w) => `<div class="w" style="left:${toPct(w.from)}%;width:${toPct(w.to) - toPct(w.from)}%" title="${w.from}–${w.to}"></div>`).join("")}${d === today ? `<div class="now" style="left:${nowPct}%" title="现在"></div>` : ""}</div>`;
+  }
+  return `<div class="tl">${rows}<span></span><div class="ax"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
+}
+
+// ---------------------------------------------------------------- shared bits
+const pageBar = (title, extra = "", cnt = "") => `<header class="bar"><button class="ibtn mobile-only" data-act="mmenu" aria-label="菜单" style="display:none">${ic("menu")}</button><h1>${title}${cnt !== "" ? `<span class="cnt">${cnt}</span>` : ""}</h1><span class="grow"></span>${extra}</header>`;
+const searchBox = (ph, val, key) => `<label class="search">${ic("search")}<input data-search="${key}" placeholder="${esc(ph)}" value="${esc(val || "")}"><kbd>/</kbd></label>`;
+const moreBtn = (kind, id) => `<button class="ibtn" data-menu="${kind}" data-id="${esc(id)}" aria-label="更多操作" title="更多操作">${ic("more")}</button>`;
+const emptyState = (icn, title, desc, action = "") => `<div class="empty"><div class="ic">${ic(icn)}</div><b>${title}</b><span>${desc}</span>${action}</div>`;
+function table(cols, rows, empty) {
+  if (!rows.length) return `<div class="tw">${empty}</div>`;
+  return `<div class="tw hide-m"><table class="tbl"><colgroup>${cols.map((c) => `<col${c[1] ? ` style="width:${c[1]}"` : ""}>`).join("")}</colgroup><thead><tr>${cols.map((c) => `<th class="${c[2] || ""}">${c[0]}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+}
+const mcards = (cards) => (cards.length ? `<div class="mcards">${cards.join("")}</div>` : "");
+
+// ---------------------------------------------------------------- login
+function renderLogin() {
+  const locked = S.loginLocked;
+  return `<div class="login"><form class="box" data-form="login">
+  <h1><svg class="logo" style="width:28px;height:28px"><use href="#logo"/></svg>Obsidian MCP 授权管理</h1>
+  <div class="fld"><label for="pw">管理密码</label><div class="pw"><input class="inp" id="pw" type="password" autocomplete="current-password" ${locked ? "disabled" : ""} style="height:40px"><button type="button" class="ibtn" data-act="pwtoggle" style="top:6px" aria-label="显示密码">${ic("eye")}</button></div>
+  ${locked ? `<span class="lock-note">连续失败次数过多，已临时锁定，请 15 分钟后再试</span>` : S.loginErr ? `<span class="lock-note">密码不正确</span>` : ""}</div>
+  <button class="btn primary" ${locked ? "disabled" : ""}>登录</button>
+  <p class="help" style="margin:0">这里使用独立的管理密码，<b class="tx2" style="font-weight:600">不接受</b> OAuth 账户密码、API Key 或 Token。</p>
+  <div class="foot"><span>部署版本 <span class="mono">${VERSION}</span></span><a href="#/web" onclick="return false">进入 Obsidian Web ${ic("ext", "xs")}</a></div>
+  </form></div>`;
+}
+
+// ---------------------------------------------------------------- overview (#462)
+function renderOverview() {
+  const active = TOKENS.filter((t) => t.status === "active" && t.type === "refresh");
+  const fails24 = AUDIT.filter((a) => !a.ok && NOW - new Date(a.at) < D);
+  const pending = CLIENTS.filter((c) => c.transfer).length;
+  const disabled = ACCOUNTS.filter((a) => !a.enabled).length;
+  const retired = PUBLISHES.filter((p) => p.status !== "active").length;
+  const unused = KEYS.filter((k) => !k.lastUsed).length;
+  const stat = (href, icn, t, n, d) => `<a class="stat" href="#/${href}"><span class="t">${ic(icn)}${t}</span><span class="n">${n}</span><span class="d">${d}</span></a>`;
+  const stats = [
+    stat("accounts", "user", "OAuth 账户", ACCOUNTS.length, disabled ? `<span class="w">${disabled} 个已停用</span>` : "全部启用"),
+    stat("keys", "key", "API Key", KEYS.length, unused ? `${unused} 个从未调用` : "均有调用"),
+    stat("clients", "app", "OAuth 客户端", CLIENTS.length, pending ? `<span class="w">${pending} 个转移待完成</span>` : "无待处理"),
+    stat("tokens", "ticket", "有效授权", active.length, `共 ${TOKENS.length / 2} 次授权记录`),
+    stat("publish", "globe", "已发布文档", PUBLISHES.filter((p) => p.status === "active").length, retired ? `<span class="w">${retired} 条已失效待清理</span>` : "无失效记录"),
+    stat("audit?outcome=failure", "list", "审计记录", AUDIT.length, fails24.length ? `<span class="w">24 小时内 ${fails24.length} 次失败</span>` : "24 小时内无失败"),
+    stat("authz", "cal", "定时授权", POLICIES.filter((p) => p.enabled).length + " / " + POLICIES.length, AUTHZ.enabled ? "已启用策略 / 全部" : "AuthZ 总开关关闭"),
+    stat("vaults", "db", "Vault", VAULTS.length, `${VAULTS.filter((v) => v.git.enabled).length} 个启用 Git`),
+  ];
+  const att = [];
+  if (pending) att.push(`<a class="li" href="#/clients/${CLIENTS[0].clientId}"><span class="dot amber"></span><b>Claude Desktop 授权转移待完成</b><span class="ell">等待 audit-user 重新授权</span><span class="r">${rel(CLIENTS[0].transfer.at)}</span></a>`);
+  const brute = AUDIT.filter((a) => a.action === "admin.login" && !a.ok);
+  if (brute.length) att.push(`<a class="li" href="#/audit?outcome=failure&action=admin.login"><span class="dot danger"></span><b>管理登录失败 ${brute.length} 次</b><span class="ell mono">${brute[0].src}</span><span class="r">${rel(brute[0].at)}</span></a>`);
+  if (retired) att.push(`<a class="li" href="#/publish"><span class="dot amber"></span><b>${retired} 条发布记录已失效</b><span class="ell">源笔记已删除，可撤销清理</span></a>`);
+  att.push(`<a class="li" href="#/vaults/research"><span class="dot"></span><b>research 未初始化 Git 仓库</b><span class="ell">版本历史仅保存在本机</span></a>`);
+  const fails = AUDIT.filter((a) => !a.ok).slice(0, 5).map((a) => `<a class="li" href="#/audit?outcome=failure&focus=${a.id}"><span class="dot danger"></span><b class="nowrap">${esc(ACTIONS[a.action]?.[0] ?? a.action)}</b><span class="ell">${esc(credLabel(a))}${a.reason ? " · " + esc(a.reason) : ""}</span><span class="r">${rel(a.at)}</span></a>`).join("");
+  const health = `<div class="kv">
+    <div class="k">定时授权</div><div>${AUTHZ.enabled ? `<span class="st ok"><span class="dot"></span>已启用</span> <span class="muted">· ${POLICIES.filter((p) => p.enabled).length} 条策略生效</span>` : `<span class="st off"><span class="dot"></span>未启用</span>`} ${fut("Stage 5")}</div>
+    ${VAULTS.map((v) => `<div class="k">${esc(v.id)}</div><div>${gitState(v)}</div>`).join("")}
+    <div class="k">部署版本</div><div><span class="mono">${VERSION}</span> <span class="muted">· main@3bc97da</span></div>
+    <div class="k futonly">上次部署</div><div class="futonly"><span class="muted">2026-10-05 · v2026.10.05.8</span> ${fut("部署信息")}</div>
+  </div>`;
+  return pageBar("概览") + `<div class="content scroll"><div class="page">
+  <div class="stats">${stats.join("")}</div>
+  <div class="ov2"><div><div class="sect"><div class="sect-h"><h2>需要关注</h2><span class="muted">${att.length}</span></div><div class="list">${att.join("")}</div></div>
+  <div class="sect"><div class="sect-h"><h2>最近失败</h2><span class="grow"></span><a href="#/audit?outcome=failure" class="btn ghost sm">查看全部 ${ic("chev", "xs")}</a></div><div class="list">${fails}</div></div></div>
+  <div><div class="sect"><div class="sect-h"><h2>运行状态</h2></div>${health}</div>
+  <div class="sect"><div class="sect-h"><h2>说明</h2></div><p class="help" style="margin:0">Publish 管理只显示 Vault、路径和时间等元数据，不在管理端渲染正文。所有修改 OAuth 账户权限、改密的操作都会撤销该账户已有授权。</p></div></div></div>
+  </div></div>`;
+}
+function gitState(v) {
+  const r = v.repo;
+  if (!v.git.enabled && r.state === "norepo") return `<span class="st off"><span class="dot"></span>未初始化 Git 仓库</span>`;
+  if (r.state === "clean") return `<span class="st ok"><span class="dot"></span>已同步</span> <span class="muted">· 最近提交 ${rel(r.lastCommit)}</span>`;
+  if (r.state === "dirty") return `<span class="st amber"><span class="dot"></span>${r.pending.length} 个待提交</span>`;
+  return `<span class="st danger"><span class="dot"></span>配置错误</span>`;
+}
+function credLabel(a) {
+  const c = a.cred;
+  if (c.kind === "api-key") return "API Key · " + keyName(keyOf(c.key));
+  if (c.client) return clientName(client(c.client)) + (c.user ? " · " + acctName(acct(c.user)) : "");
+  if (c.user) return acctName(acct(c.user));
+  return CRED_KIND[c.kind];
+}
+
+// ---------------------------------------------------------------- accounts (#460)
+function renderAccounts() {
+  const q = (S.q.accounts || "").toLowerCase();
+  const list = ACCOUNTS.filter((a) => !q || (a.username + a.displayName).toLowerCase().includes(q));
+  const rows = list.map((a) => {
+    const lc = linkedClients(a.id);
+    return `<tr class="click ${a.enabled ? "" : "dim"} ${S.cur === a.id ? "cur" : ""}" data-open="account" data-id="${a.id}">
+    <td><div class="nm"><b>${esc(a.displayName || a.username)}</b><span class="sub2">${a.displayName ? `<span class="mono">${esc(a.username)}</span>` : `<span class="muted" style="font-style:italic">未设置显示名</span>`}${idc(a.id)}</span></div></td>
+    <td>${a.enabled ? `<span class="st ok"><span class="dot"></span>启用</span>` : `<span class="st off"><span class="dot"></span>已停用</span>`}</td>
+    <td><div class="tags">${scopeTags(a.scopes)}${vaultTags(a.vaults)}</div></td>
+    <td class="cellt">${lc.length ? lc.map((c) => `<a href="#/clients/${c.clientId}" data-stop>${esc(clientName(c))}</a>`).join("、") : `<span class="muted">—</span>`}</td>
+    <td class="cellt">${a.lastLogin ? `${rel(a.lastLogin.at)} <span class="muted mono">${a.lastLogin.ip}</span>` : `<span class="muted">从未登录</span>`}</td>
+    <td class="cellt muted">${fmtDate(a.createdAt)}</td>
+    <td class="act">${moreBtn("account", a.id)}</td></tr>`;
+  });
+  const cards = list.map((a) => `<div class="mc" data-open="account" data-id="${a.id}"><div class="b"><div class="nm"><b>${esc(a.displayName || a.username)}</b><span class="sub2">${esc(a.username)}${a.enabled ? "" : " · 已停用"}</span></div><div class="tags">${scopeTags(a.scopes)}${vaultTags(a.vaults)}</div><div class="meta"><span>${a.lastLogin ? "登录 " + rel(a.lastLogin.at) : "从未登录"}</span><span>${linkedClients(a.id).length} 个客户端</span></div></div>${moreBtn("account", a.id)}</div>`);
+  return pageBar("OAuth 账户", `<button class="btn primary" data-act="new-account">${ic("plus")}<span class="hide-m">新建账户</span></button>`, ACCOUNTS.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">账户用于客户端的 OAuth 同意页登录，与管理密码相互独立。</p>
+  <div class="toolbar">${searchBox("搜索用户名或显示名", S.q.accounts, "accounts")}</div>
+  ${table([["账户", "24%"], ["状态", "10%"], ["权限上限 · Vault", "24%"], ["已授权客户端", "16%"], ["最后登录", "14%"], ["创建", "10%"], ["", "", "act"]], rows, emptyState("user", q ? "没有匹配的账户" : "还没有 OAuth 账户", q ? "换个关键词试试" : "创建账户后，用户即可在客户端的授权页登录", q ? "" : `<button class="btn primary" data-act="new-account">${ic("plus")}新建账户</button>`))}${mcards(cards)}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- api keys (#459 #460)
+function renderKeys() {
+  const q = (S.q.keys || "").toLowerCase();
+  const list = KEYS.filter((k) => !q || (k.label + (k.prefix || "")).toLowerCase().includes(q));
+  const rows = list.map((k) => `<tr class="click ${S.cur === k.id ? "cur" : ""}" data-open="key" data-id="${k.id}">
+    <td><div class="nm"><b style="${k.label ? "" : "font-style:italic;font-weight:400;color:var(--tx2)"}">${esc(keyName(k))}</b><span class="sub2">${k.env ? `<span class="kind">环境变量</span><span class="muted">由部署 .env 提供</span>` : `<span class="mono">${esc(k.prefix)}…</span>${idc(k.id)}`}</span></div></td>
+    <td><div class="tags">${scopeTags(k.scopes)}${vaultTags(k.vaults)}</div></td>
+    <td class="cellt">${k.lastUsed ? `${rel(k.lastUsed.at)} <span class="muted">· ${esc(k.lastUsed.agent)}</span>` : `<span class="muted">从未调用</span>`}</td>
+    <td class="cellt mono muted">${k.lastUsed?.ip ?? "—"}</td>
+    <td class="cellt muted">${k.env ? "随部署" : fmtDate(k.createdAt)}</td>
+    <td class="act">${k.env ? `<span class="ibtn" title="环境配置 Key 只读：在受保护的 .env 中轮换">${ic("lock")}</span>` : moreBtn("key", k.id)}</td></tr>`);
+  const cards = list.map((k) => `<div class="mc" data-open="key" data-id="${k.id}"><div class="b"><div class="nm"><b>${esc(keyName(k))}</b><span class="sub2">${k.env ? "环境变量 · 只读" : esc(k.prefix) + "…"}</span></div><div class="tags">${scopeTags(k.scopes)}${vaultTags(k.vaults)}</div><div class="meta"><span>${k.lastUsed ? "调用 " + rel(k.lastUsed.at) : "从未调用"}</span></div></div>${k.env ? "" : moreBtn("key", k.id)}</div>`);
+  return pageBar("API Key", `<button class="btn primary" data-act="new-key">${ic("plus")}<span class="hide-m">新建 Key</span></button>`, KEYS.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">每个 Key 独立设置权限范围与可访问的 Vault。Key 明文只在创建时显示一次。</p>
+  ${S.flashKey ? `<div class="banner amber">${ic("key")}<div style="flex:1;min-width:0"><b>新 Key「${esc(S.flashKey.label)}」已创建，明文仅显示这一次</b><div class="secret" style="margin-top:8px"><span class="grow">${esc(S.flashKey.secret)}</span><button class="btn sm" data-copy="${esc(S.flashKey.secret)}">${ic("copy")}复制</button></div><span class="help">离开或刷新本页后将无法再次查看；遗失请删除后重新创建。</span></div><button class="ibtn" data-act="dismiss-flash">${ic("x")}</button></div>` : ""}
+  <div class="toolbar">${searchBox("搜索备注或前缀", S.q.keys, "keys")}</div>
+  ${table([["名称 / 前缀", "26%"], ["权限 · Vault", "26%"], ["最后调用", "20%"], ["来源", "12%"], ["创建", "10%"], ["", "", "act"]], rows, emptyState("key", "没有匹配的 Key", "换个关键词试试"))}${mcards(cards)}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- clients (#459 #364)
+function renderClients() {
+  const q = (S.q.clients || "").toLowerCase();
+  const list = CLIENTS.filter((c) => !q || (clientName(c) + c.redirectUris.join(" ")).toLowerCase().includes(q));
+  const rows = list.map((c) => {
+    const la = linkedAccounts(c.clientId);
+    return `<tr class="click ${S.cur === c.clientId ? "cur" : ""}" data-open="client" data-id="${c.clientId}">
+    <td><div class="nm"><b style="${c.clientName ? "" : "font-style:italic;font-weight:400;color:var(--tx2)"}">${esc(clientName(c))}</b><span class="sub2">${idc(c.clientId)}</span></div></td>
+    <td class="cellt">${la.length ? la.map((a) => `<a href="#/accounts/${a.id}" data-stop>${esc(acctName(a))}</a>`).join("、") : `<span class="muted">无有效授权</span>`}${c.transfer ? `<div><span class="tag amber" title="已撤销原账户授权，等待目标账户在客户端重新同意">转移中 → ${esc(acctName(acct(c.transfer.to)))}</span></div>` : ""}</td>
+    <td class="cellt">${c.domains.length ? c.domains.map((d) => `<span title="来源：${d.src.join("、")}">${esc(d.host)}</span>`).join("") : `<span class="muted">—</span>`}</td>
+    <td class="cellt">${c.lastCall ? `${rel(c.lastCall.at)} <span class="muted mono">${c.lastCall.ip}</span>` : `<span class="muted">从未调用</span>`}</td>
+    <td class="cellt mono muted" title="${esc(c.redirectUris.join("\n"))}">${esc(c.redirectUris[0].replace(/^https?:\/\//, ""))}${c.redirectUris.length > 1 ? ` <span class="tag">+${c.redirectUris.length - 1}</span>` : ""}</td>
+    <td class="act">${moreBtn("client", c.clientId)}</td></tr>`;
+  });
+  const cards = list.map((c) => `<div class="mc" data-open="client" data-id="${c.clientId}"><div class="b"><div class="nm"><b>${esc(clientName(c))}</b><span class="sub2">${linkedAccounts(c.clientId).map(acctName).join("、") || "无有效授权"}</span></div>${c.transfer ? `<span><span class="tag amber">转移中 → ${esc(acctName(acct(c.transfer.to)))}</span></span>` : ""}<div class="meta"><span>${c.lastCall ? "调用 " + rel(c.lastCall.at) : "从未调用"}</span></div></div>${moreBtn("client", c.clientId)}</div>`);
+  return pageBar("OAuth 客户端", "", CLIENTS.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">客户端通过动态注册（DCR）自动出现。连接域名来自实际授权与调用，不从回调地址推测。</p>
+  <div class="toolbar">${searchBox("搜索客户端名称或回调地址", S.q.clients, "clients")}</div>
+  ${table([["客户端", "24%"], ["已授权账户", "22%"], ["连接域名", "18%"], ["最后调用", "16%"], ["回调地址", "20%"], ["", "", "act"]], rows, emptyState("app", "没有匹配的客户端", "换个关键词试试"))}${mcards(cards)}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- tokens (#459 #463)
+function renderTokens() {
+  const f = S.tokenFilter, order = S.tokenOrder;
+  const grants = {};
+  for (const t of TOKENS) (grants[t.grant] ??= []).push(t);
+  let gl = Object.values(grants).map((ts) => ({ ts, acc: ts.find((t) => t.type === "access"), ref: ts.find((t) => t.type === "refresh") }));
+  const gst = (g) => g.ref.status;
+  const counts = { all: gl.length, active: 0, rotated: 0, revoked: 0 };
+  gl.forEach((g) => counts[gst(g)]++);
+  if (f !== "all") gl = gl.filter((g) => gst(g) === f);
+  gl.sort((a, b) => (order === "asc" ? 1 : -1) * (new Date(a.ref.createdAt) - new Date(b.ref.createdAt)));
+  const rows = gl.map((g) => {
+    const t = g.ref, c = client(t.clientId), a = acct(t.userId);
+    return `<tr class="${t.status === "active" ? "" : "dim"}">
+    <td><div class="nm"><b>${esc(clientName(c))}</b><span class="sub2">${esc(acctName(a))}</span></div></td>
+    <td><div class="nm"><span class="cellt">访问 ${idc(g.acc.id)} ${g.acc.status === "active" ? "" : `<span class="muted">${TOKEN_ST[g.acc.status][0]}</span>`}</span><span class="cellt">刷新 ${idc(t.id)}</span></div></td>
+    <td><div class="tags">${scopeTags(t.scopes)}${vaultTags(t.vaults)}</div></td>
+    <td class="cellt">${t.lastUsed ? rel(t.lastUsed.at) + ` <span class="muted mono">${t.lastUsed.ip}</span>` : `<span class="muted">未使用</span>`}<div class="muted" title="${fmtFull(t.createdAt)}">签发 ${fmt(t.createdAt)}</div></td>
+    <td>${stTag(t.status)}</td>
+    <td class="act">${t.status === "active" ? moreBtn("token", t.grant) : ""}</td></tr>`;
+  });
+  const cards = gl.map((g) => { const t = g.ref; return `<div class="mc"><div class="b"><div class="nm"><b>${esc(clientName(client(t.clientId)))}</b><span class="sub2">${esc(acctName(acct(t.userId)))} · ${idc(t.id)}</span></div><div class="meta">${stTag(t.status)}<span>签发 ${rel(t.createdAt)}</span></div></div>${t.status === "active" ? moreBtn("token", t.grant) : ""}</div>`; });
+  const seg = [["all", "全部"], ["active", "有效"], ["rotated", "已轮换"], ["revoked", "已撤销"]].map(([k, l]) => `<button class="${f === k ? "on" : ""}" data-tokf="${k}">${l}<span class="n">${counts[k]}</span></button>`).join("");
+  return pageBar("OAuth Token", `<button class="btn" data-act="token-cleanup">${ic("trash")}<span class="hide-m">清理历史记录…</span></button>`, gl.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">一次授权（grant）包含访问 Token 与刷新 Token，按授权合并为一行。绑定域名：<span class="mono">obsidian.example.com</span>（来自 Token 的 resource）。</p>
+  <div class="toolbar"><div class="seg">${seg}</div><span class="grow"></span><select class="sel sm" data-act="tok-order" aria-label="排序"><option value="desc" ${order === "desc" ? "selected" : ""}>签发时间：从新到旧</option><option value="asc" ${order === "asc" ? "selected" : ""}>签发时间：从旧到新</option></select></div>
+  ${table([["客户端 · 账户", "22%"], ["Token（短 ID）", "22%"], ["权限 · Vault", "22%"], ["最后使用 · 签发", "18%"], ["状态", "10%"], ["", "", "act"]], rows, emptyState("ticket", "没有该状态的 Token", "切换上方筛选查看其他记录"))}${mcards(cards)}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- publish
+function renderPublish() {
+  const rows = PUBLISHES.map((p) => `<tr class="${p.status === "active" ? "" : "dim"}">
+    <td><div class="nm"><b>${esc(p.title)}</b><span class="sub2"><span class="tag acc">${esc(p.vault)}</span><span class="mono ell" title="${esc(p.path)}">${esc(p.path)}</span></span></div></td>
+    <td>${p.status === "active" ? `<span class="st ok"><span class="dot"></span>公开中</span>` : `<span class="st amber" title="orphaned：源笔记已不存在"><span class="dot"></span>已失效 · 源笔记不存在</span>`}</td>
+    <td class="cellt"><span class="mono">/publish/${esc(p.id.slice(0, 6))}…</span> <button class="ibtn" style="display:inline-grid;vertical-align:middle" data-copy="https://obsidian.example.com/publish/${p.id}" title="复制公开链接">${ic("link")}</button></td>
+    <td class="cellt">${esc(p.by.name)}${p.by.user ? ` <span class="muted">· ${esc(p.by.user)}</span>` : ""}<div class="muted">${p.by.kind === "key" ? "API Key" : "OAuth 客户端"}</div></td>
+    <td class="cellt">${rel(p.at)}<div class="muted futonly">${p.views} 次访问 ${fut("访问统计")}</div></td>
+    <td class="act">${moreBtn("publish", p.id)}</td></tr>`);
+  const cards = PUBLISHES.map((p) => `<div class="mc"><div class="b"><div class="nm"><b>${esc(p.title)}</b><span class="sub2">${esc(p.vault)} · ${esc(p.path)}</span></div><div class="meta">${p.status === "active" ? `<span class="st ok"><span class="dot"></span>公开中</span>` : `<span class="st amber"><span class="dot"></span>已失效</span>`}<span>${esc(p.by.name)}</span><span>${rel(p.at)}</span></div></div>${moreBtn("publish", p.id)}</div>`);
+  const retired = PUBLISHES.filter((p) => p.status !== "active").length;
+  return pageBar("发布文档", "", PUBLISHES.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">跨 Vault 统一管理匿名公开链接。仅展示元数据，不读取或渲染正文；只有「公开中」的文档可被匿名访问。</p>
+  ${retired ? `<div class="banner amber">${ic("alert")}<div><b>${retired} 条记录已失效</b>：源笔记被删除或不再是 Markdown，链接已无法访问。撤销即可清理记录。</div></div>` : ""}
+  ${table([["文档", "30%"], ["状态", "18%"], ["公开链接", "16%"], ["发布者", "16%"], ["发布时间", "14%"], ["", "", "act"]], rows, emptyState("globe", "还没有公开的文档", "在 Web 端或通过 MCP 发布笔记后会出现在这里"))}${mcards(cards)}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- audit (#458 #285)
+function auditFiltered() {
+  const f = S.audit;
+  return AUDIT.filter((a) => {
+    if (f.outcome === "success" && !a.ok) return false;
+    if (f.outcome === "failure" && a.ok) return false;
+    if (f.action && !(a.action.startsWith(f.action) || (ACTIONS[a.action]?.[1] ?? "") === f.action)) return false;
+    if (f.credential && a.cred.kind !== f.credential) return false;
+    if (f.origin && !a.origin.includes(f.origin)) return false;
+    if (f.source && !(a.src || "").includes(f.source)) return false;
+    if (f.q) { const q = f.q.toLowerCase(); if (!((a.tool || "") + " " + (a.ua || "") + " " + (ACTIONS[a.action]?.[0] ?? "") + " " + credLabel(a)).toLowerCase().includes(q)) return false; }
+    return true;
+  });
+}
+function renderAudit() {
+  const f = S.audit, list = auditFiltered(), ps = f.pageSize, pages = Math.max(1, Math.ceil(list.length / ps));
+  const pg = Math.min(f.page, pages), slice = list.slice((pg - 1) * ps, pg * ps);
+  const failN = list.filter((a) => !a.ok).length;
+  const rows = [];
+  for (const a of slice) {
+    const [al, cat] = ACTIONS[a.action] ?? [a.action, ""];
+    rows.push(`<tr class="click ${a.ok ? "" : "fail"} ${S.focus === a.id ? "cur" : ""}" data-ua="${a.id}">
+    <td class="cellt num" title="${fmtFull(a.at)}">${fmt(a.at)}</td>
+    <td>${a.ok ? `<span class="st ok"><span class="dot"></span>成功</span>` : `<span class="st danger"><span class="dot"></span>失败</span>`}</td>
+    <td><div class="nm"><span class="ell" title="${esc(a.action)}">${esc(al)}</span><span class="sub2">${esc(cat)}${a.tool ? ` · <span class="mono ell">${esc(a.tool)}</span>` : ""}</span></div></td>
+    <td><div class="nm"><span class="ell">${esc(credLabel(a))}</span><span class="sub2">${esc(CRED_KIND[a.cred.kind])}</span></div></td>
+    <td><div class="nm"><span class="ell">${esc(a.agent || "—")}</span><span class="sub2">${a.agent ? (a.cred.kind === "api-key" ? "由 UA 推测" : "客户端自报") : ""}</span></div></td>
+    <td class="cellt"><span class="mono">${esc(a.src || "—")}</span><div class="muted">${a.src === "127.0.0.1" ? "本机直连" : a.src?.startsWith("192.168") || a.src?.startsWith("10.") ? "内网" : "公网"}</div></td>
+    <td class="act"><span class="ibtn">${ic("chev", S.uaOpen.has(a.id) ? "open" : "")}</span></td></tr>`);
+    if (S.uaOpen.has(a.id)) rows.push(`<tr class="${a.ok ? "" : "fail"}"><td colspan="7" style="padding:0"><div class="uax">${a.reason ? `<div style="color:var(--danger);font-family:var(--font)">失败原因：${esc(a.reason)}</div>` : ""}${a.detail ? `<div style="color:var(--tx);font-family:var(--font)">${esc(a.detail)}</div>` : ""}动作键 ${esc(a.action)} · 域名 ${esc(a.origin)} · 凭据 ${esc(a.cred.kind)}<br>User-Agent：${esc(a.ua)}<div class="futonly" style="font-family:var(--font);margin-top:6px">${fut("#285")} <span class="tx2">转发链：</span><span class="mono">${esc(a.src)} ← 反代 172.18.0.1（受信）</span> · Agent 来源：${a.cred.kind === "api-key" ? "Key 绑定的 Agent 名" : "clientInfo"}</div></div></td></tr>`);
+  }
+  const cards = slice.map((a) => `<div class="mc ${a.ok ? "" : "fail"}"><div class="b"><div class="nm"><b>${esc(ACTIONS[a.action]?.[0] ?? a.action)}</b><span class="sub2">${esc(credLabel(a))}</span></div><div class="meta">${a.ok ? `<span class="st ok"><span class="dot"></span>成功</span>` : `<span class="st danger"><span class="dot"></span>失败</span>`}<span>${fmt(a.at)}</span><span class="mono">${esc(a.src)}</span>${a.tool ? `<span class="mono">${esc(a.tool)}</span>` : ""}</div>${a.reason ? `<span class="help" style="color:var(--danger)">${esc(a.reason)}</span>` : ""}</div></div>`);
+  const opt = (v, l, cur) => `<option value="${v}" ${cur === v ? "selected" : ""}>${l}</option>`;
+  const nonDefault = f.action || f.credential || f.origin || f.source || f.q;
+  const filters = `<div class="toolbar">
+    <div class="seg">${[["", "全部"], ["success", "成功"], ["failure", "失败"]].map(([k, l]) => `<button class="${f.outcome === k ? "on" : ""}" data-auf="${k}">${l}</button>`).join("")}</div>
+    <select class="sel sm" data-af="action" aria-label="动作">${opt("", "所有动作", f.action)}${opt("MCP", "MCP 调用", f.action)}${opt("OAuth", "OAuth 授权", f.action)}${opt("Web", "Web", f.action)}${opt("管理", "管理操作", f.action)}${opt("admin.login", "管理员登录", f.action)}</select>
+    <select class="sel sm" data-af="credential" aria-label="凭据类型">${opt("", "所有凭据", f.credential)}${Object.entries(CRED_KIND).map(([k, l]) => opt(k, l, f.credential)).join("")}</select>
+    <input class="inp sm hide-m" data-af="origin" placeholder="域名" value="${esc(f.origin)}" style="width:150px">
+    <input class="inp sm hide-m" data-af="source" placeholder="来源 IP" value="${esc(f.source)}" style="width:120px">
+    ${searchBox("搜索调用、工具、User-Agent", f.q, "audit")}
+    ${nonDefault || f.outcome ? `<button class="btn ghost sm" data-act="audit-reset">重置</button>` : ""}</div>`;
+  const pager = `<div class="pager"><span>共 ${list.length} 条${failN ? ` · <span style="color:var(--danger)">${failN} 条失败</span>` : ""}</span><span class="grow"></span><label>每页 <select class="sel sm" data-act="pagesize">${[25, 50, 100].map((n) => `<option ${n === ps ? "selected" : ""}>${n}</option>`).join("")}</select></label><div class="pg"><button data-pg="${pg - 1}" ${pg === 1 ? "disabled" : ""}>‹</button>${Array.from({ length: pages }, (_, i) => `<button class="${i + 1 === pg ? "on" : ""}" data-pg="${i + 1}">${i + 1}</button>`).join("")}<button data-pg="${pg + 1}" ${pg === pages ? "disabled" : ""}>›</button></div></div>`;
+  return pageBar("审计", `<button class="btn ghost sm futonly" data-act="audit-export">${ic("file")}<span class="hide-m">导出 CSV</span> ${fut("设想")}</button>${moreBtn("audit", "")}`, "") + `<div class="content scroll"><div class="page wide">
+  ${filters}
+  ${table([["时间", "92px"], ["结果", "76px"], ["动作", "22%"], ["凭据", "22%"], ["Agent", "15%"], ["来源", "13%"], ["", "", "act"]], rows, emptyState("filter", "没有匹配的审计记录", "调整或重置筛选条件", `<button class="btn" data-act="audit-reset">重置筛选</button>`))}${mcards(cards)}
+  ${list.length ? pager : ""}
+  </div></div>`;
+}
+
+// ---------------------------------------------------------------- authz list (#405 #434 #455)
+function renderAuthz() {
+  const orphans = [...new Set(POLICIES.flatMap((p) => p.subjects))].filter((s) => subjectView(s).missing);
+  const rows = POLICIES.map((p) => {
+    const w = windowSummary(p), now = inWindow(p);
+    return `<tr class="click ${p.enabled ? "" : "dim"}" data-open="policy" data-id="${p.id}">
+    <td><div class="nm"><b>${esc(p.label)}</b><span class="sub2">${idc(p.id)}<span>· 修改于 ${rel(p.updatedAt)}</span></span></div></td>
+    <td>${p.enabled ? `<span class="st ok"><span class="dot"></span>启用</span>` : `<span class="st off"><span class="dot"></span>停用</span>`}<div class="muted" style="font-size:13px" title="${p.mode}">窗口外${MODE[p.mode].n}</div></td>
+    <td><div class="nm" style="gap:2px">${p.subjects.map((s) => { const v = subjectView(s); return `<span class="ell" title="${esc(s)}"><span class="${v.missing ? "muted" : ""}">${esc(v.name)}</span> <span class="muted">${esc(v.kindLabel)}</span>${v.missing ? ` <span class="tag danger">孤立</span>` : ""}</span>`; }).join("")}</div></td>
+    <td><div class="tags">${capTags(p.capabilities)}</div></td>
+    <td><div class="nm"><span class="ell">${esc(w.text)}</span><span class="sub2">${w.marks.map((m) => `<span class="tag">${esc(m)}</span>`).join("")}${p.enabled ? `<span class="${now.ok ? "" : ""}" style="color:${now.ok ? "var(--ok)" : "var(--amber)"}">${now.ok ? "现在允许" : "现在受限"}</span>` : ""}</span></div></td>
+    <td class="act">${moreBtn("policy", p.id)}</td></tr>`;
+  });
+  const cards = POLICIES.map((p) => `<div class="mc" data-open="policy" data-id="${p.id}"><div class="b"><div class="nm"><b>${esc(p.label)}</b><span class="sub2">${p.enabled ? "启用" : "停用"} · 窗口外${MODE[p.mode].n}</span></div><span class="tx2" style="font-size:13px">${esc(windowSummary(p).text)}</span><div class="meta">${p.subjects.map((s) => `<span>${esc(subjectView(s).name)}</span>`).join("")}</div></div>${moreBtn("policy", p.id)}</div>`);
+  const broken = S.broken === "authz";
+  return pageBar("定时授权", `<button class="btn primary" data-act="new-policy" ${broken ? "disabled" : ""}>${ic("plus")}<span class="hide-m">新建策略</span></button>`, POLICIES.length) + `<div class="content scroll"><div class="page wide">
+  <div class="banner ${AUTHZ.enabled ? "acc" : ""}">${ic("shield")}<div style="flex:1">定时授权只会在既有权限基础上<b>再加限制</b>，不会放大权限；管理后台本身不受策略约束。时间窗口表示「允许访问的时间」，不代表永久有效。<details style="margin-top:4px"><summary class="muted" style="cursor:pointer">技术细节</summary><span class="muted">策略修订号 <span class="mono">${AUTHZ.revision}</span>；保存时携带修订号，若他人已修改将提示冲突而不覆盖。suspend = 暂停（保留会话）；revoke = 撤销（作用于该主体全部授权）。</span></details></div>
+  <div class="futonly bm" style="display:flex;align-items:center;gap:8px;white-space:nowrap"><span class="muted" style="font-size:13px">总开关</span><button class="switch ${AUTHZ.enabled ? "on" : ""}" data-act="authz-master" aria-label="AuthZ 总开关"></button>${fut("Stage 5")}</div></div>
+  ${broken ? `<div class="banner danger">${ic("alert")}<div style="flex:1"><b>策略存储不可用</b>：策略文件无法解析（第 14 行 JSON 语法错误），所有策略暂不生效，编辑已禁用。<div style="margin-top:8px"><textarea class="inp mono" rows="5" style="height:auto;padding:8px" placeholder="粘贴修复用的策略文档（JSON）"></textarea></div><div style="margin-top:8px;display:flex;gap:8px"><button class="btn danger" data-act="authz-repair">用此文档覆盖修复…</button><span class="help" style="align-self:center">覆盖前会备份当前损坏文件</span></div></div></div>` : ""}
+  ${orphans.length ? `<div class="banner amber">${ic("alert")}<div><b>${orphans.length} 个孤立主体</b>：策略引用了已删除的凭据（${orphans.map((s) => `<span class="mono">${esc(subjectView(s).shortId)}</span>`).join("、")}）。它们不会再匹配任何请求，建议编辑策略移除。</div></div>` : ""}
+  ${table([["策略", "22%"], ["状态 · 模式", "12%"], ["主体", "22%"], ["限制的能力", "16%"], ["允许时间窗口", "24%"], ["", "", "act"]], rows, emptyState("cal", "还没有定时授权策略", "为某个 Key、客户端或账户设置可访问的时间段", `<button class="btn primary" data-act="new-policy">${ic("plus")}新建策略</button>`))}${mcards(cards)}
+  <div class="sect" id="preview"><div class="sect-h"><h2>当前状态预览</h2><span class="muted">查看某个主体此刻是否被策略限制</span></div>
+  <div class="card" style="padding:16px"><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="sel" data-act="preview-subject" style="max-width:420px"><option value="">请选择主体…</option>${allSubjects().map((s) => { const v = subjectView(s); return `<option value="${esc(s)}" ${S.previewSubj === s ? "selected" : ""}>${esc(v.name)} · ${esc(v.kindLabel)} · ${esc(v.shortId)}</option>`; }).join("")}</select></div>${S.previewSubj ? previewFor(S.previewSubj) : `<p class="help" style="margin:8px 0 0">选择主体后显示命中的策略及此刻的判定。</p>`}</div></div>
+  </div></div>`;
+}
+function allSubjects() {
+  return [...KEYS.map((k) => "api-key:" + k.id), ...CLIENTS.map((c) => "oauth-client:" + c.clientId), ...ACCOUNTS.map((a) => "oauth-user:" + a.id)];
+}
+function previewFor(s, draft) {
+  const ps = (draft ? [draft, ...POLICIES.filter((p) => p.id !== draft.id)] : POLICIES).filter((p) => p.enabled && p.subjects.includes(s));
+  if (!ps.length) return `<div class="verdict ok">${ic("checkc")}<span><b>不受定时授权限制</b> · 没有启用的策略引用该主体，按其原有权限访问</span></div>`;
+  return ps.map((p) => { const r = inWindow(p); return `<div class="verdict ${r.ok ? "ok" : "no"}">${ic(r.ok ? "checkc" : "ban")}<span><b>${esc(p.label)}</b>${p === draft ? " <span class='tag acc'>编辑中</span>" : ""} · ${r.ok ? "此刻允许" : `此刻${MODE[p.mode].n}`}（${esc(r.why)}）· 影响：${esc(p.capabilities.map(capName).join("、"))}</span></div>`; }).join("");
+}
+
+// ---------------------------------------------------------------- policy editor (#455 #406 #434)
+function renderPolicyEditor() {
+  const d = S.draft, isNew = !d.id;
+  const subjSel = d.subjects.map((s) => { const v = subjectView(s); return `<span class="pill" title="${esc(s)}"><span class="kind">${esc(v.kindLabel)}</span>${esc(v.name)} <span class="mono muted">${esc(v.shortId)}</span><button data-unsubj="${esc(s)}" aria-label="移除">${ic("x", "xs")}</button></span>`; }).join("");
+  const sq = (S.subjQ || "").toLowerCase();
+  const groups = ["api-key", "oauth-client", "oauth-user"].map((kind) => {
+    const items = allSubjects().filter((s) => s.startsWith(kind + ":")).map(subjectView).filter((v) => !sq || (v.name + v.sub + v.id).toLowerCase().includes(sq));
+    if (!items.length) return "";
+    return `<div class="pick-g"><span>${KIND_LABEL[kind]}</span><span>${items.length}</span></div>` + items.map((v) => `<label class="pick"><input type="checkbox" data-subj="${esc(v.s)}" ${d.subjects.includes(v.s) ? "checked" : ""}><div class="nm"><b style="${v.unnamed ? "font-style:italic;font-weight:400" : ""}">${esc(v.name)}</b><span class="sub2">${v.sub ? esc(v.sub) + " · " : ""}<span class="mono">${esc(v.shortId)}</span></span></div><span class="kind">${esc(v.kindLabel)}</span></label>`).join("");
+  }).join("");
+  const orphanSel = d.subjects.filter((s) => subjectView(s).missing);
+  const cq = (S.capQ || "").toLowerCase(), rv = d.mode === "revoke";
+  const capHtml = CAPS.map((g) => {
+    const items = g.items.filter((it) => !cq || (it.k + it.n + (it.d || "")).toLowerCase().includes(cq));
+    if (!items.length) return "";
+    const selN = g.items.filter((it) => d.capabilities.includes(it.k)).length;
+    const open = cq || S.capOpen.has(g.g);
+    return `<div class="cap-g"><button type="button" class="cap-h ${open ? "open" : ""}" data-capg="${g.g}">${ic("chev", "chev")}<b>${g.name}</b><span class="mono" style="color:var(--tx4)">${g.g}</span><span class="grow"></span>${selN ? `<span class="tag acc">已选 ${selN}</span>` : ""}<span>${g.items.length} 项</span></button>${open ? `<div class="cap-b">${items.map((it) => `<label class="chk"><input type="checkbox" data-cap="${it.k}" ${d.capabilities.includes(it.k) ? "checked" : ""} ${rv && it.k !== "all" ? "disabled" : ""}><span>${esc(it.n)} <span class="mono">${esc(it.k)}</span>${it.d ? `<span class="d">${esc(it.d)}</span>` : ""}</span></label>`).join("")}</div>` : ""}</div>`;
+  }).join("");
+  const weekly = [1, 2, 3, 4, 5, 6, 0].map((day) => {
+    const ws = d.weekly.filter((w) => w.day === day);
+    return { day, ws };
+  });
+  const onDays = new Set(d.weekly.map((w) => w.day));
+  const wrows = weekly.filter((x) => x.ws.length).map(({ day, ws }) => ws.map((w, i) => `<div class="wrow"><span class="lab">${i === 0 ? DAYS[day] : ""}</span><input class="inp" type="time" value="${w.from}" data-wf="${day}:${i}:from"><span class="muted" style="text-align:center">–</span><input class="inp" type="time" value="${w.to}" data-wf="${day}:${i}:to"><button type="button" class="ibtn" data-wdel="${day}:${i}" aria-label="删除时段">${ic("x")}</button></div>`).join("")).join("");
+  const crossBad = d.weekly.some((w) => w.to <= w.from);
+  const drows = d.dateRanges.map((r, i) => `<div class="drow"><input class="inp" type="date" value="${r.from}" data-df="${i}:from"><span class="muted" style="text-align:center">–</span><input class="inp" type="date" value="${r.to}" data-df="${i}:to"><button type="button" class="ibtn" data-ddel="${i}" aria-label="删除日期区间">${ic("x")}</button></div>`).join("");
+  const utc = (v) => { if (!v) return "未设置"; const t = new Date(v + ":00+08:00"); return isNaN(t) ? "格式无效" : t.toISOString().replace(".000", ""); };
+  const w = windowSummary(d), now = inWindow(d);
+  const conflict = S.conflict;
+  return pageBar(`<a class="crumbp" href="#/authz">定时授权</a><span class="muted">›</span><span>${isNew ? "新建策略" : esc(d.label || "未命名策略")}</span>`, isNew ? "" : `<span class="hide-m">${idc(d.id)}</span>`) + `<div class="content scroll"><div class="ped">
+  <form class="ped-form" data-form="policy" onsubmit="return false">
+  ${conflict ? `<div class="banner danger">${ic("alert")}<div><b>保存冲突</b>：其他管理员在你编辑期间修改了策略（修订 ${AUTHZ.revision} → ${AUTHZ.revision + 1}）。你的改动尚未保存。<div style="margin-top:8px;display:flex;gap:8px"><button type="button" class="btn sm" data-act="conflict-reload">载入最新版本</button><button type="button" class="btn ghost sm" data-act="conflict-diff">查看差异</button></div></div></div>` : ""}
+  <fieldset class="fs"><legend>基本信息</legend>
+    <div class="grid2"><div class="fld"><label>策略名称</label><input class="inp" data-dv="label" value="${esc(d.label)}" placeholder="例如：研究机器人仅工作时间" maxlength="120"></div>
+    <div class="fld"><label>状态</label><div style="display:flex;align-items:center;gap:8px;height:32px"><button type="button" class="switch ${d.enabled ? "on" : ""}" data-act="d-enabled" aria-label="启用"></button><span class="tx2" style="font-size:13px">${d.enabled ? "保存后立即生效" : "保存但不生效"}</span></div></div></div>
+    <div class="fld" style="margin-top:12px"><span class="l">窗口外的处理方式</span><div class="mode">${["suspend", "revoke"].map((m) => `<button type="button" class="${d.mode === m ? "on" : ""} ${m === "revoke" ? "rv" : ""}" data-mode="${m}"><b><span class="radio"></span>${MODE[m].n} <span class="mono" style="color:var(--tx4);font-weight:400">${m}</span></b><span>${MODE[m].d}</span></button>`).join("")}</div></div>
+  </fieldset>
+  <fieldset class="fs"><legend>主体 <span class="muted">策略作用于哪些凭据 · 已选 ${d.subjects.length}</span></legend>
+    ${d.subjects.length ? `<div class="selrow">${subjSel}</div>` : `<p class="help" style="margin:0 0 8px">尚未选择主体</p>`}
+    ${orphanSel.length ? `<p class="help warn" style="margin:0 0 8px">${ic("alert", "xs")} 含 ${orphanSel.length} 个已删除的主体，建议移除</p>` : ""}
+    <div class="picker"><label class="search">${ic("search")}<input data-subjq placeholder="按名称、账户或 ID 搜索" value="${esc(S.subjQ || "")}"></label><div class="pick-list scroll">${groups || `<div class="empty" style="padding:24px">没有匹配的主体</div>`}</div></div>
+  </fieldset>
+  <fieldset class="fs"><legend>限制的能力 <span class="muted">窗口外这些能力不可用</span></legend>
+    ${rv ? `<div class="banner amber">${ic("info")}<div>「撤销」模式只能作用于<b>全部能力</b>，已自动锁定为「全部」。</div></div>` : ""}
+    <div class="picker"><label class="search">${ic("search")}<input data-capq placeholder="搜索能力，例如 写入、git、write_note" value="${esc(S.capQ || "")}"></label>${capHtml || `<div class="empty" style="padding:24px">没有匹配的能力</div>`}</div>
+    ${d.capabilities.length ? `<div class="selrow" style="margin-top:8px">${d.capabilities.map((k) => `<span class="pill">${esc(capName(k))} <span class="mono muted">${esc(k)}</span>${rv ? "" : `<button type="button" data-uncap="${esc(k)}">${ic("x", "xs")}</button>`}</span>`).join("")}</div>` : ""}
+  </fieldset>
+  <fieldset class="fs"><legend>允许访问的时间</legend>
+    <div class="grid2"><div class="fld"><label>时区</label><select class="sel" data-dv="timezone">${TIMEZONES.map((z) => `<option ${z === d.timezone ? "selected" : ""}>${z}</option>`).join("")}<option>其他（IANA 名称）…</option></select><span class="help">下方所有时间都按此时区解释</span></div><div></div>
+    <div class="fld"><label>生效起点 <small>startsAt</small></label><input class="inp" type="datetime-local" data-dv="startsAt" value="${d.startsAt}"><span class="help">${d.startsAt ? `存储为 <span class="mono">${utc(d.startsAt)}</span>` : "未设置 · 立即生效"}</span></div>
+    <div class="fld"><label>失效终点 <small>expiresAt</small></label><input class="inp" type="datetime-local" data-dv="expiresAt" value="${d.expiresAt}"><span class="help">${d.expiresAt ? `存储为 <span class="mono">${utc(d.expiresAt)}</span>` : "未设置 · 长期有效"}</span></div></div>
+    <div class="fld" style="margin-top:20px"><span class="l">每周窗口 <span class="muted">不选择 = 每天全天</span></span>
+      <div class="chips">${[1, 2, 3, 4, 5, 6, 0].map((day) => `<button type="button" class="chip ${onDays.has(day) ? "on" : ""}" data-day="${day}">${DAYS[day]}</button>`).join("")}<span style="width:8px"></span><button type="button" class="btn ghost sm" data-preset="work">工作日 9–18</button><button type="button" class="btn ghost sm" data-preset="all">每天</button><button type="button" class="btn ghost sm" data-preset="clear">清空</button></div>
+      ${wrows}
+      ${onDays.size ? `<button type="button" class="addl" data-act="add-slot">${ic("plus", "xs")}为已选日期再加一个时段</button>` : ""}
+      ${crossBad ? `<span class="help warn">${ic("alert", "xs")} 结束时间需晚于开始时间；跨午夜请拆成两段（如 22:00–24:00 和次日 00:00–06:00）</span>` : `<span class="help">不支持跨午夜，跨午夜请拆成两段</span>`}
+    </div>
+    <div class="fld" style="margin-top:20px"><span class="l">限定日期 <span class="muted">不添加 = 不限日期</span></span>${drows}<button type="button" class="addl" data-act="add-range">${ic("plus", "xs")}添加日期区间</button></div>
+  </fieldset>
+  </form>
+  <aside class="ped-side"><div class="stick">
+    <div class="sect-h"><h2>生效预览</h2><span class="muted">${esc(d.timezone)}</span></div>
+    <div class="sumbox"><b>${esc(w.text)}</b>${w.marks.length ? `<div>${w.marks.map((m) => `<span class="tag" style="margin:4px 4px 0 0">${esc(m)}</span>`).join("")}</div>` : ""}<div style="margin-top:4px">窗口外：<b>${MODE[d.mode].n}</b> ${esc(d.capabilities.length ? d.capabilities.map(capName).join("、") : "（未选择能力）")}</div></div>
+    <div style="margin-top:16px">${timeline(d)}</div>
+    <div class="verdict ${now.ok ? "ok" : "no"}" style="margin-top:12px">${ic(now.ok ? "checkc" : "ban")}<span>现在（${fmt(NOW.toISOString())}）<b>${now.ok ? "允许访问" : MODE[d.mode].n}</b> · ${esc(now.why)}</span></div>
+    <div class="sect-h" style="margin-top:24px"><h2>对主体的影响</h2></div>
+    ${d.subjects.length ? d.subjects.map((s) => `<div style="margin-top:8px"><div style="font-size:13px;color:var(--tx2)">${esc(subjectView(s).name)} <span class="muted">${esc(subjectView(s).kindLabel)}</span></div>${previewFor(s, d)}</div>`).join("") : `<p class="help">选择主体后显示</p>`}
+  </div></aside>
+  </div>
+  <div class="ped-foot"><button class="btn primary" data-act="save-policy">${isNew ? "创建策略" : "保存策略"}</button><a class="btn ghost" href="#/authz">取消</a><span class="grow"></span>${isNew ? "" : `<button class="btn danger-o" data-act="del-policy">${ic("trash")}<span class="hide-m">删除策略</span></button>`}<span class="help hide-m" style="margin-left:8px"><kbd>⌘</kbd> <kbd>↵</kbd> 保存</span></div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------- vault & git (#461 #401 #402 #404 #437)
+function renderVaults() {
+  const rows = VAULTS.map((v) => `<tr class="click ${S.cur === v.id ? "cur" : ""}" data-open="vault" data-id="${v.id}">
+    <td><div class="nm"><b>${esc(v.label)}</b><span class="sub2"><span class="mono">${esc(v.id)}</span>${v.primary ? `<span class="kind">主库</span>` : ""}</span></div></td>
+    <td>${gitState(v)}</td>
+    <td class="cellt">${v.git.enabled ? `${v.git.autoCommit ? "自动提交" : "手动提交"} · ${v.git.autoPush ? "自动推送" : "不推送"}${v.git.autoCommitSweep ? ` · 每 ${v.git.sweepIntervalSeconds / 60} 分钟兜底` : ""}` : `<span class="muted">未启用</span>`}</td>
+    <td class="cellt mono">${v.git.enabled ? esc(v.git.remote + "/" + v.git.branch) : "—"}</td>
+    <td class="cellt">${Object.values(v.caps).filter(Boolean).length} / ${Object.keys(v.caps).length} 可用</td>
+    <td class="act">${moreBtn("vault", v.id)}</td></tr>`);
+  const cards = VAULTS.map((v) => `<div class="mc" data-open="vault" data-id="${v.id}"><div class="b"><div class="nm"><b>${esc(v.label)}</b><span class="sub2">${esc(v.id)}${v.primary ? " · 主库" : ""}</span></div><div class="meta">${gitState(v)}</div></div>${moreBtn("vault", v.id)}</div>`);
+  const broken = S.broken === "git";
+  return pageBar("Vault 与 Git", `<button class="btn" data-act="vault-refresh">${ic("refresh")}<span class="hide-m">刷新 Vault 清单</span></button><button class="btn futonly" data-act="vault-scan">${ic("search")}<span class="hide-m">扫描新 Vault</span> ${fut("#437")}</button>`, VAULTS.length) + `<div class="content scroll"><div class="page">
+  <p class="lede">每个 Vault 的 Git 状态与同步设置。目录路径与远端名称只在管理端可见；这里不创建仓库，也不接受含凭据的远端地址。</p>
+  ${broken ? `<div class="banner danger">${ic("alert")}<div style="flex:1"><b>Git 配置存储不可用</b>：配置文件损坏，各 Vault 回退为默认设置（不自动提交）。<div style="margin-top:8px"><button class="btn danger" data-act="git-repair">重置为默认并修复…</button></div></div></div>` : ""}
+  ${table([["Vault", "20%"], ["Git 状态", "24%"], ["同步方式", "26%"], ["远端 / 分支", "14%"], ["能力", "10%"], ["", "", "act"]], rows, emptyState("db", "没有可用的 Vault", "检查部署配置中的 Vault 列表"))}${mcards(cards)}
+  <div class="sect futonly"><div class="futbox" style="display:flex;gap:12px;align-items:center"><div class="grow"><b style="font-weight:600">从 GitHub 仓库添加 Vault</b> ${fut("Architecture TODO")}<div class="help">以远端仓库为存储后端的 Vault（GitHub-backed Vault），只读克隆或双向同步。</div></div><button class="btn" disabled>添加…</button></div></div>
+  </div></div>`;
+}
+</script>
+<script>
+"use strict";
+// ---------------------------------------------------------------- state & storage
+const storageKey = (n) => "omcp-admin." + n;
+const params = new URLSearchParams(location.search);
+const DEV = params.get("dev") === "1";
+const devp = (k) => (DEV ? params.get(k) : null);
+const S = {
+  route: "overview", sub: null, q: {}, cur: null, focus: null,
+  tokenFilter: "all", tokenOrder: "desc",
+  audit: { outcome: "", action: "", credential: "", origin: "", source: "", q: "", page: 1, pageSize: 25 },
+  uaOpen: new Set(), draft: null, subjQ: "", capQ: "", capOpen: new Set(), previewSubj: "",
+  flashKey: null, loginLocked: false, loginErr: false, authed: true, broken: null, conflict: false,
+};
+const NAV = [
+  ["overview", "概览", "home", "o"], null, "身份与凭据",
+  ["accounts", "OAuth 账户", "user", "a"], ["keys", "API Key", "key", "k"], ["clients", "OAuth 客户端", "app", "c"], ["tokens", "OAuth Token", "ticket", "t"],
+  null, "内容与安全", ["publish", "发布文档", "globe", "p"], ["audit", "审计", "list", "u"], ["authz", "定时授权", "cal", "z"],
+  null, "系统", ["vaults", "Vault 与 Git", "db", "v"],
+];
+const isMobile = () => matchMedia("(max-width:720px)").matches;
+
+function setTheme(t) { document.documentElement.dataset.theme = t; $('meta[name="theme-color"]').content = t === "light" ? "#ffffff" : "#101318"; try { localStorage.setItem(storageKey("theme"), t); } catch {} }
+
+// ---------------------------------------------------------------- router
+function parseHash() {
+  const h = location.hash.replace(/^#\/?/, "");
+  const [path, qs] = h.split("?");
+  const parts = path.split("/").filter(Boolean);
+  S.route = parts[0] || "overview"; S.sub = parts[1] || null;
+  const qp = new URLSearchParams(qs || "");
+  if (S.route === "audit") {
+    for (const k of ["outcome", "action", "credential", "origin", "source", "q"]) if (qp.has(k)) S.audit[k] = qp.get(k);
+    if (qp.has("focus")) S.focus = qp.get("focus");
+  }
+  if (S.route === "authz" && S.sub) {
+    if (!S.draft || S.draft._for !== S.sub) {
+      const p = S.sub === "new" ? null : POLICIES.find((x) => x.id === S.sub);
+      S.draft = p ? { ...structuredClone(p), _for: S.sub } : { id: null, _for: "new", label: "", mode: "suspend", enabled: true, timezone: "Asia/Shanghai", startsAt: "", expiresAt: "", weekly: [], dateRanges: [], subjects: [], capabilities: [] };
+      S.capOpen = new Set(CAPS.filter((g) => g.items.some((it) => S.draft.capabilities.includes(it.k))).map((g) => g.g));
+      if (!S.capOpen.size) S.capOpen.add("scope");
+      S.subjQ = ""; S.capQ = "";
+    }
+  }
+}
+function go(hash, replace) { if (replace) history.replaceState(null, "", hash); else history.pushState(null, "", hash); onRoute(); }
+function onRoute() {
+  parseHash();
+  closeMenu();
+  if (S.route === "login") { S.authed = false; } else S.authed = true;
+  render();
+  // detail routes open drawers
+  const map = { accounts: "account", keys: "key", clients: "client", vaults: "vault" };
+  if (S.sub && map[S.route]) openDrawer(map[S.route], S.sub, true); else closeDrawer(true);
+}
+
+// ---------------------------------------------------------------- render
+function sidebar() {
+  let html = "";
+  for (const n of NAV) {
+    if (n === null) continue;
+    if (typeof n === "string") { html += `<div class="sec-h">${n}</div>`; continue; }
+    const [k, l, icn, key] = n;
+    const cnt = { accounts: ACCOUNTS.length, keys: KEYS.length, clients: CLIENTS.length, tokens: TOKENS.filter((t) => t.status === "active" && t.type === "refresh").length, publish: PUBLISHES.length, authz: POLICIES.length, vaults: VAULTS.length }[k];
+    html += `<a class="ni ${S.route === k ? "on" : ""}" href="#/${k}">${ic(icn)}<span class="lbl">${l}</span>${k === "audit" && AUDIT.some((a) => !a.ok && NOW - new Date(a.at) < D) ? `<span class="dot danger" title="24 小时内有失败"></span>` : ""}${k === "clients" && CLIENTS.some((c) => c.transfer) ? `<span class="dot amber" title="有转移待完成"></span>` : ""}<span class="cnt">${cnt ?? ""}</span></a>`;
+  }
+  return `<aside class="side"><div class="bar brand"><svg class="logo"><use href="#logo"/></svg><b>Obsidian MCP</b><span>授权管理</span></div>
+  <nav class="side-body scroll">${html}</nav>
+  <div class="side-foot"><a class="ni" href="#/web" onclick="return false" title="进入 Obsidian Web" style="flex:1">${ic("ext")}<span class="lbl">进入 Obsidian Web</span></a>
+  <button class="ibtn" data-act="theme" title="切换主题 (T)">${ic(document.documentElement.dataset.theme === "dark" ? "sun" : "moon")}</button><button class="ibtn" data-act="kbd" title="快捷键 (?)">${ic("kbd")}</button><button class="ibtn" data-act="logout" title="退出登录">${ic("out")}</button></div></aside>`;
+}
+function mnav() {
+  const items = [["overview", "概览", "home"], ["tokens", "Token", "ticket"], ["audit", "审计", "list"], ["authz", "定时", "cal"], ["more", "更多", "menu"]];
+  const prim = items.slice(0, 4).map((i) => i[0]);
+  return `<nav class="mnav">${items.map(([k, l, icn]) => `<a href="${k === "more" ? "#" : "#/" + k}" ${k === "more" ? 'data-act="mmore"' : ""} class="${S.route === k || (k === "more" && !prim.includes(S.route)) ? "on" : ""}">${ic(icn)}${l}</a>`).join("")}</nav>`;
+}
+function render() {
+  const root = $("#root");
+  if (!S.authed) { root.innerHTML = renderLogin(); return; }
+  let main;
+  const r = S.route;
+  if (r === "authz" && S.sub) main = renderPolicyEditor();
+  else main = ({ overview: renderOverview, accounts: renderAccounts, keys: renderKeys, clients: renderClients, tokens: renderTokens, publish: renderPublish, audit: renderAudit, authz: renderAuthz, vaults: renderVaults }[r] || renderOverview)();
+  if (devp("empty") === r) main = pageBar(NAV.find((n) => n && n[0] === r)?.[1] || "") + `<div class="content"><div class="page">${emptyState({ accounts: "user", keys: "key", clients: "app", tokens: "ticket", publish: "globe", audit: "list", authz: "cal" }[r] || "info", "这里还没有内容", "空状态示例（dev 参数 empty）")}</div></div>`;
+  const st = $(".content")?.scrollTop;
+  root.innerHTML = `<div class="app">${sidebar()}<main class="main">${main}</main></div>${mnav()}`;
+  if (st && $(".content")) $(".content").scrollTop = st;
+}
+
+// ---------------------------------------------------------------- toast / modal / menu
+let toastT;
+function toast(msg, opts = {}) {
+  const t = $("#toast");
+  t.className = "toast on" + (opts.err ? " err" : "");
+  t.innerHTML = `${ic(opts.err ? "alert" : "checkc")}<span>${msg}</span>${opts.undo ? `<button data-act="undo">撤销</button>` : ""}`;
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), opts.ms || 3200);
+}
+let modalOk = null;
+function confirmBox({ title, body, list, ok = "确认", danger = true, type, onOk, extra = "" }) {
+  const m = $("#modal");
+  m.innerHTML = `<h3>${title}</h3>${body ? `<p>${body}</p>` : ""}${list ? `<ul>${list.map((x) => `<li>${x}</li>`).join("")}</ul>` : ""}${extra}${type ? `<div class="tc">输入 <code>${esc(type)}</code> 以确认</div><input class="inp" data-typeconf autocomplete="off">` : ""}<div class="acts"><button class="btn ghost" data-act="mcancel">取消</button><button class="btn ${danger ? "danger" : "primary"}" data-act="mok" ${type ? "disabled" : ""}>${ok}</button></div>`;
+  m.classList.add("on"); $("#mscrim").classList.add("on");
+  modalOk = onOk; m.dataset.type = type || "";
+  setTimeout(() => (type ? $("[data-typeconf]", m) : $("[data-act=mok]", m))?.focus(), 30);
+}
+function closeModal() { $("#modal").classList.remove("on"); $("#mscrim").classList.remove("on"); modalOk = null; }
+function showKbd() {
+  const row = (k, l) => `<div class="row"><span>${l}</span><span>${k.split(" ").map((x) => `<kbd>${x}</kbd>`).join(" ")}</span></div>`;
+  const m = $("#modal"); m.classList.add("kbdp");
+  m.innerHTML = `<h3>键盘快捷键</h3><div class="cols"><h4>导航</h4>${NAV.filter(Array.isArray).map((n) => row("g " + n[3], n[1])).join("")}<h4>通用</h4>${row("/", "搜索 / 筛选")}${row("n", "新建（当前页）")}${row("j k", "表格上下移动")}${row("↵", "打开详情")}${row("Esc", "关闭抽屉 / 弹窗")}${row("t", "切换主题")}${row("?", "本面板")}${row("⌘ ↵", "保存策略")}</div><div class="acts"><button class="btn" data-act="mcancel">关闭</button></div>`;
+  m.classList.add("on"); $("#mscrim").classList.add("on");
+}
+let menuCtx = null;
+function openMenu(btn, kind, id) {
+  const items = menuItems(kind, id);
+  const m = $("#menu");
+  m.innerHTML = items.map((it) => (it === "-" ? "<hr>" : `<button data-mi="${it[0]}" class="${it[3] ? "dz2" : ""}" ${it[4] ? "disabled" : ""}>${ic(it[2])}<span class="grow">${it[1]}</span>${it[5] || ""}</button>`)).join("");
+  m.classList.add("on");
+  const r = btn.getBoundingClientRect(), mw = 220;
+  m.style.minWidth = mw + "px";
+  m.style.left = Math.max(8, Math.min(innerWidth - mw - 8, r.right - mw)) + "px";
+  const h = m.offsetHeight;
+  m.style.top = (r.bottom + 4 + h > innerHeight ? r.top - h - 4 : r.bottom + 4) + "px";
+  menuCtx = { kind, id };
+}
+function closeMenu() { $("#menu")?.classList.remove("on"); menuCtx = null; }
+function menuItems(kind, id) {
+  if (kind === "account") { const a = acct(id); return [["open", "查看与编辑", "edit"], ["pw", "重置密码…", "lock"], ["toggle", a.enabled ? "停用账户…" : "启用账户", a.enabled ? "pause" : "play"], "-", ["del", "删除账户…", "trash", 1]]; }
+  if (kind === "key") return [["open", "编辑权限与 Vault", "edit"], ["copyid", "复制 Key ID", "copy"], ["rotate", "轮换（重新生成）", "refresh", 0, 1, fut("设想")], "-", ["del", "删除 Key…", "trash", 1]];
+  if (kind === "client") { const c = client(id); return [["open", "查看详情", "eye"], ["transfer", "转移授权账户…", "swap", 0, !linkedAccounts(id).length && !c.transfer], c.transfer ? ["canceltr", "取消待完成的转移", "x"] : null, "-", ["revoke", "撤销全部授权…", "ban", 1, !linkedAccounts(id).length], ["del", "删除客户端…", "trash", 1]].filter(Boolean); }
+  if (kind === "token") return [["copyid", "复制刷新 Token ID", "copy"], ["toaudit", "查看相关审计", "list"], "-", ["revoke", "撤销此授权…", "ban", 1]];
+  if (kind === "publish") return [["copylink", "复制公开链接", "link"], ["openlink", "打开公开页", "ext"], "-", ["revoke", "撤销公开链接…", "ban", 1]];
+  if (kind === "policy") { const p = POLICIES.find((x) => x.id === id); return [["edit", "编辑", "edit"], ["toggle", p.enabled ? "停用" : "启用", p.enabled ? "pause" : "play"], ["dup", "复制为新策略", "copy"], "-", ["del", "删除策略…", "trash", 1]]; }
+  if (kind === "vault") return [["open", "详情与 Git 设置", "edit"], ["verify", "验证 Git 仓库与配置", "checkc"], "-", ["openweb", "在 Web 中打开", "ext"]];
+  if (kind === "audit") return [["clear", "清空审计日志…", "trash", 1]];
+  return [];
+}
+function onMenu(act) {
+  const { kind, id } = menuCtx; closeMenu();
+  if (act === "open") return go(`#/${{ account: "accounts", key: "keys", client: "clients", vault: "vaults" }[kind]}/${id}`);
+  if (kind === "account") {
+    const a = acct(id);
+    if (act === "pw") return openDrawer("account", id, false, "pw");
+    if (act === "toggle") { if (!a.enabled) { a.enabled = true; render(); return toast(`已启用 ${esc(acctName(a))}`); } return confirmBox({ title: `停用「${esc(acctName(a))}」？`, body: `停用后该账户<b>无法登录授权页</b>，并会<b>撤销其全部已有授权</b>（${linkedClients(id).length} 个客户端需要重新授权）。之后可以重新启用。`, ok: "停用账户", onOk: () => { a.enabled = false; render(); toast("账户已停用，已撤销其授权"); } }); }
+    if (act === "del") return confirmBox({ title: `删除账户「${esc(acctName(a))}」？`, body: "将永久删除账户并撤销其全部 Token，审计记录中的名称会显示为「已删除 / 未知」。此操作不能撤销。", type: a.username, ok: "永久删除", onOk: () => { ACCOUNTS.splice(ACCOUNTS.indexOf(a), 1); go("#/accounts", true); toast("账户已删除"); } });
+  }
+  if (kind === "key") {
+    const k = keyOf(id);
+    if (act === "copyid") return copy(id);
+    if (act === "del") return confirmBox({ title: `删除 Key「${esc(keyName(k))}」？`, body: `使用此 Key 的程序将立即无法访问（最后调用：${k.lastUsed ? rel(k.lastUsed.at) + " · " + esc(k.lastUsed.agent) : "从未"}）。引用它的定时授权策略会变成孤立主体。`, type: k.label || k.prefix, ok: "删除 Key", onOk: () => { KEYS.splice(KEYS.indexOf(k), 1); go("#/keys", true); toast("Key 已删除"); } });
+  }
+  if (kind === "client") {
+    const c = client(id);
+    if (act === "transfer") return openDrawer("client", id, false, "transfer");
+    if (act === "canceltr") { delete c.transfer; render(); return toast("已取消转移；原账户需重新授权才能恢复"); }
+    if (act === "revoke") return revokeClient(c);
+    if (act === "del") return confirmBox({ title: `删除客户端「${esc(clientName(c))}」？`, body: "将撤销其全部授权并删除注册记录；客户端下次连接时会重新注册为新客户端。", type: c.clientName || "delete", ok: "删除客户端", onOk: () => { CLIENTS.splice(CLIENTS.indexOf(c), 1); go("#/clients", true); toast("客户端已删除"); } });
+  }
+  if (kind === "token") {
+    const ts = TOKENS.filter((t) => t.grant === id), t = ts.find((x) => x.type === "refresh");
+    if (act === "copyid") return copy(t.id);
+    if (act === "toaudit") return go("#/audit?q=" + encodeURIComponent(clientName(client(t.clientId))));
+    if (act === "revoke") return confirmBox({ title: "撤销此授权？", body: `<b>${esc(clientName(client(t.clientId)))}</b> 以 <b>${esc(acctName(acct(t.userId)))}</b> 身份的访问 Token 与刷新 Token 将立即失效，客户端需要重新授权。`, extra: `<label class="chk futonly" style="margin:0 -8px 8px"><input type="checkbox" checked><span>同时断开该客户端的在线 MCP 会话 ${fut("#441")}</span></label>`, ok: "撤销", onOk: () => { ts.forEach((x) => (x.status = "revoked")); render(); toast("授权已撤销"); } });
+  }
+  if (kind === "publish") {
+    const p = PUBLISHES.find((x) => x.id === id), url = "https://obsidian.example.com/publish/" + p.id;
+    if (act === "copylink") return copy(url);
+    if (act === "openlink") return toast("原型：将在新标签打开 " + esc(url));
+    if (act === "revoke") return confirmBox({ title: `撤销「${esc(p.title)}」的公开链接？`, body: "匿名访问者将立即无法打开此链接；笔记本身不受影响。之后重新发布会生成新的链接。", ok: "撤销链接", onOk: () => { PUBLISHES.splice(PUBLISHES.indexOf(p), 1); render(); toast("公开链接已撤销"); } });
+  }
+  if (kind === "policy") {
+    const p = POLICIES.find((x) => x.id === id);
+    if (act === "edit") return go("#/authz/" + id);
+    if (act === "toggle") { if (p.enabled) return confirmBox({ title: `停用「${esc(p.label)}」？`, body: "停用后该策略不再限制任何主体，相关凭据将按原有权限全天可用。", ok: "停用", danger: false, onOk: () => { p.enabled = false; AUTHZ.revision++; render(); toast("策略已停用"); } }); p.enabled = true; AUTHZ.revision++; render(); return toast("策略已启用"); }
+    if (act === "dup") { S.draft = { ...structuredClone(p), id: null, _for: "new", label: p.label + "（副本）" }; return go("#/authz/new"); }
+    if (act === "del") return delPolicy(p);
+  }
+  if (kind === "vault") {
+    if (act === "verify") return verifyVault(id);
+    if (act === "openweb") return toast("原型：将打开 Obsidian Web 中的 " + esc(id));
+  }
+  if (kind === "audit" && act === "clear") return confirmBox({ title: "清空全部审计日志？", body: `将永久删除 <b>${AUDIT.length}</b> 条记录（含 ${AUDIT.filter((a) => !a.ok).length} 条失败记录）。清空动作本身会作为第一条新记录保留。`, type: "清空日志", ok: "清空日志", onOk: () => { AUDIT.length = 0; AUDIT.push({ id: "au_new", at: NOW.toISOString(), action: "audit.clear", ok: true, cred: { kind: "admin-session" }, origin: "obsidian.example.com", src: "192.168.1.24", ua: UAS.browser }); render(); toast("审计日志已清空"); } });
+}
+function delPolicy(p) {
+  confirmBox({ title: `删除策略「${esc(p.label)}」？`, body: `相关主体（${p.subjects.map((s) => esc(subjectView(s).name)).join("、")}）将不再受时间限制。`, type: p.label, ok: "删除策略", onOk: () => { POLICIES.splice(POLICIES.indexOf(p), 1); AUTHZ.revision++; S.draft = null; go("#/authz", true); toast("策略已删除"); } });
+}
+function revokeClient(c) {
+  const la = linkedAccounts(c.clientId);
+  confirmBox({ title: `撤销「${esc(clientName(c))}」的全部授权？`, body: `${la.map((a) => `<b>${esc(acctName(a))}</b>`).join("、")} 在此客户端上的 Token 将立即失效，需要重新授权。客户端注册保留。`, extra: `<label class="chk futonly" style="margin:0 -8px 8px"><input type="checkbox" checked><span>同时断开在线 MCP 会话 ${fut("#441")}</span></label>`, ok: "撤销授权", onOk: () => { TOKENS.forEach((t) => { if (t.clientId === c.clientId && t.status === "active") t.status = "revoked"; }); render(); refreshDrawer(); toast("已撤销全部授权"); } });
+}
+function verifyVault(id) {
+  const v = VAULTS.find((x) => x.id === id);
+  if (v.repo.state === "norepo") return toast(`${esc(id)}：未找到 Git 仓库（目录中没有 .git）`, { err: true, ms: 4200 });
+  v.verified = { ok: true, at: NOW.toISOString() }; refreshDrawer(); toast(`${esc(id)}：仓库与配置验证通过`);
+}
+function copy(text) { navigator.clipboard?.writeText(text).catch(() => {}); toast("已复制 " + `<span class="mono">${esc(text.length > 40 ? text.slice(0, 40) + "…" : text)}</span>`); }
+
+// ---------------------------------------------------------------- drawers
+let drawerCtx = null;
+function openDrawer(kind, id, fromRoute, mode) {
+  drawerCtx = { kind, id, mode: mode || null };
+  S.cur = id;
+  $("#drawer").innerHTML = drawerHtml();
+  $("#drawer").classList.add("on"); $("#dscrim").classList.add("on");
+  $$(".tbl tr.cur").forEach((r) => r.classList.remove("cur"));
+  $$(`[data-open][data-id="${CSS.escape(id || "")}"]`).forEach((r) => r.classList.add("cur"));
+}
+function refreshDrawer() { if (drawerCtx && $("#drawer").classList.contains("on")) $("#drawer").innerHTML = drawerHtml(); }
+function closeDrawer(silent) {
+  if (!$("#drawer").classList.contains("on")) return;
+  $("#drawer").classList.remove("on"); $("#dscrim").classList.remove("on"); drawerCtx = null; S.cur = null;
+  $$(".tbl tr.cur").forEach((r) => r.classList.remove("cur"));
+  if (!silent && S.sub && ["accounts", "keys", "clients", "vaults"].includes(S.route)) history.pushState(null, "", "#/" + S.route);
+  if (!silent) S.sub = null;
+}
+const dhead = (title, sub) => `<header class="bar"><h1 class="ell">${title}</h1>${sub || ""}<span class="grow"></span><button class="ibtn" data-act="dclose" aria-label="关闭 (Esc)">${ic("x")}</button></header>`;
+const scopeChecks = (sel, name) => SCOPES.map((s) => `<label class="chk"><input type="checkbox" name="${name}" value="${s.key}" ${sel.includes(s.key) ? "checked" : ""}><span>${s.name} <span class="sub">${s.key}</span><span class="d">${s.desc}</span></span></label>`).join("");
+const vaultChecks = (sel) => VAULTS.map((v) => `<label class="chk"><input type="checkbox" name="vault" value="${v.id}" ${sel.includes(v.id) ? "checked" : ""}><span>${esc(v.label)} <span class="sub">${v.id}</span><span class="d">${v.primary ? "主库" : "附加库"}</span></span></label>`).join("");
+function drawerHtml() {
+  const { kind, id, mode } = drawerCtx;
+  if (kind === "new-account") return dhead("新建 OAuth 账户") + `<form class="dbody scroll" data-form="new-account" onsubmit="return false"><div class="dsec"><div class="grid2"><div class="fld"><label>用户名 <small>username</small></label><input class="inp" name="username" placeholder="3–64 位，例如 carol" required></div><div class="fld"><label>显示名 <span class="muted">可选</span></label><input class="inp" name="displayName" placeholder="例如 Carol Wu"></div></div>
+    <div class="fld" style="margin-top:12px"><label>初始密码</label><div class="pw"><input class="inp" type="password" name="password" autocomplete="new-password" placeholder="至少 12 位"><button type="button" class="ibtn" data-act="pwtoggle">${ic("eye")}</button></div><span class="help">与管理密码相互独立；用户在客户端的授权页使用</span></div></div>
+    <div class="dsec"><h3>权限上限</h3><div class="grid2" style="gap:0">${scopeChecks(["obsidian.read"], "scope")}</div></div><div class="dsec"><h3>允许的 Vault</h3>${vaultChecks(["vault"])}</div></form><footer class="dfoot"><span class="help"></span><button class="btn ghost" data-act="dclose">取消</button><button class="btn primary" data-act="create-account">创建账户</button></footer>`;
+  if (kind === "new-key") return dhead("新建 API Key") + `<form class="dbody scroll" data-form="new-key" onsubmit="return false"><div class="dsec"><div class="fld"><label>备注名</label><input class="inp" name="label" placeholder="例如：桌面客户端" maxlength="120"><span class="help">用于在列表、审计和定时授权中识别这个 Key</span></div></div>
+    <div class="dsec"><h3>权限范围</h3>${scopeChecks(["obsidian.read"], "scope")}</div><div class="dsec"><h3>允许的 Vault</h3>${vaultChecks(["vault"])}</div>
+    <div class="dsec futonly"><h3>到期时间 ${fut("设想")}</h3><select class="sel" disabled><option>永不过期</option></select></div></form><footer class="dfoot"><span class="help">明文只显示一次</span><button class="btn ghost" data-act="dclose">取消</button><button class="btn primary" data-act="create-key">创建 Key</button></footer>`;
+  if (kind === "account") {
+    const a = acct(id); if (!a) return dhead("账户不存在") + `<div class="dbody">${emptyState("user", "账户不存在或已删除", "")}</div>`;
+    const lc = linkedClients(id);
+    return dhead(esc(acctName(a)), a.enabled ? "" : `<span class="tag">已停用</span>`) + `<div class="dbody scroll">
+    <div class="dsec"><div class="kv"><div class="k">用户名</div><div class="mono">${esc(a.username)}</div><div class="k">显示名</div><div>${a.displayName ? esc(a.displayName) : `<span class="muted">未设置</span>`}</div><div class="k">账户 ID</div><div>${idc(a.id, a.id)}</div><div class="k">创建</div><div>${fmtFull(a.createdAt)}</div><div class="k">最后登录</div><div>${a.lastLogin ? `${fmtFull(a.lastLogin.at)} <span class="muted mono">· ${a.lastLogin.ip}</span>` : `<span class="muted">从未登录</span>`}</div><div class="k">已授权客户端</div><div>${lc.length ? lc.map((c) => `<a href="#/clients/${c.clientId}">${esc(clientName(c))}</a>`).join("、") : `<span class="muted">无</span>`}</div></div></div>
+    <form class="dsec" data-form="acct-perm" onsubmit="return false"><h3>权限上限与 Vault</h3>${scopeChecks(a.scopes, "scope")}<div style="height:8px"></div>${vaultChecks(a.vaults)}
+      <div class="banner amber" style="margin:12px 0 0">${ic("alert")}<div>保存后将<b>撤销该账户已有的全部授权</b>（${lc.length} 个客户端需重新授权）。</div></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" data-act="save-acct-perm">保存权限</button></div></form>
+    <form class="dsec" data-form="acct-pw" onsubmit="return false" id="pwsec"><h3>重置密码</h3><div style="display:flex;gap:8px"><div class="pw grow"><input class="inp" type="password" placeholder="新密码，至少 12 位" ${mode === "pw" ? "autofocus" : ""}><button type="button" class="ibtn" data-act="pwtoggle">${ic("eye")}</button></div><button class="btn" data-act="acct-pw">重置</button></div><span class="help">重置后该账户的已有授权会被撤销</span></form>
+    <div class="dsec"><h3>危险操作</h3><div class="danger-zone"><div class="dz"><div class="t"><b>${a.enabled ? "停用账户" : "启用账户"}</b>${a.enabled ? "禁止登录并撤销全部授权，可随时恢复" : "恢复登录能力；客户端需重新授权"}</div><button class="btn ${a.enabled ? "danger-o" : ""}" data-dz="toggle">${a.enabled ? "停用…" : "启用"}</button></div><div class="dz"><div class="t"><b>删除账户</b>永久删除，不能撤销</div><button class="btn danger-o" data-dz="del">删除…</button></div></div></div>
+    <div class="dsec"><a href="#/audit?q=${encodeURIComponent(acctName(a))}" class="btn ghost sm">${ic("list")}查看此账户的审计记录</a></div></div>`;
+  }
+  if (kind === "key") {
+    const k = keyOf(id); if (!k) return dhead("Key 不存在") + `<div class="dbody">${emptyState("key", "Key 不存在或已删除", "")}</div>`;
+    const pol = POLICIES.filter((p) => p.subjects.includes("api-key:" + k.id));
+    return dhead(esc(keyName(k)), k.env ? `<span class="tag">${ic("lock", "xs")}只读</span>` : "") + `<div class="dbody scroll">
+    ${k.env ? `<div class="banner">${ic("info")}<div>这个 Key 来自部署环境变量 <span class="mono">API_KEY</span>，明文不在此显示，也不能在这里修改或删除。如需轮换，请修改受保护的 <span class="mono">.env</span> 后重启服务。</div></div>` : ""}
+    <div class="dsec"><div class="kv"><div class="k">前缀</div><div class="mono">${k.env ? "—（环境变量）" : esc(k.prefix) + "…"}</div><div class="k">Key ID</div><div>${idc(k.id, k.id)}</div><div class="k">创建</div><div>${k.env ? "随部署" : fmtFull(k.createdAt)}</div><div class="k">最后调用</div><div>${k.lastUsed ? `${fmtFull(k.lastUsed.at)}<div class="muted">${esc(k.lastUsed.agent)} · <span class="mono">${k.lastUsed.ip}</span></div>` : `<span class="muted">从未调用</span>`}</div><div class="k">定时授权</div><div>${pol.length ? pol.map((p) => `<a href="#/authz/${p.id}">${esc(p.label)}</a>`).join("、") : `<span class="muted">未受限制</span>`}</div>
+    <div class="k futonly">绑定 Agent</div><div class="futonly"><span class="muted">未设置</span> ${fut("#285")}<div class="help">审计中以此名称归因，替代 UA 推测</div></div></div></div>
+    <form class="dsec" data-form="key-perm" onsubmit="return false"><h3>权限范围与 Vault</h3>${k.env ? `<div class="tags">${scopeTags(k.scopes)}${vaultTags(k.vaults)}</div>` : `${scopeChecks(k.scopes, "scope")}<div style="height:8px"></div>${vaultChecks(k.vaults)}<div style="margin-top:12px"><button class="btn primary" data-act="save-key-perm">保存</button></div>`}</form>
+    ${k.env ? "" : `<div class="dsec"><h3>危险操作</h3><div class="danger-zone"><div class="dz"><div class="t"><b>删除 Key</b>使用此 Key 的程序将立即失去访问</div><button class="btn danger-o" data-dz="del">删除…</button></div></div></div>`}</div>`;
+  }
+  if (kind === "client") {
+    const c = client(id); if (!c) return dhead("客户端不存在") + `<div class="dbody">${emptyState("app", "客户端不存在或已删除", "")}</div>`;
+    const la = linkedAccounts(id), eligible = ACCOUNTS.filter((a) => a.enabled && !la.includes(a));
+    const tr = c.transfer;
+    return dhead(esc(clientName(c))) + `<div class="dbody scroll">
+    ${tr ? `<div class="banner amber">${ic("swap")}<div style="flex:1"><b>授权转移待完成</b>：已于 ${rel(tr.at)} 撤销 <b>${esc(acctName(acct(tr.from)))}</b> 的授权，等待 <b>${esc(acctName(acct(tr.to)))}</b> 在客户端中重新登录并同意。<div style="margin-top:8px"><button class="btn sm" data-act="cancel-transfer">取消转移</button></div></div></div>` : ""}
+    <div class="dsec"><div class="kv"><div class="k">客户端 ID</div><div>${idc(c.clientId, c.clientId)}</div><div class="k">已授权账户</div><div>${la.length ? la.map((a) => `<a href="#/accounts/${a.id}">${esc(acctName(a))}</a>`).join("、") : `<span class="muted">无有效授权</span>`}</div>
+    <div class="k">连接域名</div><div>${c.domains.length ? c.domains.map((d) => `${esc(d.host)} <span class="muted">· 来源 ${d.src.join(" / ")}</span>`).join("<br>") : `<span class="muted">尚无</span>`}</div>
+    <div class="k">注册</div><div>${fmtFull(c.createdAt)}</div><div class="k">最后调用</div><div>${c.lastCall ? `${fmtFull(c.lastCall.at)} <span class="muted mono">· ${c.lastCall.ip}</span>` : `<span class="muted">从未调用</span>`}</div></div></div>
+    <div class="dsec"><h3>回调地址 · ${c.redirectUris.length}</h3><div class="list">${c.redirectUris.map((u) => `<div class="li"><span class="mono ell grow" title="${esc(u)}">${esc(u)}</span><button class="ibtn" data-copy="${esc(u)}">${ic("copy")}</button></div>`).join("")}</div></div>
+    <!-- 「默认 Vault」分节：先实现、后补参照（#643 / issue #642）。
+         参照在这里落后过一次有意的设计变更：OAuth 客户端的「默认作用域」是 #643 加进 Admin 抽屉的功能
+         （不指定 vaultId 时用哪个库，偏好不等于授权），参照当时没有这一节。按协调席裁决 2026-10-22，
+         把参照往前推而不是给实现发区域级豁免 —— 后者会让“这一块以后怎么变都不报”，是假守卫的温床。
+         结构与实现逐项对齐：form.dsec > h3 + 一个 .sel 选择器 + 一个提交按钮。 -->
+    <form class="dsec" data-form="client-default-vault" onsubmit="return false" id="dvsec"><h3>默认 Vault</h3>
+      <div class="fld"><label for="default-vault">默认 Vault</label><select class="sel" id="default-vault" name="defaultVaultId"><option value="" selected>继承服务默认 Vault</option><option value="vault">vault (vault)</option></select><span class="help">MCP 调用不指定 vaultId 时使用此库；明确指定其他有权访问的 Vault 仍然有效。默认库不会授予访问权限。</span></div>
+      <div style="margin-top:12px"><button class="btn primary" type="submit">保存默认 Vault</button></div></form>
+    <form class="dsec" data-form="transfer" onsubmit="return false" id="trsec"><h3>转移授权账户</h3><p class="help" style="margin:0 0 8px">把此客户端的当前授权从一个账户换到另一个账户：撤销原账户的 Token，目标账户在客户端中重新同意后生效。不更改回调地址与密钥。</p>
+      <div class="grid2"><div class="fld"><label>从</label><select class="sel" ${la.length ? "" : "disabled"}>${la.length ? la.map((a) => `<option>${esc(acctName(a))}（${esc(a.username)}）</option>`).join("") : "<option>无有效授权</option>"}</select></div><div class="fld"><label>转到</label><select class="sel" data-trto ${tr || !la.length ? "disabled" : ""}><option value="">选择目标账户…</option>${eligible.map((a) => `<option value="${a.id}">${esc(acctName(a))}（${esc(a.username)}）</option>`).join("")}${ACCOUNTS.filter((a) => !a.enabled).map((a) => `<option disabled>${esc(acctName(a))} · 已停用</option>`).join("")}</select></div></div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center"><button class="btn" data-act="begin-transfer" ${tr || !la.length ? "disabled" : ""}>${ic("swap")}开始转移…</button>${tr ? `<span class="help">已有一项转移待完成</span>` : ""}</div>
+      <div class="futonly futbox" style="margin-top:12px"><label class="chk" style="margin:-6px -8px"><input type="checkbox" disabled><span>由管理员直接为目标账户签发等价授权，无需其重新同意 ${fut("#364 待决")}</span></label></div></form>
+    <div class="dsec"><h3>危险操作</h3><div class="danger-zone"><div class="dz"><div class="t"><b>撤销全部授权</b>所有账户在此客户端上的 Token 立即失效，注册保留</div><button class="btn danger-o" data-dz="revoke" ${la.length ? "" : "disabled"}>撤销…</button></div><div class="dz"><div class="t"><b>删除客户端</b>撤销授权并删除注册记录</div><button class="btn danger-o" data-dz="del">删除…</button></div></div></div></div>`;
+  }
+  if (kind === "vault") {
+    const v = VAULTS.find((x) => x.id === id); if (!v) return dhead("Vault 不存在") + "";
+    const g = v.git, dis = !v.editable;
+    const sw = (k, l, key, d) => `<div class="li" style="min-height:52px"><div class="grow"><b>${l}</b> <span class="sub">${key}</span><div class="help">${d}</div></div><button type="button" class="switch ${g[k] ? "on" : ""}" data-gsw="${k}" ${dis ? "disabled" : ""}></button></div>`;
+    const num = (k, l, min, max) => `<div class="fld"><label>${l}</label><div style="display:flex;align-items:center;gap:6px"><input class="inp" type="number" min="${min}" max="${max}" value="${g[k]}" data-gnum="${k}" ${dis ? "disabled" : ""}><span class="muted">秒</span></div><span class="sub ell" title="${k} · 范围 ${min}–${max}">${k}</span></div>`;
+    return dhead(esc(v.label), `<span class="mono muted">${esc(v.id)}</span>${v.primary ? `<span class="kind">主库</span>` : ""}`) + `<div class="dbody scroll">
+    <div class="dsec"><h3>状态</h3><div class="kv"><div class="k">Git 仓库</div><div>${gitState(v)}${v.repo.state === "norepo" ? `<div class="help">目录中没有 .git。在服务器上执行 <span class="mono">git init</span> 后点「验证」，即可启用自动提交。</div>` : `<div class="help mono">HEAD ${v.repo.head} · ${esc(v.repo.msg)}</div>`}</div>
+    ${v.repo.state === "clean" ? `<div class="k">最近推送</div><div>${rel(v.repo.lastPush)} · 领先 ${v.repo.ahead} / 落后 ${v.repo.behind}</div>` : ""}
+    <div class="k">待提交</div><div>${v.repo.state === "clean" ? `<span class="muted">无</span>` : v.repo.state === "norepo" ? "—" : ""}</div>
+    <div class="k">目录</div><div class="mono" style="word-break:break-all">${esc(v.root)}<div class="help" style="font-family:var(--font)">实际路径与此一致</div></div>
+    <div class="k">配置来源</div><div>${v.configSource === "admin" ? `管理端保存 · ${rel(v.updatedAt)}` : "默认值（尚未保存过）"}</div>
+    <div class="k">上次验证</div><div>${v.verified ? `<span class="st ok"><span class="dot"></span>通过</span> <span class="muted">· ${rel(v.verified.at)}</span>` : `<span class="muted">未验证</span>`}</div>
+    <div class="k">定时任务</div><div>${g.enabled && g.autoCommitSweep ? `兜底提交：下次约 ${Math.round(g.sweepIntervalSeconds / 60) - 2} 分钟后` : `<span class="muted">未运行</span>`}</div></div></div>
+    <form class="dsec" data-form="git" onsubmit="return false"><h3>Git 同步设置</h3><div class="list">${sw("enabled", "为此 Vault 启用 Git", "enabled", v.repo.state === "norepo" ? "需要先初始化仓库" : "关闭后不再自动提交或推送")}${sw("autoCommit", "自动提交", "autoCommit", "笔记变更后按防抖时间自动提交")}${sw("autoPush", "自动推送", "autoPush", "提交后推送到远端")}${sw("autoCommitSweep", "周期兜底提交", "autoCommitSweep", "定期提交遗漏的变更")}</div>
+      <div class="grid3" style="margin-top:16px">${num("debounceSeconds", "提交防抖", 5, 3600)}${num("maxDelaySeconds", "最大延迟", 30, 86400)}${num("sweepIntervalSeconds", "兜底间隔", 60, 86400)}</div>
+      <div class="grid2" style="margin-top:12px"><div class="fld"><label>远端名称 <small>remote</small></label><input class="inp mono" value="${esc(g.remote)}" ${dis ? "disabled" : ""}><span class="help">填写名称（如 origin），不是 URL</span></div><div class="fld"><label>分支 <small>branch</small></label><input class="inp mono" value="${esc(g.branch)}" ${dis ? "disabled" : ""}></div></div>
+      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn primary" data-act="save-git">保存设置</button><button class="btn" data-act="verify-git">${ic("checkc")}验证仓库与配置</button></div></form>
+    <div class="dsec"><h3>能力 <span class="muted" style="font-weight:400">${Object.values(v.caps).filter(Boolean).length} 项可用</span></h3><div class="caps">${Object.entries(v.caps).map(([k, on]) => `<span class="cap ${on ? "" : "off"}" title="${esc(k)}${on ? "" : " · " + esc(CAP_HINTS[k] || "该能力尚未接线")}"><span class="dot ${on ? "ok" : ""}"></span>${CAP_LABELS[k]}</span>`).join("")}</div>
+    <div class="help" style="margin-top:8px">${Object.entries(v.caps).filter(([, on]) => !on).map(([k]) => `<div>· ${CAP_LABELS[k]}：${esc(CAP_HINTS[k] || "尚未接线")}</div>`).join("")}</div>
+    <details style="margin-top:8px"><summary class="help" style="cursor:pointer">技术细节</summary><pre class="mono" style="white-space:pre-wrap;color:var(--tx3);margin:8px 0 0">${Object.entries(v.caps).filter(([, on]) => !on).map(([k]) => `${k}: available=false (unwired)`).join("\n")}</pre></details></div>
+    <div class="dsec futonly"><div class="futbox"><b style="font-weight:600">运行时</b> ${fut("#437")}<div class="help">索引条目 1,284 · 最后扫描 2 分钟前 · 热刷新：开启（新增目录无需重启容器）</div></div></div></div>`;
+  }
+  return "";
+}
+
+// ---------------------------------------------------------------- events
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const cp = t.closest("[data-copy]"); if (cp) { e.preventDefault(); e.stopPropagation(); return copy(cp.dataset.copy); }
+  const mb = t.closest("[data-menu]"); if (mb) { e.stopPropagation(); if (menuCtx && menuCtx.id === mb.dataset.id && $("#menu").classList.contains("on")) return closeMenu(); return openMenu(mb, mb.dataset.menu, mb.dataset.id); }
+  const mi = t.closest("[data-mi]"); if (mi) return onMenu(mi.dataset.mi);
+  if (!t.closest("#menu")) closeMenu();
+  if (t.closest("[data-stop]")) return;
+  const op = t.closest("[data-open]");
+  if (op && !t.closest("button,a,input,select")) {
+    const k = op.dataset.open, id = op.dataset.id;
+    if (k === "policy") return go("#/authz/" + id);
+    return go(`#/${{ account: "accounts", key: "keys", client: "clients", vault: "vaults" }[k]}/${id}`);
+  }
+  const ua = t.closest("[data-ua]"); if (ua) { const id = ua.dataset.ua; S.uaOpen.has(id) ? S.uaOpen.delete(id) : S.uaOpen.add(id); return render(); }
+  const dz = t.closest("[data-dz]"); if (dz && drawerCtx) { menuCtx = { kind: drawerCtx.kind, id: drawerCtx.id }; return onMenu(dz.dataset.dz); }
+  const tf = t.closest("[data-tokf]"); if (tf) { S.tokenFilter = tf.dataset.tokf; return render(); }
+  const af = t.closest("[data-auf]"); if (af) { S.audit.outcome = af.dataset.auf; S.audit.page = 1; return render(); }
+  const pg = t.closest("[data-pg]"); if (pg && !pg.disabled) { S.audit.page = +pg.dataset.pg; render(); $(".content").scrollTop = 0; return; }
+  // policy editor
+  const md = t.closest("[data-mode]"); if (md) { S.draft.mode = md.dataset.mode; if (md.dataset.mode === "revoke") S.draft.capabilities = ["all"]; return render(); }
+  const dy = t.closest("[data-day]"); if (dy) { const d = +dy.dataset.day; if (S.draft.weekly.some((w) => w.day === d)) S.draft.weekly = S.draft.weekly.filter((w) => w.day !== d); else S.draft.weekly.push({ day: d, from: "09:00", to: "18:00" }); return render(); }
+  const pr = t.closest("[data-preset]"); if (pr) { const p = pr.dataset.preset; S.draft.weekly = p === "clear" ? [] : (p === "work" ? [1, 2, 3, 4, 5] : [0, 1, 2, 3, 4, 5, 6]).map((day) => ({ day, from: p === "work" ? "09:00" : "00:00", to: p === "work" ? "18:00" : "24:00" })); return render(); }
+  const wd = t.closest("[data-wdel]"); if (wd) { const [day, i] = wd.dataset.wdel.split(":").map(Number); const ws = S.draft.weekly.filter((w) => w.day === day); S.draft.weekly.splice(S.draft.weekly.indexOf(ws[i]), 1); return render(); }
+  const dd = t.closest("[data-ddel]"); if (dd) { S.draft.dateRanges.splice(+dd.dataset.ddel, 1); return render(); }
+  const us = t.closest("[data-unsubj]"); if (us) { S.draft.subjects = S.draft.subjects.filter((s) => s !== us.dataset.unsubj); return render(); }
+  const uc = t.closest("[data-uncap]"); if (uc) { S.draft.capabilities = S.draft.capabilities.filter((s) => s !== uc.dataset.uncap); return render(); }
+  const cg = t.closest("[data-capg]"); if (cg) { const g = cg.dataset.capg; S.capOpen.has(g) ? S.capOpen.delete(g) : S.capOpen.add(g); return render(); }
+  const gsw = t.closest("[data-gsw]"); if (gsw && !gsw.disabled) { gsw.classList.toggle("on"); return; }
+  const a = t.closest("[data-act]"); if (!a) return;
+  const act = a.dataset.act;
+  if (a.tagName === "A" && act === "mmore") e.preventDefault();
+  const D_ = drawerCtx;
+  switch (act) {
+    case "theme": setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); return render();
+    case "kbd": return showKbd();
+    case "logout": return confirmBox({ title: "退出管理后台？", body: "将结束当前管理会话。", ok: "退出", danger: false, onOk: () => go("#/login") });
+    case "dclose": return closeDrawer();
+    case "mcancel": return closeModal();
+    case "mok": { const f = modalOk; closeModal(); return f && f(); }
+    case "pwtoggle": { const i = a.parentElement.querySelector("input"); i.type = i.type === "password" ? "text" : "password"; return; }
+    case "new-account": S.cur = null; return openDrawer("new-account", "");
+    case "new-key": return openDrawer("new-key", "");
+    case "new-policy": S.draft = null; return go("#/authz/new");
+    case "create-account": { const f = $("[data-form=new-account]"); const u = f.username.value.trim(); if (u.length < 3) { f.username.focus(); return toast("用户名至少 3 位", { err: true }); } if (f.password.value.length < 12) { f.password.focus(); return toast("密码至少 12 位", { err: true }); } ACCOUNTS.push({ id: crypto.randomUUID?.() || "new-" + Date.now(), username: u, displayName: f.displayName.value.trim(), scopes: $$("[name=scope]:checked", f).map((x) => x.value), vaults: $$("[name=vault]:checked", f).map((x) => x.value), enabled: true, createdAt: NOW.toISOString(), lastLogin: null }); closeDrawer(); render(); return toast(`已创建账户 ${esc(u)}`); }
+    case "create-key": { const f = $("[data-form=new-key]"); const label = f.label.value.trim() || ""; const id = crypto.randomUUID?.() || "k" + Date.now(); const pre = "obmcp_" + id.replace(/-/g, "").slice(0, 8); KEYS.push({ id, label, prefix: pre, scopes: $$("[name=scope]:checked", f).map((x) => x.value), vaults: $$("[name=vault]:checked", f).map((x) => x.value), createdAt: NOW.toISOString(), lastUsed: null }); S.flashKey = { label: label || "未命名 Key", secret: pre + "_DUMMY-NOT-A-REAL-SECRET-x7Q2" }; closeDrawer(); go("#/keys", true); return; }
+    case "dismiss-flash": S.flashKey = null; return render();
+    case "save-acct-perm": return confirmBox({ title: "保存权限并撤销已有授权？", body: `<b>${esc(acctName(acct(D_.id)))}</b> 在 ${linkedClients(D_.id).length} 个客户端上的授权将被撤销，用户需要重新授权。`, ok: "保存并撤销", onOk: () => { const f = $("[data-form=acct-perm]"), ac = acct(D_.id); ac.scopes = $$("[name=scope]:checked", f).map((x) => x.value); ac.vaults = $$("[name=vault]:checked", f).map((x) => x.value); TOKENS.forEach((t) => { if (t.userId === ac.id && t.status === "active") t.status = "revoked"; }); render(); refreshDrawer(); toast("权限已保存，已撤销旧授权"); } });
+    case "acct-pw": { const i = $("[data-form=acct-pw] input"); if (i.value.length < 12) { i.focus(); return toast("新密码至少 12 位", { err: true }); } return confirmBox({ title: "重置密码？", body: "该账户的已有授权会被撤销，需要用新密码重新授权。", ok: "重置密码", onOk: () => { i.value = ""; toast("密码已重置"); } }); }
+    case "save-key-perm": { const f = $("[data-form=key-perm]"), k = keyOf(D_.id); k.scopes = $$("[name=scope]:checked", f).map((x) => x.value); k.vaults = $$("[name=vault]:checked", f).map((x) => x.value); render(); return toast("Key 权限已保存，立即生效"); }
+    case "begin-transfer": { const to = $("[data-trto]").value; if (!to) return toast("请选择目标账户", { err: true }); const c = client(D_.id), from = linkedAccounts(c.clientId)[0]; return confirmBox({ title: "转移授权账户？", body: `将立即撤销 <b>${esc(acctName(from))}</b> 在「${esc(clientName(c))}」上的 Token。<b>${esc(acctName(acct(to)))}</b> 需在客户端中重新登录并同意后，转移才完成。`, ok: "开始转移", danger: false, onOk: () => { c.transfer = { from: from.id, to, at: NOW.toISOString() }; TOKENS.forEach((t) => { if (t.clientId === c.clientId && t.userId === from.id && t.status === "active") t.status = "revoked"; }); render(); refreshDrawer(); toast("已发起转移，等待目标账户重新授权"); } }); }
+    case "cancel-transfer": delete client(D_.id).transfer; render(); refreshDrawer(); return toast("已取消转移");
+    case "save-git": { const v = VAULTS.find((x) => x.id === D_.id); $$("[data-gsw]").forEach((s) => (v.git[s.dataset.gsw] = s.classList.contains("on"))); $$("[data-gnum]").forEach((n) => (v.git[n.dataset.gnum] = +n.value)); v.configSource = "admin"; v.updatedAt = NOW.toISOString(); render(); refreshDrawer(); return toast(`${esc(v.id)} 的 Git 设置已保存`); }
+    case "verify-git": return verifyVault(D_.id);
+    case "vault-refresh": return toast("Vault 清单已刷新：2 个，无变化");
+    case "vault-scan": return toast("原型：将扫描数据目录并热加载新 Vault（#437）");
+    case "token-cleanup": return confirmBox({ title: "清理历史 Token 记录", body: "只删除已撤销、已过期或已轮换的记录，<b>有效 Token 不受影响</b>。", extra: `<div class="fld"><label>清理范围</label><select class="sel" id="olderThan"><option value="7">早于 7 天</option><option value="30" selected>早于 30 天</option><option value="90">早于 90 天</option><option value="0">全部非活动记录</option></select></div>`, ok: "清理", onOk: () => { const n = TOKENS.filter((t) => t.status !== "active").length; toast(`已清理 ${n} 条非活动 Token 记录（访问 ${Math.ceil(n / 2)}，刷新 ${Math.floor(n / 2)}）`); } });
+    case "audit-reset": Object.assign(S.audit, { outcome: "", action: "", credential: "", origin: "", source: "", q: "", page: 1 }); history.replaceState(null, "", "#/audit"); return render();
+    case "audit-export": return toast("原型：导出当前筛选结果为 CSV（设想）");
+    case "authz-master": return confirmBox({ title: AUTHZ.enabled ? "关闭定时授权？" : "启用定时授权？", body: AUTHZ.enabled ? "所有策略将暂停生效，凭据恢复全天可用。" : "所有启用的策略将立即开始限制对应主体。", ok: AUTHZ.enabled ? "关闭" : "启用", danger: AUTHZ.enabled, onOk: () => { AUTHZ.enabled = !AUTHZ.enabled; render(); toast("已" + (AUTHZ.enabled ? "启用" : "关闭") + "定时授权"); } });
+    case "authz-repair": return confirmBox({ title: "用粘贴的文档覆盖策略存储？", body: "当前损坏的文件会先备份。覆盖后所有策略按新文档生效。", type: "覆盖", ok: "覆盖修复", onOk: () => { S.broken = null; render(); toast("策略存储已修复"); } });
+    case "git-repair": return confirmBox({ title: "重置 Git 配置存储？", body: "所有 Vault 的 Git 设置将恢复默认（不自动提交），损坏文件会先备份。", type: "重置", ok: "重置", onOk: () => { S.broken = null; render(); toast("已重置 Git 配置"); } });
+    case "d-enabled": S.draft.enabled = !S.draft.enabled; return render();
+    case "add-slot": { const days = [...new Set(S.draft.weekly.map((w) => w.day))]; days.forEach((day) => S.draft.weekly.push({ day, from: "19:00", to: "22:00" })); return render(); }
+    case "add-range": S.draft.dateRanges.push({ from: fmtDate(NOW.toISOString()), to: fmtDate(new Date(+NOW + 7 * D).toISOString()) }); return render();
+    case "save-policy": return savePolicy();
+    case "del-policy": return delPolicy(POLICIES.find((p) => p.id === S.draft.id));
+    case "conflict-reload": S.conflict = false; S.draft = null; parseHash(); render(); return toast("已载入最新版本");
+    case "conflict-diff": return toast("原型：并排显示你的改动与最新版本");
+    case "mmore": return mobileMore(a);
+    case "undo": return;
+  }
+});
+function mobileMore(a) {
+  const m = $("#menu");
+  m.innerHTML = NAV.filter(Array.isArray).map(([k, l, icn]) => `<button data-nav="${k}">${ic(icn)}<span class="grow">${l}</span></button>`).join("") + `<hr><button data-act="theme">${ic("sun")}<span class="grow">切换主题</span></button><button data-act="logout">${ic("out")}<span class="grow">退出登录</span></button>`;
+  m.classList.add("on"); m.style.left = "auto"; m.style.right = "8px"; m.style.top = innerHeight - m.offsetHeight - 64 + "px"; menuCtx = { kind: "more" };
+}
+document.addEventListener("click", (e) => { const n = e.target.closest("[data-nav]"); if (n) { closeMenu(); go("#/" + n.dataset.nav); } });
+function savePolicy() {
+  const d = S.draft;
+  if (!d.label.trim()) { $("[data-dv=label]").focus(); return toast("请填写策略名称", { err: true }); }
+  if (!d.subjects.length) return toast("请至少选择一个主体", { err: true });
+  if (!d.capabilities.length) return toast("请至少选择一项能力", { err: true });
+  if (d.weekly.some((w) => w.to <= w.from)) return toast("有时段的结束时间早于开始时间", { err: true });
+  if (devp("conflict") === "1" && !S.conflictShown) { S.conflictShown = true; S.conflict = true; render(); $(".content").scrollTop = 0; return; }
+  const { _for, ...clean } = d;
+  if (d.id) Object.assign(POLICIES.find((p) => p.id === d.id), clean, { updatedAt: NOW.toISOString() });
+  else POLICIES.push({ ...clean, id: crypto.randomUUID?.() || "p" + Date.now(), updatedAt: NOW.toISOString() });
+  AUTHZ.revision++; S.draft = null; go("#/authz"); toast(d.id ? "策略已保存" : "策略已创建");
+}
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.search) { const k = t.dataset.search; if (k === "audit") { S.audit.q = t.value; S.audit.page = 1; } else S.q[k] = t.value; return rerenderKeepFocus(t); }
+  if (t.dataset.af) { S.audit[t.dataset.af] = t.value; S.audit.page = 1; return rerenderKeepFocus(t); }
+  if (t.hasAttribute("data-subjq")) { S.subjQ = t.value; return rerenderKeepFocus(t); }
+  if (t.hasAttribute("data-capq")) { S.capQ = t.value; return rerenderKeepFocus(t); }
+  if (t.dataset.dv === "label") { S.draft.label = t.value; return; }
+  if (t.hasAttribute("data-typeconf")) { $("[data-act=mok]").disabled = t.value !== $("#modal").dataset.type; }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.dataset.act === "tok-order") { S.tokenOrder = t.value; return render(); }
+  if (t.dataset.act === "pagesize") { S.audit.pageSize = +t.value; S.audit.page = 1; return render(); }
+  if (t.dataset.act === "preview-subject") { S.previewSubj = t.value; return render(); }
+  if (t.dataset.af) { S.audit[t.dataset.af] = t.value; S.audit.page = 1; return render(); }
+  if (t.dataset.subj) { const s = t.dataset.subj; S.draft.subjects = t.checked ? [...S.draft.subjects, s] : S.draft.subjects.filter((x) => x !== s); return render(); }
+  if (t.dataset.cap) { const k = t.dataset.cap; S.draft.capabilities = t.checked ? [...S.draft.capabilities, k] : S.draft.capabilities.filter((x) => x !== k); return render(); }
+  if (t.dataset.dv) { S.draft[t.dataset.dv] = t.value; return render(); }
+  if (t.dataset.wf) { const [day, i, f] = t.dataset.wf.split(":"); const ws = S.draft.weekly.filter((w) => w.day === +day); ws[+i][f] = t.value; return render(); }
+  if (t.dataset.df) { const [i, f] = t.dataset.df.split(":"); S.draft.dateRanges[+i][f] = t.value; return render(); }
+});
+function rerenderKeepFocus(el) {
+  const sel = Object.keys(el.dataset).map((k) => `[data-${k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase())}${el.dataset[k] ? `="${el.dataset[k]}"` : ""}]`).join("");
+  const pos = el.selectionStart;
+  render();
+  const n = $(sel); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch {} }
+}
+document.addEventListener("submit", (e) => {
+  if (e.target.dataset.form === "login") { e.preventDefault(); const v = $("#pw").value; if (v === "") { S.loginErr = true; return render(); } S.loginErr = false; go("#/overview"); toast("欢迎回来"); }
+});
+$("#dscrim").addEventListener("click", () => closeDrawer());
+$("#mscrim").addEventListener("click", closeModal);
+
+// ---------------------------------------------------------------- keyboard
+let gPending = 0;
+document.addEventListener("keydown", (e) => {
+  const inField = e.target.matches("input,textarea,select");
+  if ($("#modal").classList.contains("on")) {
+    if (e.key === "Escape") closeModal();
+    if (e.key === "Enter" && !$("[data-act=mok]")?.disabled && $("[data-act=mok]")) { e.preventDefault(); const f = modalOk; closeModal(); f && f(); }
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && S.route === "authz" && S.sub) { e.preventDefault(); return savePolicy(); }
+  if (e.key === "Escape") { if ($("#menu").classList.contains("on")) return closeMenu(); if (inField) return e.target.blur(); if (drawerCtx) return closeDrawer(); if (S.route === "authz" && S.sub) return go("#/authz"); return; }
+  if (inField || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (gPending && Date.now() - gPending < 1200) { gPending = 0; const n = NAV.filter(Array.isArray).find((x) => x[3] === e.key); if (n) { e.preventDefault(); go("#/" + n[0]); } return; }
+  if (e.key === "g") { gPending = Date.now(); return; }
+  if (e.key === "?") { e.preventDefault(); return showKbd(); }
+  if (e.key === "/") { const s = $("[data-search],[data-subjq]"); if (s) { e.preventDefault(); s.focus(); s.select(); } return; }
+  if (e.key === "t") { setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); return render(); }
+  if (e.key === "n") { const b = $(".bar [data-act^=new-]"); if (b) { e.preventDefault(); b.click(); } return; }
+  if (e.key === "j" || e.key === "k") {
+    const rows = $$(".tbl tbody tr[data-open],.tbl tbody tr[data-ua]"); if (!rows.length) return;
+    let i = rows.findIndex((r) => r.classList.contains("kb"));
+    rows.forEach((r) => { r.classList.remove("kb"); r.classList.remove("cur"); });
+    i = Math.max(0, Math.min(rows.length - 1, i + (e.key === "j" ? 1 : -1)));
+    rows[i].classList.add("kb", "cur"); rows[i].scrollIntoView({ block: "nearest" }); return;
+  }
+  if (e.key === "Enter") { const r = $(".tbl tr.kb"); if (r) r.click(); }
+});
+addEventListener("popstate", onRoute);
+addEventListener("hashchange", () => { if (location.hash !== lastHash) { lastHash = location.hash; onRoute(); } });
+let lastHash = location.hash;
+
+// ---------------------------------------------------------------- boot (dev params)
+(function boot() {
+  let theme = "dark"; try { theme = localStorage.getItem(storageKey("theme")) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); } catch {}
+  if (devp("theme")) theme = devp("theme");
+  setTheme(theme);
+  if (devp("future") === "0") document.body.classList.add("nofut");
+  if (devp("lock") === "1") S.loginLocked = true;
+  if (devp("broken")) S.broken = devp("broken");
+  if (devp("authz") === "off") AUTHZ.enabled = false;
+  if (devp("flash") === "1") S.flashKey = { label: "桌面客户端", secret: "obmcp_5f1e9a20_DUMMY-NOT-A-REAL-SECRET-x7Q2" };
+  if (!location.hash) history.replaceState(null, "", location.search + "#/overview");
+  lastHash = location.hash;
+  onRoute();
+  if (devp("subj")) { S.subjQ = devp("subj"); render(); }
+  const dm = devp("menu"); if (dm) { const [k, id] = dm.split(":"); const b = $(`[data-menu="${k}"][data-id="${id || ""}"]`); b && openMenu(b, k, id || ""); }
+  const da = devp("act"); if (da) { const b = $(`[data-act="${da}"]`); b && b.click(); }
+  const mi = devp("mi"); if (mi && menuCtx) onMenu(mi);
+  if (devp("kbd") === "1") showKbd();
+  if (devp("ua")) { S.uaOpen.add(devp("ua")); render(); }
+})();
+</script>
+</body>
+</html>

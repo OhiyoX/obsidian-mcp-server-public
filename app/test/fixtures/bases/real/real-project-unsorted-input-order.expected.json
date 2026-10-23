@@ -1,0 +1,13 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Work/Project One.md",
+    "Work/Project Two.md",
+    "Work/Project Three.md",
+    "Work/Project Four.md"
+  ],
+  "note": "无 sort 时结果保持注入 records 的输入顺序（不隐式排序）",
+  "flipIn": null
+}

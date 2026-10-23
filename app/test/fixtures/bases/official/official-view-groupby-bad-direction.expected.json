@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "W0-D：view.groupBy（非法 direction）现在 fail closed（unsupported），不再静默接受",
+  "flipIn": "W0-D"
+}

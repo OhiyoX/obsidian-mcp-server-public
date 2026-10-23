@@ -1,0 +1,12 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "file.ctime / file.size / file.mtime 在 filter 与 sort 路径可用（propertyValue 支持），这是 filter 侧而非公式侧的能力",
+  "flipIn": null
+}

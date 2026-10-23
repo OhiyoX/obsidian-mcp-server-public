@@ -1,0 +1,11 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Work/Project Four.md",
+    "Work/Project One.md"
+  ],
+  "note": "view.limit 对平铺 rows 生效：5 条里取 2 条（sorted slice），totalMatched 不受 limit 影响",
+  "flipIn": null
+}

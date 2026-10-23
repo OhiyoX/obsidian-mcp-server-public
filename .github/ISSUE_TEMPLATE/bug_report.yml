@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible defect in the public snapshot.
+title: "[bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real tokens, vault contents, customer data, private
+        hostnames, or full logs containing them. Use example.com and TEST-NET
+        addresses in reproductions.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Steps, commands, or a small test case.
+      placeholder: |
+        1. Start the server with ...
+        2. Call ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Snapshot commit
+      description: The public commit SHA you tested.
+      placeholder: 0123456789abcdef
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: Redact credentials, vault contents, and private hostnames.
+      render: text

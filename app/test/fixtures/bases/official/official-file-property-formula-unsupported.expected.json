@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "同一 file.* 属性在公式侧不可用：file.asLink(file.size) 被 fail closed 拒绝（只有 file.name 在公式里允许）",
+  "flipIn": null
+}

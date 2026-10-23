@@ -1,0 +1,358 @@
+{
+  "target": "base-expression",
+  "group": "grouping-precedence",
+  "title": "括号、优先级、左结合、一元与二元运算的结合形状",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Arithmetic operators",
+      "quote": "Arithmetic operators perform arithmetic on numbers. For example, `radius * (2 * 3.14)`.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Arithmetic operators（表格 `( )` 行）",
+      "quote": "| `( )`    | parenthesis |",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Comparison operators",
+      "quote": "Comparison operators can be used to compare numbers, or Date objects. Equal and not equal can be used with any kind of value, not just numbers and dates.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Boolean operators",
+      "quote": "Boolean operators can be used to combine or invert logical values, resulting in a true or false value.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Formulas.md",
+      "locator": "## Write a formula → ### Use operators",
+      "quote": "`(part / whole) * 100` — use parentheses for order of operations",
+      "url": "https://obsidian.md/help/formulas"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§14.2 Parser / AST",
+      "quote": "operator precedence、括号、unary/binary、字符串转义、数字、boolean、null。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    }
+  ],
+  "cases": [
+    {
+      "id": "precedence-multiply-before-add",
+      "input": "1 + 2 * 3",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "+",
+        "left": { "type": "literal", "valueType": "number", "value": 1 },
+        "right": {
+          "type": "binary",
+          "operator": "*",
+          "left": { "type": "literal", "valueType": "number", "value": 2 },
+          "right": { "type": "literal", "valueType": "number", "value": 3 }
+        }
+      },
+      "note": "乘法先于加法；官方 Formulas.md「use parentheses for order of operations」隐含标准算术优先级"
+    },
+    {
+      "id": "precedence-parentheses-override",
+      "input": "(1 + 2) * 3",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "*",
+        "left": {
+          "type": "binary",
+          "operator": "+",
+          "left": { "type": "literal", "valueType": "number", "value": 1 },
+          "right": { "type": "literal", "valueType": "number", "value": 2 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 3 }
+      },
+      "note": "与上一条同记号、不同括号 → 不同树；这就是括号生效的证据（括号节点透明）"
+    },
+    {
+      "id": "precedence-subtraction-left-associative",
+      "input": "10 - 3 - 2",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "-",
+        "left": {
+          "type": "binary",
+          "operator": "-",
+          "left": { "type": "literal", "valueType": "number", "value": 10 },
+          "right": { "type": "literal", "valueType": "number", "value": 3 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 2 }
+      },
+      "note": "左结合（JS parity：Bases functions follow JavaScript behavior）"
+    },
+    {
+      "id": "precedence-division-left-associative",
+      "input": "8 / 4 / 2",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "/",
+        "left": {
+          "type": "binary",
+          "operator": "/",
+          "left": { "type": "literal", "valueType": "number", "value": 8 },
+          "right": { "type": "literal", "valueType": "number", "value": 4 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 2 }
+      },
+      "note": "除法左结合（官方 Arithmetic operators 表含 `/`）"
+    },
+    {
+      "id": "precedence-modulo",
+      "input": "7 % 4",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "%",
+        "left": { "type": "literal", "valueType": "number", "value": 7 },
+        "right": { "type": "literal", "valueType": "number", "value": 4 }
+      },
+      "note": "取模在官方 Arithmetic operators 表内"
+    },
+    {
+      "id": "precedence-add-before-relational",
+      "input": "1 + 2 > 2",
+      "outcome": "accept",
+      "ast": {
+        "type": "comparison",
+        "operator": ">",
+        "left": {
+          "type": "binary",
+          "operator": "+",
+          "left": { "type": "literal", "valueType": "number", "value": 1 },
+          "right": { "type": "literal", "valueType": "number", "value": 2 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 2 }
+      },
+      "note": "算术先于比较（官方 `price > 100` 形态；JS 优先级）"
+    },
+    {
+      "id": "precedence-relational-before-equality",
+      "input": "1 < 2 == true",
+      "outcome": "accept",
+      "ast": {
+        "type": "comparison",
+        "operator": "==",
+        "left": {
+          "type": "comparison",
+          "operator": "<",
+          "left": { "type": "literal", "valueType": "number", "value": 1 },
+          "right": { "type": "literal", "valueType": "number", "value": 2 }
+        },
+        "right": { "type": "literal", "valueType": "boolean", "value": true }
+      },
+      "note": "关系运算符先于相等运算符（JS 优先级；两类都在官方 Comparison operators 表内）"
+    },
+    {
+      "id": "precedence-equality-before-and",
+      "input": "1 == 1 && 2 == 2",
+      "outcome": "accept",
+      "ast": {
+        "type": "logical",
+        "operator": "&&",
+        "left": {
+          "type": "comparison",
+          "operator": "==",
+          "left": { "type": "literal", "valueType": "number", "value": 1 },
+          "right": { "type": "literal", "valueType": "number", "value": 1 }
+        },
+        "right": {
+          "type": "comparison",
+          "operator": "==",
+          "left": { "type": "literal", "valueType": "number", "value": 2 },
+          "right": { "type": "literal", "valueType": "number", "value": 2 }
+        }
+      },
+      "note": "官方布尔示例 `price > 0 && quantity > 0` 的形状"
+    },
+    {
+      "id": "precedence-and-before-or",
+      "input": "true || false && true",
+      "outcome": "accept",
+      "ast": {
+        "type": "logical",
+        "operator": "||",
+        "left": { "type": "literal", "valueType": "boolean", "value": true },
+        "right": {
+          "type": "logical",
+          "operator": "&&",
+          "left": { "type": "literal", "valueType": "boolean", "value": false },
+          "right": { "type": "literal", "valueType": "boolean", "value": true }
+        }
+      },
+      "note": "`&&` 先于 `||`（官方 Boolean operators 表；JS 优先级）"
+    },
+    {
+      "id": "precedence-unary-not",
+      "input": "!a",
+      "outcome": "accept",
+      "ast": {
+        "type": "unary",
+        "operator": "!",
+        "argument": { "type": "reference", "namespace": "note", "name": "a", "explicit": false }
+      },
+      "note": "官方 Formulas.md 示例 `!completed`"
+    },
+    {
+      "id": "precedence-unary-binds-tightest",
+      "input": "!a && b",
+      "outcome": "accept",
+      "ast": {
+        "type": "logical",
+        "operator": "&&",
+        "left": {
+          "type": "unary",
+          "operator": "!",
+          "argument": { "type": "reference", "namespace": "note", "name": "a", "explicit": false }
+        },
+        "right": { "type": "reference", "namespace": "note", "name": "b", "explicit": false }
+      },
+      "note": "一元运算绑定最紧（`!` 作用于 a，而不是 a && b）"
+    },
+    {
+      "id": "precedence-unary-minus-before-multiply",
+      "input": "-2 * 3",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "*",
+        "left": {
+          "type": "unary",
+          "operator": "-",
+          "argument": { "type": "literal", "valueType": "number", "value": 2 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 3 }
+      },
+      "note": "一元负号绑定紧于乘法（否则 (-2*3) 与 -(2*3) 无法区分）"
+    },
+    {
+      "id": "precedence-double-unary",
+      "input": "!!a",
+      "outcome": "accept",
+      "ast": {
+        "type": "unary",
+        "operator": "!",
+        "argument": {
+          "type": "unary",
+          "operator": "!",
+          "argument": { "type": "reference", "namespace": "note", "name": "a", "explicit": false }
+        }
+      },
+      "note": "一元可嵌套；深度按一元操作数累加（见 depth 组）"
+    },
+    {
+      "id": "precedence-nested-parentheses-transparent",
+      "input": "((1))",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 1 },
+      "note": "括号只塑形，不产生节点；`((1))` 与 `1` 同树"
+    },
+    {
+      "id": "precedence-documented-radius-example",
+      "input": "radius * (2 * 3.14)",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "*",
+        "left": { "type": "reference", "namespace": "note", "name": "radius", "explicit": false },
+        "right": {
+          "type": "binary",
+          "operator": "*",
+          "left": { "type": "literal", "valueType": "number", "value": 2 },
+          "right": { "type": "literal", "valueType": "number", "value": 3.14 }
+        }
+      },
+      "note": "官方原文示例逐字（Bases syntax.md Arithmetic operators）"
+    },
+    {
+      "id": "precedence-comparison-chain-left-associative",
+      "input": "1 < 2 < 3",
+      "outcome": "accept",
+      "ast": {
+        "type": "comparison",
+        "operator": "<",
+        "left": {
+          "type": "comparison",
+          "operator": "<",
+          "left": { "type": "literal", "valueType": "number", "value": 1 },
+          "right": { "type": "literal", "valueType": "number", "value": 2 }
+        },
+        "right": { "type": "literal", "valueType": "number", "value": 3 }
+      },
+      "note": "关系比较左结合（JS parity）；typed 求值时内层结果是 boolean，与外层 number 比较会 type-mismatch（见 values 组），不静默乱转"
+    },
+    {
+      "id": "precedence-reject-missing-right-operand",
+      "input": "1 +",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 3,
+      "messageTemplate": "Expected an expression but found {token} at position {position}",
+      "note": "二元运算符缺右操作数"
+    },
+    {
+      "id": "precedence-reject-missing-closing-paren",
+      "input": "(1 + 2",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 6,
+      "messageTemplate": "Expected \")\" but found {token} at position {position}",
+      "note": "括号未闭合"
+    },
+    {
+      "id": "precedence-reject-extra-closing-paren",
+      "input": "1 + 2)",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 5,
+      "messageTemplate": "Unexpected token {token} at position {position}; expected end of expression",
+      "note": "尾随 token（多余右括号）"
+    },
+    {
+      "id": "precedence-reject-empty-parentheses",
+      "input": "()",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 1,
+      "messageTemplate": "Expected an expression but found {token} at position {position}",
+      "note": "空括号不是表达式"
+    },
+    {
+      "id": "precedence-reject-adjacent-operators",
+      "input": "1 + * 2",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 4,
+      "messageTemplate": "Expected an expression but found {token} at position {position}",
+      "note": "两个运算符相邻"
+    },
+    {
+      "id": "precedence-reject-unary-plus",
+      "input": "+5",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "permanent",
+      "position": 0,
+      "messageTemplate": "Unsupported unary operator \"+\" at position {position}",
+      "note": "官方算术表只把 `+` 记为二元 plus；一元正号未定义 → fail closed 而不是猜"
+    }
+  ]
+}

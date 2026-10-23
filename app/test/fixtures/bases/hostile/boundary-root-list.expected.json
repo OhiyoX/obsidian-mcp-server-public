@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "invalid-schema",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "Base root 是 YAML 列表 → invalid-schema",
+  "flipIn": null
+}

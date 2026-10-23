@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Notes/Alpha.md", "Notes/Beta.md", "Archive/Gamma.md", "Notes/Delta.md", "Notes/Nested/Deep.md"],
+  "note": "刀4：view.groupBy 已被执行（direction DESC 只翻组间序：done/deferred/active；行序仍由 sort/file.path 决定）",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

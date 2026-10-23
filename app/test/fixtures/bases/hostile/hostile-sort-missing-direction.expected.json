@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Notes/Nested/Deep.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md"
+  ],
+  "note": "sort 项缺 direction 时默认 ASC（不是 schema 错误），并保留 path tie-break",
+  "flipIn": null
+}

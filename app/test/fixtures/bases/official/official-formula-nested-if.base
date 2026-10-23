@@ -1,0 +1,8 @@
+formulas:
+  note: file.asLink(if(title, if(status, title, file.name), file.name))
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - formula.note

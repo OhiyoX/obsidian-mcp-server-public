@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "__proto__ 作为 filter 对象的键不匹配 and/or/not，因此 fail closed（unsupported）",
+  "flipIn": null
+}

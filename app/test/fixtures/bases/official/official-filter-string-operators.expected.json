@@ -1,0 +1,13 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md"
+  ],
+  "note": "contains / startsWith / endsWith 三个字符串谓词在 filter 里可用（作用于 string 属性）",
+  "flipIn": null
+}

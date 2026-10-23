@@ -1,0 +1,7 @@
+formulas:
+  __proto__: file.asLink(file.name)
+views:
+  - type: table
+    name: Main
+    order:
+      - formula.__proto__

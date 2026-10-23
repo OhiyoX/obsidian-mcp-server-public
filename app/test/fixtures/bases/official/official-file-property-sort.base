@@ -1,0 +1,9 @@
+views:
+  - type: table
+    name: Main
+    sort:
+      - property: file.size
+        direction: DESC
+    order:
+      - file.name
+      - file.size

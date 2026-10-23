@@ -1,0 +1,2744 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "app/scripts/tool-discovery-runtime-matrix.mjs",
+  "mode": "phase2c scope-negative runtime matrix (real MCP Streamable HTTP, SDK runtime — NOT host)",
+  "source": {
+    "commit": "427225bf2e28aefceb3ed5d132a7fb26f5f964a9",
+    "commitIsInformational": true,
+    "exactSourceSha": null,
+    "provenance": "Recomputable from the current worktree by starting isolated in-process MCP servers on loopback with a temp vault/data path. `commit` is the pre-generation HEAD and is informational only; the content digest excludes this `source` block."
+  },
+  "scopeTruthSource": "app/src/scopes.js (MCP_TOOL_SCOPE_REQUIREMENTS)",
+  "profileTruthSource": "app/src/capability-policy.js CORE_TOOL_NAMES + app/src/capability-catalog.js TOOLSET_TOOLS",
+  "transport": "MCP Streamable HTTP over 127.0.0.1 ephemeral port",
+  "authHarness": "test middleware maps x-test-scopes -> authInfo.scopes; this is NOT production authentication",
+  "notHostEvidence": "This is SDK/runtime transport evidence. It does not prove any installed host defers tool loading or refreshes its tool list. Host cells stay `unknown`.",
+  "nativeRegistrationOrder": [
+    "agent_bootstrap",
+    "server_info",
+    "get_note",
+    "get_metadata",
+    "write_note",
+    "append_to_note",
+    "patch_note",
+    "replace_in_note",
+    "manage_frontmatter",
+    "manage_tags",
+    "list_notes",
+    "list_recent",
+    "search_notes",
+    "list_tags",
+    "list_files",
+    "pull_note_file",
+    "get_file",
+    "pull_file",
+    "write_file",
+    "start_file_upload",
+    "upload_file_chunk",
+    "file_upload_status",
+    "cancel_file_upload",
+    "create_archive",
+    "inspect_archive",
+    "read_archive_entry",
+    "extract_archive",
+    "get_canvas",
+    "write_canvas",
+    "manage_folders",
+    "move_note",
+    "delete_note",
+    "get_backlinks",
+    "list_trash",
+    "restore_from_trash",
+    "list_versions",
+    "delete_trash_entry",
+    "restore_version",
+    "delete_version",
+    "get_graph",
+    "get_unresolved_links",
+    "get_orphans",
+    "get_deadends",
+    "list_tasks",
+    "update_task",
+    "daily_note",
+    "list_templates",
+    "create_from_template",
+    "list_properties",
+    "rename_property",
+    "list_aliases",
+    "set_property_type",
+    "list_bases",
+    "get_base",
+    "write_base",
+    "create_base_entry",
+    "patch_base",
+    "query_base",
+    "list_base_views",
+    "git_status",
+    "git_diff",
+    "git_log",
+    "git_commit",
+    "git_pull",
+    "git_push",
+    "index_status",
+    "reindex_vault",
+    "recall",
+    "find_related",
+    "graph_health",
+    "suggest_links",
+    "memory_capture",
+    "memory_recall",
+    "skill_list",
+    "skill_match",
+    "skill_validate",
+    "skill_export",
+    "skill_import",
+    "get_note_context",
+    "get_publish_status",
+    "manage_publish",
+    "plan_restore_from_trash",
+    "plan_restore_version",
+    "plan_delete_note",
+    "plan_move_note",
+    "plan_note_changes",
+    "get_note_plan",
+    "apply_note_plan",
+    "get_note_version",
+    "compare_note_versions"
+  ],
+  "nativeRegistrationOrderDigest": "41e0d5589794ad05a9c79cf5dcc544797a6639eef4c29c74259056cd502c422a",
+  "profiles": [
+    {
+      "id": "full",
+      "policy": {
+        "profile": "full"
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 48,
+          "visibleCount": 48,
+          "hiddenCount": 42,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 54,
+          "visibleCount": 54,
+          "hiddenCount": 36,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 77,
+          "visibleCount": 77,
+          "hiddenCount": 13,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "pull_note_file",
+              "isError": true
+            },
+            {
+              "name": "pull_file",
+              "isError": true
+            },
+            {
+              "name": "start_file_upload",
+              "isError": true
+            },
+            {
+              "name": "upload_file_chunk",
+              "isError": true
+            },
+            {
+              "name": "file_upload_status",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 90,
+          "visibleCount": 90,
+          "hiddenCount": 0,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 0,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": []
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 90,
+          "readCount": 48,
+          "restoredCount": 90,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": true,
+      "handlerInvocations": []
+    },
+    {
+      "id": "core",
+      "policy": {
+        "profile": "core"
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 6,
+          "readCount": 6,
+          "restoredCount": 6,
+          "shouldChange": false,
+          "changed": false,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:info",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "info"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 2,
+          "readCount": 2,
+          "restoredCount": 2,
+          "shouldChange": false,
+          "changed": false,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:notes",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "notes"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 8,
+          "readCount": 2,
+          "restoredCount": 8,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:search",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "search"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 4,
+          "visibleCount": 4,
+          "hiddenCount": 86,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 4,
+          "visibleCount": 4,
+          "hiddenCount": 86,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 4,
+          "visibleCount": 4,
+          "hiddenCount": 86,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 4,
+          "visibleCount": 4,
+          "hiddenCount": 86,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 4,
+          "readCount": 4,
+          "restoredCount": 4,
+          "shouldChange": false,
+          "changed": false,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:files",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "files"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 5,
+          "visibleCount": 5,
+          "hiddenCount": 85,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 16,
+          "visibleCount": 16,
+          "hiddenCount": 74,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 16,
+          "readCount": 2,
+          "restoredCount": 16,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:links",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "links"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 7,
+          "visibleCount": 7,
+          "hiddenCount": 83,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 7,
+          "visibleCount": 7,
+          "hiddenCount": 83,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 13,
+          "visibleCount": 13,
+          "hiddenCount": 77,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 13,
+          "visibleCount": 13,
+          "hiddenCount": 77,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 13,
+          "readCount": 7,
+          "restoredCount": 13,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:workflows",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "workflows"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 16,
+          "visibleCount": 16,
+          "hiddenCount": 74,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 16,
+          "visibleCount": 16,
+          "hiddenCount": 74,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 16,
+          "readCount": 8,
+          "restoredCount": 16,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:git",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "git"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 3,
+          "visibleCount": 3,
+          "hiddenCount": 87,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 3,
+          "visibleCount": 3,
+          "hiddenCount": 87,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 6,
+          "visibleCount": 6,
+          "hiddenCount": 84,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 6,
+          "readCount": 3,
+          "restoredCount": 6,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:intelligence",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "intelligence"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 10,
+          "visibleCount": 10,
+          "hiddenCount": 80,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 10,
+          "visibleCount": 10,
+          "hiddenCount": 80,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 11,
+          "visibleCount": 11,
+          "hiddenCount": 79,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 13,
+          "visibleCount": 13,
+          "hiddenCount": 77,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 13,
+          "readCount": 10,
+          "restoredCount": 13,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:context",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "context"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 1,
+          "readCount": 1,
+          "restoredCount": 1,
+          "shouldChange": false,
+          "changed": false,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:publish",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "publish"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 1,
+          "visibleCount": 1,
+          "hiddenCount": 89,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 2,
+          "visibleCount": 2,
+          "hiddenCount": 88,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 2,
+          "readCount": 1,
+          "restoredCount": 2,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    },
+    {
+      "id": "module:plans",
+      "policy": {
+        "profile": "module",
+        "toolsets": [
+          "plans"
+        ]
+      },
+      "rows": [
+        {
+          "scopeSet": "read",
+          "scopes": [
+            "obsidian.read"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+files",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.files"
+          ],
+          "expectedCount": 8,
+          "visibleCount": 8,
+          "hiddenCount": 82,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "apply_note_plan",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "read+write",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write"
+          ],
+          "expectedCount": 9,
+          "visibleCount": 9,
+          "hiddenCount": 81,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        },
+        {
+          "scopeSet": "all",
+          "scopes": [
+            "obsidian.read",
+            "obsidian.write",
+            "obsidian.files"
+          ],
+          "expectedCount": 9,
+          "visibleCount": 9,
+          "hiddenCount": 81,
+          "matchesExpectedWireOrder": true,
+          "structuralLeaks": 0,
+          "hiddenNameInPayload": 0,
+          "deniedCalls": 6,
+          "deniedHandlerExecutions": 0,
+          "deniedMetadataLeaks": 0,
+          "deniedSamples": [
+            {
+              "name": "write_note",
+              "isError": true
+            },
+            {
+              "name": "get_file",
+              "isError": true
+            },
+            {
+              "name": "git_commit",
+              "isError": true
+            },
+            {
+              "name": "manage_publish",
+              "isError": true
+            },
+            {
+              "name": "memory_capture",
+              "isError": true
+            },
+            {
+              "name": "update_task",
+              "isError": true
+            }
+          ]
+        }
+      ],
+      "negatives": {
+        "missingAuth": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "noScope": {
+          "visibleCount": 0,
+          "deniedCallIsError": true
+        },
+        "scopeChange": {
+          "allCount": 9,
+          "readCount": 8,
+          "restoredCount": 9,
+          "shouldChange": true,
+          "changed": true,
+          "restored": true,
+          "matchesExpected": true
+        }
+      },
+      "fullDescriptorsDeepEqualNativeRaw": null,
+      "handlerInvocations": []
+    }
+  ],
+  "annotationScopeMismatch": {
+    "readOnlyAnnotationButWriteScoped": 36,
+    "note": "Frozen fixtures classify some tasks as read-only while the tool's Scope requirement includes obsidian.write. This census records the mismatch; it does not change the frozen fixtures or the Scope truth."
+  },
+  "semantics": {
+    "deniedHandlerExecutions": "Every registered handler is wrapped with a sentinel counter. The matrix only calls tools that are expected to be hidden; a nonzero count means a denied call reached a handler.",
+    "metadataLeaks": "structuralLeaks counts returned tool names outside the independently computed expected set; hiddenNameInPayload counts expected-hidden names that leaked into the returned `name` field."
+  },
+  "unmeasured": [
+    "installed host deferred loading / tool search (Phase 3 host evidence)",
+    "production authentication and OAuth scope derivation",
+    "end-to-end agent task success",
+    "latency"
+  ],
+  "gate": {
+    "decision": "pass",
+    "checks": [
+      {
+        "id": "visibility-matches-independent-truth",
+        "pass": true,
+        "detail": "profile x scope rows with a visibility mismatch: 0"
+      },
+      {
+        "id": "zero-metadata-leaks",
+        "pass": true,
+        "detail": "structural leaks 0; hidden names in payload 0"
+      },
+      {
+        "id": "zero-denied-handler-executions",
+        "pass": true,
+        "detail": "denied calls that reached a handler: 0"
+      },
+      {
+        "id": "denied-call-no-metadata",
+        "pass": true,
+        "detail": "denied results containing descriptor metadata: 0"
+      },
+      {
+        "id": "missing-auth-fail-closed",
+        "pass": true,
+        "detail": "profiles where missing auth exposed tools: 0"
+      },
+      {
+        "id": "no-scope-fail-closed",
+        "pass": true,
+        "detail": "profiles where empty scopes exposed tools: 0"
+      },
+      {
+        "id": "current-request-scope-recompute",
+        "pass": true,
+        "detail": "profiles where scope change did not recompute/restore: 0"
+      },
+      {
+        "id": "full-descriptors-equal-raw-native",
+        "pass": true,
+        "detail": "full-profile wired tools/list descriptors deep-equal the raw native descriptor array"
+      }
+    ],
+    "blockers": []
+  },
+  "contentDigest": {
+    "bytes": 35927,
+    "sha256": "be97f68fb5c46270aae7edc259b313c563c5577a922e96865d1d1da995db4130"
+  }
+}
