@@ -224,13 +224,15 @@ async function adminLogin(base) {
   return { cookie, csrf };
 }
 
-export async function createManagedApiKey(base) {
+export async function createManagedApiKey(base, { scopes = ["obsidian.read"], vault = "vault", label = "wave-c second principal" } = {}) {
   const { cookie, csrf } = await adminLogin(base);
+  const body = new URLSearchParams({ csrf, label, allowedVault: vault });
+  for (const scope of scopes) body.append("allowedScope", scope);
   const created = await fetch(`${base}/admin/auth/api-key/create`, {
     method: "POST",
     redirect: "manual",
     headers: { Cookie: cookie, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ csrf, label: "wave-c second principal", allowedScope: "obsidian.read", allowedVault: "vault" }),
+    body,
   });
   assert.equal(created.status, 303);
   const keysHtml = await (await fetch(`${base}/admin/auth?tab=keys`, { headers: { Cookie: cookie } })).text();

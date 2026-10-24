@@ -385,7 +385,7 @@ test("the compact face routes exactly one more action and still partitions the c
   const { tools: compact, routing } = compactToolView(nativeTools, TOOL_NAMES);
   // The +1 this lane adds: 89 -> 90 routed actions, every canonical name exactly once.
   assert.equal(compactDescriptorBranchTotal(compact), TOOL_NAMES.length);
-  assert.equal(TOOL_NAMES.length, 90);
+  assert.equal(TOOL_NAMES.length, 91, "90 after #630 create_base_entry + 1 for #470 wave A start_direct_upload");
   // `routing` is keyed by DESCRIPTOR name, so the membership check is the Set that
   // carries the action.
   const owner = [...routing.entries()].find(([, members]) => members.has("create_base_entry"));

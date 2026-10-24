@@ -76,17 +76,20 @@ export function formatDateValue(value) {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) {
       const [year, month, day] = [date.getFullYear(), date.getMonth() + 1, date.getDate()];
-      return `${String(month).padStart(2, "0")} / ${String(day).padStart(2, "0")} / ${year}`;
+      return `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
     }
     return value;
   }
   return String(value ?? "");
 }
 
-// Desktop Bases show the calendar day as `MM / DD / YYYY` with padded numbers.
+// Desktop Bases show the calendar day through moment `L` (asar app.js `renderTo`:
+// `window.moment(this.date).format(this.time ? "L LT" : "L")`), which for the en-US table the
+// owner shot uses (`04-sort-popover.png`: `10/21/2026`) is `MM/DD/YYYY` — no spaces around the
+// slashes. The padded numbers are kept; only the separators change.
 function formatCalendar(iso) {
   const [year, month, day] = iso.split("-");
-  return `${month} / ${day} / ${year}`;
+  return `${month}/${day}/${year}`;
 }
 
 // Bounded, non-executing textual preview used for array chips, object summaries

@@ -1,7 +1,7 @@
 # Progressive Tool Discovery — Phase 2C runtime Scope-negative matrix
 
 Status: **candidate** (branch artifact). This is **SDK/runtime transport evidence, not host evidence**.
-Source commit: `427225bf2e28aefceb3ed5d132a7fb26f5f964a9` (informational).
+Source commit: `bcb47fb4b3e92ec90a041438a4fc8e6c591a38cf` (informational).
 
 Real MCP Streamable HTTP over loopback with the real discovery runtime and sentinel-wrapped handlers.
 No Vault write, no production auth, no NAS state. Scope truth: `src/scopes.js`.
@@ -22,8 +22,8 @@ No Vault write, no production auth, no NAS state. Scope truth: `src/scopes.js`.
 | `full-descriptors-equal-raw-native` | pass | full-profile wired tools/list descriptors deep-equal the raw native descriptor array |
 
 - Profiles: 13; scope rows: 52.
-- Native registration order digest: `41e0d5589794ad05a9c79cf5dcc544797a6639eef4c29c74259056cd502c422a` (90 tools).
-- ReadOnly-annotation-but-write-scoped tools: 36.
+- Native registration order digest: `a19ecae01da1de2c2ea63517e4f2de5fd1ccd2707dff7ec4fd56c1b46a666182` (91 tools).
+- ReadOnly-annotation-but-write-scoped tools: 37.
 
 ## Per-profile visibility
 
@@ -32,7 +32,7 @@ No Vault write, no production auth, no NAS state. Scope truth: `src/scopes.js`.
 | `full` | `read` | 48 | 48 | true | 0 | 6 | 0 |
 | `full` | `read+files` | 54 | 54 | true | 0 | 6 | 0 |
 | `full` | `read+write` | 77 | 77 | true | 0 | 6 | 0 |
-| `full` | `all` | 90 | 90 | true | 0 | 0 | 0 |
+| `full` | `all` | 91 | 91 | true | 0 | 0 | 0 |
 | `core` | `read` | 6 | 6 | true | 0 | 6 | 0 |
 | `core` | `read+files` | 6 | 6 | true | 0 | 6 | 0 |
 | `core` | `read+write` | 6 | 6 | true | 0 | 6 | 0 |
@@ -52,7 +52,7 @@ No Vault write, no production auth, no NAS state. Scope truth: `src/scopes.js`.
 | `module:files` | `read` | 2 | 2 | true | 0 | 6 | 0 |
 | `module:files` | `read+files` | 8 | 8 | true | 0 | 6 | 0 |
 | `module:files` | `read+write` | 5 | 5 | true | 0 | 6 | 0 |
-| `module:files` | `all` | 16 | 16 | true | 0 | 6 | 0 |
+| `module:files` | `all` | 17 | 17 | true | 0 | 6 | 0 |
 | `module:links` | `read` | 7 | 7 | true | 0 | 6 | 0 |
 | `module:links` | `read+files` | 7 | 7 | true | 0 | 6 | 0 |
 | `module:links` | `read+write` | 13 | 13 | true | 0 | 6 | 0 |
@@ -110,5 +110,5 @@ No Vault write, no production auth, no NAS state. Scope truth: `src/scopes.js`.
 - Unmeasured: end-to-end agent task success
 - Unmeasured: latency
 
-Content digest (excludes `source`): `be97f68fb5c46270aae7edc259b313c563c5577a922e96865d1d1da995db4130` (35927 bytes).
+Content digest (excludes `source`): `40e7cdaafc5f1569cbd4776f7965fc34d790987a6448296b49a79d5ced867e44` (35950 bytes).
 

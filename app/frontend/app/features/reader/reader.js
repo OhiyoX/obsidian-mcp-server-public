@@ -376,17 +376,26 @@ export function propertiesHtml(properties) {
     if (Array.isArray(value) || /^(?:tags?|aliases|cssclasses)$/i.test(key)) {
       const values = Array.isArray(value) ? value : String(value || "").split(/\s*,\s*/).filter(Boolean);
       const taggable = /^tags?$/i.test(key);
-      return values.map((item) => {
+      const pills = values.map((item) => {
         const raw = typeof item === "object" ? JSON.stringify(item) : String(item);
         // Desktop strips one leading `#` before showing/searching a tag (asar app.js: the
         // multiselect option renderer slices it, then searches `tag:<value>`).
         const text = escape(taggable ? raw.replace(/^#/, "") : raw);
         // Only `tags` pills are tag searches: the preview click delegate routes [data-tag]
         // through the same search() the inline #tags use.
+        const content = `<span class="multi-select-pill-content">${text}</span>`;
+        // Desktop parity: the pill holds a `.multi-select-pill-content` box (asar app.js@1845965
+        // `o.createDiv({cls:"multi-select-pill-content"})` + the text span inside it), and the
+        // pill's `max-width` clamp lands on that box, so an over-long value wraps inside the pill.
         return taggable
-          ? `<a class="tag property-pill multi-select-pill" href="#${text}" data-tag="${text}" data-internal-link="true">${text}</a>`
-          : `<span class="property-pill multi-select-pill">${text}</span>`;
-      }).join(" ");
+          ? `<a class="tag property-pill multi-select-pill" href="#${text}" data-tag="${text}" data-internal-link="true">${content}</a>`
+          : `<span class="property-pill multi-select-pill">${content}</span>`;
+      }).join("");
+      // Desktop parity: a multi-value row is one `.multi-select-container`
+      // (app.css: inline-flex / flex-wrap:wrap / gap:var(--size-2-3) = 6px in both axes), so the
+      // wrap distance is that gap and not the line box of a space-joined inline flow. The pills are
+      // adjacent inside it: a space text node would add its width on top of the gap.
+      return `<span class="multi-select-container">${pills}</span>`;
     }
     if (typeof value === "boolean") return `<span class="property-pill property-boolean">${value ? "true" : "false"}</span>`;
     if (value instanceof Date) {

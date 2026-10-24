@@ -33,6 +33,7 @@ import {
 import {
   buildBaseHref,
   normalizeFilter,
+  normalizeGroup,
   normalizeQuery,
   normalizeSort,
   parseBaseSearch,
@@ -151,6 +152,7 @@ export function createBaseSurface({
     onLoadMore: () => { void loadMore(); },
     onRetry: () => { void retry(); },
     onSort: (list) => { void setSort(list); },
+    onGroup: (rule) => { void setGroup(rule); },
     onFilter: (list) => { void setFilter(list); },
     onQuery: (value) => { void setQuery(value); },
     onNewNote: (name) => onCreateNote?.(folderOfPath(state.path), name),
@@ -194,6 +196,7 @@ export function createBaseSurface({
       sort: state.sort,
       filter: state.filter,
       q: state.q,
+      group: state.group,
     });
     let response;
     try {
@@ -261,7 +264,7 @@ export function createBaseSurface({
   // ---- URL state -----------------------------------------------------------
 
   function urlState() {
-    return { view: state.view, sort: state.sort, filter: state.filter, q: state.q };
+    return { view: state.view, sort: state.sort, filter: state.filter, q: state.q, group: state.group };
   }
 
   function commitUrl(mode = "replace") {
@@ -295,12 +298,14 @@ export function createBaseSurface({
     const unchanged = nextView === state.view
       && JSON.stringify(parsed.sort) === JSON.stringify(state.sort)
       && JSON.stringify(parsed.filter) === JSON.stringify(state.filter)
-      && parsed.q === state.q;
+      && parsed.q === state.q
+      && JSON.stringify(parsed.group) === JSON.stringify(state.group);
     if (unchanged) return Promise.resolve({ ok: true, unchanged: true });
     state.view = nextView;
     state.sort = parsed.sort;
     state.filter = parsed.filter;
     state.q = parsed.q;
+    state.group = parsed.group;
     return loadFirstPage({ keepRows: true });
   }
 
@@ -309,7 +314,7 @@ export function createBaseSurface({
 
   // ---- Public operations ---------------------------------------------------
 
-  async function open({ vaultId, path, route, view: viewName = null, sort = null, filter = null, q = null } = {}) {
+  async function open({ vaultId, path, route, view: viewName = null, sort = null, filter = null, q = null, group = null } = {}) {
     if (closed) return closedFailure();
     const split = splitRoute(route);
     // Deep link: the query on the route wins over a stale address bar.
@@ -323,6 +328,8 @@ export function createBaseSurface({
     state.sort = normalizeSort(sort ?? urlParams.sort);
     state.filter = normalizeFilter(filter ?? urlParams.filter);
     state.q = normalizeQuery(q ?? urlParams.q ?? "");
+    state.group = normalizeGroup(group ?? urlParams.group);
+    state.viewGroupBy = null;
     state.views = [];
     state.columns = [];
     state.rows = [];
@@ -341,6 +348,20 @@ export function createBaseSurface({
     state.sort = [];
     state.filter = [];
     state.q = "";
+    state.group = null;
+    state.error = null;
+    commitUrl("push");
+    return loadFirstPage({ keepRows: true });
+  }
+
+  // The `分组依据` menu's only write: one rule in the URL (`?group=`), never the `.base`.
+  // `null` clears the override, which returns the view to its own declared `groupBy`.
+  async function setGroup(rule) {
+    if (closed) return closedFailure();
+    if (state.documentKind !== "base" || !state.path) return failure(notReady());
+    const next = normalizeGroup(rule);
+    if (JSON.stringify(next) === JSON.stringify(state.group)) return { ok: true, unchanged: true };
+    state.group = next;
     state.error = null;
     commitUrl("push");
     return loadFirstPage({ keepRows: true });
@@ -461,6 +482,7 @@ export function createBaseSurface({
     open,
     setView,
     setSort,
+    setGroup,
     setFilter,
     setQuery,
     syncFromUrl,

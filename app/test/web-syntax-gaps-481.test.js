@@ -63,12 +63,12 @@ test("a bracket that is not a one-character marker is not a task", () => {
 test("a `#`-prefixed tag property loses the prefix in the pill, the href and the search tag", () => {
   const html = propertiesHtml([["tags", ["#edge", "sleep"]], ["tag", ["#solo"]]]);
   for (const tag of ["edge", "sleep", "solo"]) {
-    assert.match(html, new RegExp(`href="#${tag}" data-tag="${tag}" data-internal-link="true">${tag}</a>`), tag);
+    assert.match(html, new RegExp(`href="#${tag}" data-tag="${tag}" data-internal-link="true"><span class="multi-select-pill-content">${tag}</span></a>`), tag);
   }
   assert.equal(html.includes('data-tag="#edge"'), false);
   assert.equal(html.includes('href="##edge"'), false);
   // Only one leading `#` is Desktop's rule; a bare `#` must not become an empty pill.
-  assert.match(propertiesHtml([["tags", ["#"]]]), /data-tag="" data-internal-link="true"><\/a>/);
+  assert.match(propertiesHtml([["tags", ["#"]]]), /data-tag="" data-internal-link="true"><span class="multi-select-pill-content"><\/span><\/a>/);
 });
 
 test("frontmatter tags reach the same surface (Reading) and the Live panel pill drops the prefix", () => {

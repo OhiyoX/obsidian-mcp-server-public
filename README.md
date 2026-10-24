@@ -197,8 +197,22 @@ audit history, and time-window authorization.
 - [Mutation recovery](docs/MUTATION_RECOVERY.md)
 - [Time-window authorization](docs/AUTHZ_TIME_WINDOWS.md)
 - [Release and deployment](docs/RELEASE_AND_DEPLOY.md)
+- [Private Gitea / public GitHub workflow](docs/DUAL_REPOSITORY_WORKFLOW.md)
 - [Agent setup prompt](docs/AGENT_SETUP_PROMPT.md)
 - [Connect skill](skills/connect-obsidian-mcp)
+
+### Repository model: private development, public source
+
+- **Gitea is the private source of truth:** development, review, immutable
+  release tags, and production provenance.
+- **[GitHub public distribution](https://github.com/OhiyoX/obsidian-mcp-server-public)**
+  is a curated, reviewed source snapshot and the community entry point.
+  Source history and commit SHAs may differ by design; snapshots are not
+  an automatic bidirectional mirror.
+- External GitHub issues and PRs are welcome; accepted contributions are
+  reviewed before being integrated into the private development line.
+- Read the [dual-repository workflow](docs/DUAL_REPOSITORY_WORKFLOW.md) for
+  source authority, review rules, public-safety checks, and version mapping.
 
 ### Repository, community, and license
 
@@ -381,8 +395,18 @@ TRUST_PROXY=127.0.0.1
 - [Mutation 恢复](docs/MUTATION_RECOVERY.md)
 - [定时授权](docs/AUTHZ_TIME_WINDOWS.md)
 - [发布与部署](docs/RELEASE_AND_DEPLOY.md)
+- [双仓维护与公开快照安全边界](docs/DUAL_REPOSITORY_WORKFLOW.md)
 - [Agent 配置提示词](docs/AGENT_SETUP_PROMPT.md)
 - [Connect Skill](skills/connect-obsidian-mcp)
+
+### 仓库分工：私有开发与公开源码发行
+
+- **Gitea 私有仓是开发与生产发布权威源**：变更审查、合并、版本标签与生产回执。
+- **[GitHub 公开仓](https://github.com/OhiyoX/obsidian-mcp-server-public)**
+  是经检查的源码快照与社区入口，不是自动双向镜像；两边的 Git 提交 SHA 可以不同。
+- GitHub 欢迎公开 issue/PR，采纳的变更须经内部代码审查再纳入发行快照。
+- 双仓同步、脱敏、PR 审计和发布身份详见
+  [双仓维护契约](docs/DUAL_REPOSITORY_WORKFLOW.md)。
 
 ### 仓库、社区与许可证
 

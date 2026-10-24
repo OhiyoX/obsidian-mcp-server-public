@@ -79,7 +79,7 @@ test("every §17 display item for a Vault is rendered", () => {
   // root is operator-only and still shown on the Admin plane
   assert.ok(html.includes("root（仅 Admin 平面）"));
   assert.ok(html.includes("/srv/vaults/main"));
-  assert.ok(html.includes("/srv/vaults/example-vault"));
+  assert.ok(html.includes("/srv/vaults/secondary"));
   assert.ok(html.includes("canonicalRoot"));
   // capability list (#402: Chinese state badge, raw reason behind <details>)
   assert.ok(html.includes('data-capability="notes"'));
@@ -232,7 +232,7 @@ test("the config form renders controls with values, bounds and a disabled state 
   assert.ok(html.includes(`action="${DEFAULT_ACTIONS.save}"`));
   assert.ok(html.includes(`action="${DEFAULT_ACTIONS.verify}"`));
   assert.ok(multi.includes('name="vaultId" value="primary"'));
-  assert.ok(multi.includes('name="vaultId" value="example-vault"'));
+  assert.ok(multi.includes('name="vaultId" value="secondary-vault"'));
   assert.ok(html.includes("class=\"sw\"") && html.includes("class=\"switch\""));
   assert.ok(html.includes("type=\"checkbox\"") && html.includes('value="true"'));
   assert.ok(html.includes("type=\"hidden\"") && html.includes('value="false"'));

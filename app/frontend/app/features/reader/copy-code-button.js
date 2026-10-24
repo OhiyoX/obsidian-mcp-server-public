@@ -1,6 +1,6 @@
 // Reading-surface copy-code button (#482, second slice).
 //
-// Desktop parity evidence (Obsidian 1.14.4, `<local-desktop-research>/extract/obsidian-asar-1.14.4`):
+// Desktop parity evidence (Obsidian 1.14.4, `scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4`):
 //   * the `app.js` post-processor walks `pre > code`, skips a `<pre>` that already
 //     carries a `.copy-code-button` (so re-running is idempotent), creates the
 //     button as a **direct child of that `<pre>`** (which is why the stylesheet's
@@ -12,7 +12,7 @@
 //   * `app.css`@11836-11837 makes the `<pre>` the positioning context, @11854 hides
 //     the button until the block is hovered and @11857-11874 paint it (values and
 //     the `@media (hover: hover)` face) with `--background-modifier-hover`.
-// Spec for this slice: `<local-desktop-research>/findings/code-block-affordances-spec.md` §一.
+// Spec for this slice: `scratch/obsidian-desktop-re/findings/code-block-affordances-spec.md` §一.
 // The Desktop reading view has **no** language label, so nothing here may grow one
 // — that is the Live half of #482 (`.code-block-flair`) and a separate lane.
 //

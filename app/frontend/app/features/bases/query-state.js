@@ -1,17 +1,24 @@
 // Pure codec for the Base view override state that travels in the document URL
-// (`?view=&sort=&filter=&q=`) and in the `/api/web/v1/base` request.
+// (`?view=&sort=&filter=&q=&group=`) and in the `/api/web/v1/base` request.
 //
 // No DOM, no network, no imports: safe to unit test in Node (surface contract).
 // The frozen API contract (D-PARITY-PLAN) is:
 //   sort   = [{"key":"<column key>","dir":"asc|desc"}]
 //   filter = [{"key":"<column key>","op":"<op>","value":<any>}], AND combined
 //   q      = text, <= 256 chars, case-insensitive contains over every column
+//   group  = {"property":"<column key>","direction":"ASC|DESC"} (one rule, `.base` spelling)
 // Anything structurally invalid is dropped here; the server stays the authority
 // for "unknown column key -> 422" semantics.
 
 export const BASE_SORT_MAX = 4;
 export const BASE_FILTER_MAX = 8;
 export const BASE_QUERY_MAX = 256;
+
+// `group` is ONE rule, in the `.base` spelling (`views[].groupBy` is exactly
+// `{property, direction?: "ASC"|"DESC"}`; matrix §6 / N8). The Web override
+// carries the same shape so the panel, the URL and the document cannot disagree.
+export const BASE_GROUP_DIRECTIONS = ["ASC", "DESC"];
+export const DEFAULT_GROUP_DIRECTION = "ASC";
 
 export const BASE_SORT_DIRECTIONS = ["asc", "desc"];
 
@@ -192,8 +199,48 @@ export function normalizeQuery(value) {
   return value.slice(0, BASE_QUERY_MAX);
 }
 
-// `?view=&sort=&filter=&q=` — stable order, empty values omitted.
-export function buildBaseSearch({ view = null, sort = [], filter = [], q = "" } = {}) {
+// `{ property, direction }` or null. A missing/blank direction defaults to ASC (the
+// `.base` default); an unknown direction or a non-object is dropped rather than
+// coerced, and the server stays the authority for its own 400/422 codes.
+export function normalizeGroup(raw) {
+  let source = raw;
+  if (typeof source === "string") {
+    if (source.trim() === "") return null;
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return null;
+    }
+  }
+  if (!source || typeof source !== "object" || Array.isArray(source)) return null;
+  const property = normalizeKey(source.property);
+  if (!property) return null;
+  const direction = source.direction === undefined || source.direction === null
+    ? DEFAULT_GROUP_DIRECTION
+    : source.direction;
+  if (!BASE_GROUP_DIRECTIONS.includes(direction)) return null;
+  return { property, direction };
+}
+
+export function groupParam(group) {
+  const normalized = normalizeGroup(group);
+  return normalized ? JSON.stringify(normalized) : null;
+}
+
+export function parseGroupParam(value) {
+  return normalizeGroup(value);
+}
+
+// The rule the server actually applied to this response: the reader's `?group=`
+// override when present, else the view's declared `groupBy`. Both are the same
+// `{ property, direction }` shape, so every consumer (menu row, table headings,
+// active badge) reads one value and cannot disagree with the result set.
+export function effectiveGroupBy(state) {
+  return normalizeGroup(state?.group) ?? normalizeGroup(state?.viewGroupBy);
+}
+
+// `?view=&sort=&filter=&q=&group=` — stable order, empty values omitted.
+export function buildBaseSearch({ view = null, sort = [], filter = [], q = "", group = null } = {}) {
   const params = new URLSearchParams();
   if (view !== null && view !== undefined && String(view) !== "") params.set("view", String(view));
   const sortValue = sortParam(sort);
@@ -202,6 +249,8 @@ export function buildBaseSearch({ view = null, sort = [], filter = [], q = "" } 
   if (filterValue) params.set("filter", filterValue);
   const query = normalizeQuery(q);
   if (query) params.set("q", query);
+  const groupValue = groupParam(group);
+  if (groupValue) params.set("group", groupValue);
   const text = params.toString();
   return text ? `?${text}` : "";
 }
@@ -214,6 +263,7 @@ export function parseBaseSearch(search) {
     sort: parseSortParam(params.get("sort")),
     filter: parseFilterParam(params.get("filter")),
     q: normalizeQuery(params.get("q") || ""),
+    group: parseGroupParam(params.get("group")),
   };
 }
 

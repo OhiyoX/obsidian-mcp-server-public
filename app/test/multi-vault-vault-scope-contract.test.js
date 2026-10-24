@@ -73,7 +73,7 @@ async function runtimeTools() {
 test("tools/list keeps the canonical tool set, order and count (§7.4)", async () => {
   const tools = await runtimeTools();
   assert.equal(tools.length, TOOL_NAMES.length);
-  assert.equal(tools.length, 90, "the multi-Vault wave must not add a select_vault tool");
+  assert.equal(tools.length, 91, "the multi-Vault wave must not add a select_vault tool; #470 wave A added start_direct_upload");
   // The served order is the registration order (module by module); the catalog order is
   // `TOOL_NAMES`. Both must describe the same set — the vault-scope registrar adds no tool.
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [...TOOL_NAMES].sort());
@@ -135,7 +135,7 @@ test("input/output schemas, annotations and titles still match the frozen Wave 1
   for (const tool of tools) {
     const baseline = baselineByName.get(tool.name);
     if (!baseline) {
-      assert.ok(["get_note_context", "list_base_views", "patch_base", "create_base_entry"].includes(tool.name), `${tool.name} is neither historical nor an allowed additive tool`);
+      assert.ok(["get_note_context", "list_base_views", "patch_base", "create_base_entry", "start_direct_upload"].includes(tool.name), `${tool.name} is neither historical nor an allowed additive tool`);
       continue;
     }
     assert.equal(

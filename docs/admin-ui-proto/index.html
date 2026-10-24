@@ -503,7 +503,7 @@ const KEYS = [
 const CLIENTS = [
   { clientId: "0f6a2d91-8b47-4c3e-a5d1-2e9b7c4f8a60", clientName: "Claude Desktop", redirectUris: ["http://127.0.0.1:33418/callback", "https://claude.ai/api/mcp/auth_callback"], domains: [{ host: "obsidian.example.com", src: ["授权", "调用"] }], createdAt: ago(40 * D), lastCall: { at: ago(9 * M), ip: "192.168.1.24" },
     transfer: { from: ACCOUNTS[0].id, to: ACCOUNTS[2].id, at: ago(50 * M) } },
-  { clientId: "a9d3e7b0-24c6-4f81-9e5a-1b8d6c0f3e27", clientName: "ChatGPT Connector", redirectUris: ["https://chatgpt.com/connector_platform_oauth_redirect"], domains: [{ host: "obsidian.example.com", src: ["注册", "授权", "调用"] }], createdAt: ago(17 * D), lastCall: { at: ago(3 * D), ip: "198.51.100.8" } },
+  { clientId: "a9d3e7b0-24c6-4f81-9e5a-1b8d6c0f3e27", clientName: "ChatGPT Connector", redirectUris: ["https://chatgpt.com/connector_platform_oauth_redirect"], domains: [{ host: "obsidian.example.com", src: ["注册", "授权", "调用"] }], createdAt: ago(17 * D), lastCall: { at: ago(3 * D), ip: "20.171.207.4" } },
   { clientId: "5e7c1b02-d9a4-4e63-b8f0-a2c6e91d4b73", clientName: "Cursor IDE", redirectUris: ["cursor://anysphere.cursor-retrieval/oauth/callback"], domains: [{ host: "obsidian.example.com", src: ["授权", "调用"] }], createdAt: ago(8 * D), lastCall: { at: ago(36 * M), ip: "192.168.1.24" } },
   { clientId: "d20e4f8a-6b13-47c9-91e5-c3a7b0f2d846", clientName: "", redirectUris: ["http://localhost:6274/oauth/callback"], domains: [], createdAt: ago(2 * D), lastCall: null },
 ];
@@ -517,7 +517,7 @@ const TOKENS = [];
     const grant = "g_" + hex();
     for (const type of ["access", "refresh"]) {
       const st = type === "access" && status === "active" && created > 1 * H ? "expired" : status;
-      TOKENS.push({ id: hex() + "-" + hex().slice(0, 4) + "-4" + hex().slice(0, 3) + "-" + hex().slice(0, 4) + "-" + hex() + hex().slice(0, 4), grant, type, clientId: CLIENTS[clientIdx].clientId, userId: ACCOUNTS[userIdx].id, resource: "https://obsidian.example.com/mcp", scopes, vaults, status: type === "refresh" ? status : st, createdAt: ago(created), lastUsed: used == null ? null : { at: ago(used), ip: userIdx === 1 ? "198.51.100.8" : "192.168.1.24" } });
+      TOKENS.push({ id: hex() + "-" + hex().slice(0, 4) + "-4" + hex().slice(0, 3) + "-" + hex().slice(0, 4) + "-" + hex() + hex().slice(0, 4), grant, type, clientId: CLIENTS[clientIdx].clientId, userId: ACCOUNTS[userIdx].id, resource: "https://obsidian.example.com/mcp", scopes, vaults, status: type === "refresh" ? status : st, createdAt: ago(created), lastUsed: used == null ? null : { at: ago(used), ip: userIdx === 1 ? "20.171.207.4" : "192.168.1.24" } });
     }
   };
   mk(0, 0, "revoked", 40 * M, ["obsidian.read", "obsidian.write"], ["vault", "research"], 9 * M);
@@ -579,14 +579,14 @@ const AUDIT = [];
   ev(96, "mcp.notifications/initialized", true, cursor, { src: "192.168.1.24", ua: UAS.cursor, agent: "Cursor IDE" });
   ev(180, "oauth.token", true, cursor, { src: "192.168.1.24", ua: UAS.cursor });
   ev(181, "oauth.authorize", true, { kind: "admin-session", user: A[0].id, client: C[2].clientId }, { src: "192.168.1.24", ua: UAS.browser, detail: "alice 同意 Cursor IDE：读取、写入、文件 · vault" });
-  ev(240, "mcp.tools/call", false, gpt, { tool: "write_note", src: "198.51.100.8", ua: UAS.chatgpt, agent: "ChatGPT Connector", reason: "权限不足：缺少「写入」" });
+  ev(240, "mcp.tools/call", false, gpt, { tool: "write_note", src: "20.171.207.4", ua: UAS.chatgpt, agent: "ChatGPT Connector", reason: "权限不足：缺少「写入」" });
   ev(300, "web.login", true, { kind: "none", user: A[0].id }, { src: "192.168.1.24", ua: UAS.browser });
   ev(420, "publish.create", true, claude, { tool: "Projects/Alpha.md", src: "192.168.1.24", ua: UAS.claude, agent: "Claude Desktop" });
   ev(19 * 60, "mcp.tools/call", true, bot, { tool: "search_notes", src: "10.0.0.31", ua: UAS.bot, agent: "research-bot" });
-  ev(26 * 60, "oauth.token", false, { kind: "oauth-refresh", client: C[1].clientId, user: A[2].id }, { src: "198.51.100.8", ua: UAS.chatgpt, reason: "刷新 Token 已撤销" });
+  ev(26 * 60, "oauth.token", false, { kind: "oauth-refresh", client: C[1].clientId, user: A[2].id }, { src: "20.171.207.4", ua: UAS.chatgpt, reason: "刷新 Token 已撤销" });
   ev(30 * 60, "authz.policy.update", true, adm, { src: "192.168.1.24", ua: UAS.browser, detail: "Research bot 工作时间 · 修订 3" });
   ev(48 * 60, "oauth.register", true, none, { src: "127.0.0.1", ua: "node", detail: "未命名客户端（localhost:6274）" });
-  ev(3 * 24 * 60, "mcp.tools/call", true, gpt, { tool: "search_notes", src: "198.51.100.8", ua: UAS.chatgpt, agent: "ChatGPT Connector" });
+  ev(3 * 24 * 60, "mcp.tools/call", true, gpt, { tool: "search_notes", src: "20.171.207.4", ua: UAS.chatgpt, agent: "ChatGPT Connector" });
   ev(5 * 24 * 60, "oauth.user.create", true, adm, { src: "192.168.1.24", ua: UAS.browser, detail: "audit-user" });
   for (let i = 0; i < 22; i++) ev(6 * 24 * 60 + i * 97, i % 5 === 3 ? "oauth.refresh" : "mcp.tools/call", i % 9 !== 4, i % 2 ? nas : claude, { tool: ["list_notes", "get_note", "search_notes", "write_note"][i % 4], src: i % 2 ? "192.168.1.5" : "192.168.1.24", ua: i % 2 ? UAS.undici : UAS.claude, agent: i % 2 ? "undici" : "Claude Desktop", reason: i % 9 === 4 ? "笔记不存在" : undefined });
 })();

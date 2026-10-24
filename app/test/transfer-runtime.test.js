@@ -367,9 +367,14 @@ test("the shared transfer path guard keeps its pre-B5 prose and resolves inside 
 
 test("the runtime instance exposes exactly the frozen B5 seam and holds no module-level state", async () => {
   const runtime = transferRuntime(await secondaryVaultRuntime("vault-h"));
+  // Issue #470 Wave A appends the single-PUT handle mode to the same seam (same durable handle, same
+  // state machine, same publish primitive). Wave B adds the resumable PATCH writer to the SAME seam
+  // (it shares `publishDirectUpload` with the whole-body writer). The legacy four remain, in order,
+  // and nothing was renamed.
   assert.deepEqual(Object.keys(runtime), [
     "vaultId", "uploadsRoot", "primary", "limits",
     "startFileUpload", "appendFileUpload", "fileUploadStatus", "cancelFileUpload",
+    "startDirectUpload", "peekDirectUpload", "receiveDirectUpload", "appendDirectUpload",
   ]);
   assert.equal(runtime.vaultId, "vault-h");
   assert.equal(runtime.primary, false);

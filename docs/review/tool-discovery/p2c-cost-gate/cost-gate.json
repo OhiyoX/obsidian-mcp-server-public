@@ -3,7 +3,7 @@
   "generatedBy": "app/scripts/tool-discovery-cost-gate.mjs",
   "mode": "phase2c cost gate (offline static)",
   "source": {
-    "commit": "d2bdabe43c78909d5eb3a20ff8b7ba04e471d6f6",
+    "commit": "f07d556fda61dff1bc2903d4367087550a26ba90",
     "commitIsInformational": true,
     "exactSourceSha": null,
     "provenance": "Offline, deterministic. Recomputable from the current worktree without a live server; the content digest is over everything except this `source` block. `commit` is the pre-generation HEAD and is informational only (generation predates the commit that ships the artifact); it is not an exact source digest."
@@ -20,7 +20,7 @@
     "runtimeSource": "real createDiscoveryRuntimePolicy + registerObsidianCapabilities + client.listTools() (wired tools/list filter)"
   },
   "catalog": {
-    "toolCount": 90,
+    "toolCount": 91,
     "canonicalMembershipOrder": [
       "agent_bootstrap",
       "server_info",
@@ -35,6 +35,7 @@
       "pull_file",
       "write_file",
       "start_file_upload",
+      "start_direct_upload",
       "file_upload_status",
       "upload_file_chunk",
       "cancel_file_upload",
@@ -134,6 +135,7 @@
       "pull_file",
       "write_file",
       "start_file_upload",
+      "start_direct_upload",
       "upload_file_chunk",
       "file_upload_status",
       "cancel_file_upload",
@@ -219,6 +221,7 @@
       "pull_file",
       "write_file",
       "start_file_upload",
+      "start_direct_upload",
       "file_upload_status",
       "upload_file_chunk",
       "cancel_file_upload",
@@ -297,33 +300,33 @@
       "get_note_version",
       "compare_note_versions"
     ],
-    "descriptorBytes": 169895,
-    "inputSchemaBytes": 41349,
-    "outputSchemaBytes": 71912,
-    "toolsListPayloadBytes": 169996,
-    "estimatedTokens": 42474,
+    "descriptorBytes": 172642,
+    "inputSchemaBytes": 41790,
+    "outputSchemaBytes": 73140,
+    "toolsListPayloadBytes": 172744,
+    "estimatedTokens": 43161,
     "annotationCensus": {
       "readOnly": 53,
-      "destructive": 29,
+      "destructive": 30,
       "mutating": 8
     },
     "scopeHistogram": {
       "obsidian.read": 48,
       "obsidian.read+obsidian.files": 6,
       "obsidian.read+obsidian.write": 29,
-      "obsidian.read+obsidian.write+obsidian.files": 7
+      "obsidian.read+obsidian.write+obsidian.files": 8
     }
   },
   "runtimeParity": {
-    "nativeToolCount": 90,
-    "wiredToolCount": 90,
-    "nativeOrderDigest": "41e0d5589794ad05a9c79cf5dcc544797a6639eef4c29c74259056cd502c422a",
-    "wiredOrderDigest": "41e0d5589794ad05a9c79cf5dcc544797a6639eef4c29c74259056cd502c422a",
+    "nativeToolCount": 91,
+    "wiredToolCount": 91,
+    "nativeOrderDigest": "a19ecae01da1de2c2ea63517e4f2de5fd1ccd2707dff7ec4fd56c1b46a666182",
+    "wiredOrderDigest": "a19ecae01da1de2c2ea63517e4f2de5fd1ccd2707dff7ec4fd56c1b46a666182",
     "fullProfileWiredNamesDeepEqualNative": true,
     "fullProfileWiredDescriptorsDeepEqualNative": true,
     "fullProfileWiredMatchesNative": true,
     "nativeSetEqualsCanonicalMembership": true,
-    "positionalMismatchesVsCanonical": 54,
+    "positionalMismatchesVsCanonical": 55,
     "semantics": "`nativeRegistrationOrder` is the order the pinned SDK emits from raw tools/list. `canonicalMembershipOrder` (TOOL_NAMES) is the immutable membership/order used by server_info and Scope tables. The full-profile wired runtime output must deep-equal the raw native descriptor array in order; a pure-policy name comparison is not accepted as native-order evidence."
   },
   "metricSemantics": {
@@ -335,7 +338,7 @@
     "forbiddenToolCategories": "Unmeasured: fixtures declare forbidden tool categories, but no canonical category->tool mapping exists in the runtime. No mapping was invented for this slice."
   },
   "baselineLimits": {
-    "currentCatalogToolCount": 90,
+    "currentCatalogToolCount": 91,
     "historicalInventoryToolCount": 86,
     "fixtureBaseline": {
       "toolCatalog": "eager/full (TOOL_NAMES, 85 tools)",
@@ -343,6 +346,7 @@
       "taskCount": 50
     },
     "additiveToolsSinceFixtureBaseline": [
+      "start_direct_upload",
       "patch_base",
       "create_base_entry",
       "list_base_views",
@@ -350,6 +354,7 @@
     ],
     "historicalInventoryMissingFromCurrentCatalog": [],
     "toolsUnreferencedByFixtures": [
+      "start_direct_upload",
       "file_upload_status",
       "upload_file_chunk",
       "cancel_file_upload",
@@ -463,8 +468,8 @@
       {
         "profile": "full",
         "scopeSet": "all",
-        "visibleCount": 90,
-        "authorizedCount": 90,
+        "visibleCount": 91,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 58,
         "expectedRefsHiddenByProfile": 0,
@@ -504,7 +509,7 @@
         "profile": "core",
         "scopeSet": "all",
         "visibleCount": 6,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 14,
         "expectedRefsHiddenByProfile": 44,
@@ -544,7 +549,7 @@
         "profile": "module:info",
         "scopeSet": "all",
         "visibleCount": 2,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 6,
         "expectedRefsHiddenByProfile": 52,
@@ -584,7 +589,7 @@
         "profile": "module:notes",
         "scopeSet": "all",
         "visibleCount": 8,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 11,
         "expectedRefsHiddenByProfile": 47,
@@ -624,7 +629,7 @@
         "profile": "module:search",
         "scopeSet": "all",
         "visibleCount": 4,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 3,
         "expectedRefsHiddenByProfile": 55,
@@ -663,8 +668,8 @@
       {
         "profile": "module:files",
         "scopeSet": "all",
-        "visibleCount": 16,
-        "authorizedCount": 90,
+        "visibleCount": 17,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 5,
         "expectedRefsHiddenByProfile": 53,
@@ -704,7 +709,7 @@
         "profile": "module:links",
         "scopeSet": "all",
         "visibleCount": 13,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 4,
         "expectedRefsHiddenByProfile": 54,
@@ -744,7 +749,7 @@
         "profile": "module:workflows",
         "scopeSet": "all",
         "visibleCount": 16,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 5,
         "expectedRefsHiddenByProfile": 53,
@@ -784,7 +789,7 @@
         "profile": "module:git",
         "scopeSet": "all",
         "visibleCount": 6,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 5,
         "expectedRefsHiddenByProfile": 53,
@@ -824,7 +829,7 @@
         "profile": "module:intelligence",
         "scopeSet": "all",
         "visibleCount": 13,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 9,
         "expectedRefsHiddenByProfile": 49,
@@ -864,7 +869,7 @@
         "profile": "module:context",
         "scopeSet": "all",
         "visibleCount": 1,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 0,
         "expectedRefsHiddenByProfile": 58,
@@ -904,7 +909,7 @@
         "profile": "module:publish",
         "scopeSet": "all",
         "visibleCount": 2,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 3,
         "expectedRefsHiddenByProfile": 55,
@@ -944,7 +949,7 @@
         "profile": "module:plans",
         "scopeSet": "all",
         "visibleCount": 9,
-        "authorizedCount": 90,
+        "authorizedCount": 91,
         "leaks": [],
         "expectedRefsVisible": 7,
         "expectedRefsHiddenByProfile": 51,
@@ -958,7 +963,7 @@
       "policy": {
         "profile": "full"
       },
-      "toolCount": 90,
+      "toolCount": 91,
       "hiddenToolCount": 0,
       "toolNames": [
         "agent_bootstrap",
@@ -974,6 +979,7 @@
         "pull_file",
         "write_file",
         "start_file_upload",
+        "start_direct_upload",
         "file_upload_status",
         "upload_file_chunk",
         "cancel_file_upload",
@@ -1053,10 +1059,10 @@
         "compare_note_versions"
       ],
       "cost": {
-        "descriptorBytes": 169895,
-        "inputSchemaBytes": 41349,
-        "outputSchemaBytes": 71912,
-        "estimatedTokens": 42474
+        "descriptorBytes": 172642,
+        "inputSchemaBytes": 41790,
+        "outputSchemaBytes": 73140,
+        "estimatedTokens": 43161
       },
       "reductionVsFull": {
         "hiddenTools": 0,
@@ -1140,11 +1146,11 @@
       },
       "riskExposure": {
         "readOnlyVisible": 53,
-        "destructiveVisible": 29,
+        "destructiveVisible": 30,
         "mutatingVisible": 8,
-        "nonReadOnlyVisible": 37,
-        "writeScopedVisible": 36,
-        "filesScopedVisible": 13
+        "nonReadOnlyVisible": 38,
+        "writeScopedVisible": 37,
+        "filesScopedVisible": 14
       }
     },
     {
@@ -1153,7 +1159,7 @@
         "profile": "core"
       },
       "toolCount": 6,
-      "hiddenToolCount": 84,
+      "hiddenToolCount": 85,
       "toolNames": [
         "agent_bootstrap",
         "server_info",
@@ -1169,9 +1175,9 @@
         "estimatedTokens": 4318
       },
       "reductionVsFull": {
-        "hiddenTools": 84,
-        "descriptorBytesSaved": 152623,
-        "descriptorBytesReduction": 0.8983372082756997
+        "hiddenTools": 85,
+        "descriptorBytesSaved": 155370,
+        "descriptorBytesReduction": 0.8999548198005121
       },
       "coverage": {
         "fixtures": 50,
@@ -1487,7 +1493,7 @@
         ]
       },
       "toolCount": 2,
-      "hiddenToolCount": 88,
+      "hiddenToolCount": 89,
       "toolNames": [
         "agent_bootstrap",
         "server_info"
@@ -1499,9 +1505,9 @@
         "estimatedTokens": 1369
       },
       "reductionVsFull": {
-        "hiddenTools": 88,
-        "descriptorBytesSaved": 164419,
-        "descriptorBytesReduction": 0.9677683274963949
+        "hiddenTools": 89,
+        "descriptorBytesSaved": 167166,
+        "descriptorBytesReduction": 0.9682811830261466
       },
       "coverage": {
         "fixtures": 50,
@@ -1857,7 +1863,7 @@
         ]
       },
       "toolCount": 8,
-      "hiddenToolCount": 82,
+      "hiddenToolCount": 83,
       "toolNames": [
         "get_note",
         "get_metadata",
@@ -1875,9 +1881,9 @@
         "estimatedTokens": 4173
       },
       "reductionVsFull": {
-        "hiddenTools": 82,
-        "descriptorBytesSaved": 153205,
-        "descriptorBytesReduction": 0.9017628535271786
+        "hiddenTools": 83,
+        "descriptorBytesSaved": 155952,
+        "descriptorBytesReduction": 0.9033259577623058
       },
       "coverage": {
         "fixtures": 50,
@@ -2208,7 +2214,7 @@
         ]
       },
       "toolCount": 4,
-      "hiddenToolCount": 86,
+      "hiddenToolCount": 87,
       "toolNames": [
         "list_notes",
         "list_recent",
@@ -2222,9 +2228,9 @@
         "estimatedTokens": 2298
       },
       "reductionVsFull": {
-        "hiddenTools": 86,
-        "descriptorBytesSaved": 160704,
-        "descriptorBytesReduction": 0.9459018805732953
+        "hiddenTools": 87,
+        "descriptorBytesSaved": 163451,
+        "descriptorBytesReduction": 0.9467626649366898
       },
       "coverage": {
         "fixtures": 50,
@@ -2594,7 +2600,7 @@
           "files"
         ]
       },
-      "toolCount": 16,
+      "toolCount": 17,
       "hiddenToolCount": 74,
       "toolNames": [
         "pull_note_file",
@@ -2603,6 +2609,7 @@
         "pull_file",
         "write_file",
         "start_file_upload",
+        "start_direct_upload",
         "file_upload_status",
         "upload_file_chunk",
         "cancel_file_upload",
@@ -2615,15 +2622,15 @@
         "manage_folders"
       ],
       "cost": {
-        "descriptorBytes": 31616,
-        "inputSchemaBytes": 7089,
-        "outputSchemaBytes": 15492,
-        "estimatedTokens": 7904
+        "descriptorBytes": 34363,
+        "inputSchemaBytes": 7530,
+        "outputSchemaBytes": 16720,
+        "estimatedTokens": 8591
       },
       "reductionVsFull": {
         "hiddenTools": 74,
         "descriptorBytesSaved": 138279,
-        "descriptorBytesReduction": 0.8139085906000765
+        "descriptorBytesReduction": 0.8009580519224754
       },
       "coverage": {
         "fixtures": 50,
@@ -2968,11 +2975,11 @@
       },
       "riskExposure": {
         "readOnlyVisible": 8,
-        "destructiveVisible": 8,
+        "destructiveVisible": 9,
         "mutatingVisible": 0,
-        "nonReadOnlyVisible": 8,
-        "writeScopedVisible": 8,
-        "filesScopedVisible": 11
+        "nonReadOnlyVisible": 9,
+        "writeScopedVisible": 9,
+        "filesScopedVisible": 12
       }
     },
     {
@@ -2984,7 +2991,7 @@
         ]
       },
       "toolCount": 13,
-      "hiddenToolCount": 77,
+      "hiddenToolCount": 78,
       "toolNames": [
         "move_note",
         "delete_note",
@@ -3007,9 +3014,9 @@
         "estimatedTokens": 4226
       },
       "reductionVsFull": {
-        "hiddenTools": 77,
-        "descriptorBytesSaved": 152993,
-        "descriptorBytesReduction": 0.9005150239854027
+        "hiddenTools": 78,
+        "descriptorBytesSaved": 155740,
+        "descriptorBytesReduction": 0.9020979831095562
       },
       "coverage": {
         "fixtures": 50,
@@ -3375,7 +3382,7 @@
         ]
       },
       "toolCount": 16,
-      "hiddenToolCount": 74,
+      "hiddenToolCount": 75,
       "toolNames": [
         "list_tasks",
         "update_task",
@@ -3401,9 +3408,9 @@
         "estimatedTokens": 7728
       },
       "reductionVsFull": {
-        "hiddenTools": 74,
-        "descriptorBytesSaved": 138986,
-        "descriptorBytesReduction": 0.8180699844021307
+        "hiddenTools": 75,
+        "descriptorBytesSaved": 141733,
+        "descriptorBytesReduction": 0.820964771029066
       },
       "coverage": {
         "fixtures": 50,
@@ -3764,7 +3771,7 @@
         ]
       },
       "toolCount": 6,
-      "hiddenToolCount": 84,
+      "hiddenToolCount": 85,
       "toolNames": [
         "git_status",
         "git_diff",
@@ -3780,9 +3787,9 @@
         "estimatedTokens": 2035
       },
       "reductionVsFull": {
-        "hiddenTools": 84,
-        "descriptorBytesSaved": 161758,
-        "descriptorBytesReduction": 0.9521057123517467
+        "hiddenTools": 85,
+        "descriptorBytesSaved": 164505,
+        "descriptorBytesReduction": 0.9528677842008317
       },
       "coverage": {
         "fixtures": 50,
@@ -4143,7 +4150,7 @@
         ]
       },
       "toolCount": 13,
-      "hiddenToolCount": 77,
+      "hiddenToolCount": 78,
       "toolNames": [
         "index_status",
         "reindex_vault",
@@ -4166,9 +4173,9 @@
         "estimatedTokens": 6120
       },
       "reductionVsFull": {
-        "hiddenTools": 77,
-        "descriptorBytesSaved": 145415,
-        "descriptorBytesReduction": 0.8559110038553224
+        "hiddenTools": 78,
+        "descriptorBytesSaved": 148162,
+        "descriptorBytesReduction": 0.858203681607025
       },
       "coverage": {
         "fixtures": 50,
@@ -4509,7 +4516,7 @@
         ]
       },
       "toolCount": 1,
-      "hiddenToolCount": 89,
+      "hiddenToolCount": 90,
       "toolNames": [
         "get_note_context"
       ],
@@ -4520,9 +4527,9 @@
         "estimatedTokens": 949
       },
       "reductionVsFull": {
-        "hiddenTools": 89,
-        "descriptorBytesSaved": 166102,
-        "descriptorBytesReduction": 0.9776744459813415
+        "hiddenTools": 90,
+        "descriptorBytesSaved": 168849,
+        "descriptorBytesReduction": 0.9780296799156636
       },
       "coverage": {
         "fixtures": 50,
@@ -4908,7 +4915,7 @@
         ]
       },
       "toolCount": 2,
-      "hiddenToolCount": 88,
+      "hiddenToolCount": 89,
       "toolNames": [
         "get_publish_status",
         "manage_publish"
@@ -4920,9 +4927,9 @@
         "estimatedTokens": 906
       },
       "reductionVsFull": {
-        "hiddenTools": 88,
-        "descriptorBytesSaved": 166273,
-        "descriptorBytesReduction": 0.9786809499985285
+        "hiddenTools": 89,
+        "descriptorBytesSaved": 169020,
+        "descriptorBytesReduction": 0.9790201689044381
       },
       "coverage": {
         "fixtures": 50,
@@ -5293,7 +5300,7 @@
         ]
       },
       "toolCount": 9,
-      "hiddenToolCount": 81,
+      "hiddenToolCount": 82,
       "toolNames": [
         "plan_note_changes",
         "plan_move_note",
@@ -5312,9 +5319,9 @@
         "estimatedTokens": 4770
       },
       "reductionVsFull": {
-        "hiddenTools": 81,
-        "descriptorBytesSaved": 150816,
-        "descriptorBytesReduction": 0.8877012272285824
+        "hiddenTools": 82,
+        "descriptorBytesSaved": 153563,
+        "descriptorBytesReduction": 0.8894880735858018
       },
       "coverage": {
         "fixtures": 50,
@@ -5677,13 +5684,13 @@
       "workflows": 5
     },
     "allCoverExpected": true,
-    "descriptorBytesTotal": 971816,
+    "descriptorBytesTotal": 985551,
     "descriptorBytesMin": 3622,
     "descriptorBytesP50": 19079,
-    "descriptorBytesP95": 31616,
-    "descriptorBytesMax": 31616,
+    "descriptorBytesP95": 34363,
+    "descriptorBytesMax": 34363,
     "toolCountMin": 2,
-    "toolCountMax": 16,
+    "toolCountMax": 17,
     "perFixture": [
       {
         "taskId": "note-read-full-en",
@@ -5911,8 +5918,8 @@
         "toolsets": [
           "files"
         ],
-        "toolCount": 16,
-        "descriptorBytes": 31616,
+        "toolCount": 17,
+        "descriptorBytes": 34363,
         "coversExpected": true,
         "missing": []
       },
@@ -5922,8 +5929,8 @@
         "toolsets": [
           "files"
         ],
-        "toolCount": 16,
-        "descriptorBytes": 31616,
+        "toolCount": 17,
+        "descriptorBytes": 34363,
         "coversExpected": true,
         "missing": []
       },
@@ -5933,8 +5940,8 @@
         "toolsets": [
           "files"
         ],
-        "toolCount": 16,
-        "descriptorBytes": 31616,
+        "toolCount": 17,
+        "descriptorBytes": 34363,
         "coversExpected": true,
         "missing": []
       },
@@ -5944,8 +5951,8 @@
         "toolsets": [
           "files"
         ],
-        "toolCount": 16,
-        "descriptorBytes": 31616,
+        "toolCount": 17,
+        "descriptorBytes": 34363,
         "coversExpected": true,
         "missing": []
       },
@@ -6187,8 +6194,8 @@
         "toolsets": [
           "files"
         ],
-        "toolCount": 16,
-        "descriptorBytes": 31616,
+        "toolCount": 17,
+        "descriptorBytes": 34363,
         "coversExpected": true,
         "missing": []
       },
@@ -6255,13 +6262,13 @@
       "publish",
       "plans"
     ],
-    "toolCount": 89,
-    "descriptorBytes": 166102,
+    "toolCount": 90,
+    "descriptorBytes": 168849,
     "totalToolsets": 11,
     "toolsetsOmitted": [
       "context"
     ],
-    "descriptorBytesReduction": 0.022325554018658583,
+    "descriptorBytesReduction": 0.021970320084336373,
     "semantics": "Smallest fixed module bundle (by descriptor bytes) that statically exposes all fixture expected tools. Static coverage is necessary but not sufficient for a default shrink; see gate."
   },
   "unmeasured": [
@@ -6289,7 +6296,7 @@
       {
         "id": "catalog-integrity",
         "pass": true,
-        "detail": "native catalog 90 tools; TOOL_NAMES 90; wired full-profile output deep-equals raw native descriptors in order=true; native wire order positional mismatches vs canonical membership=54 (informational: membership order and wire order are distinct and both recorded)"
+        "detail": "native catalog 91 tools; TOOL_NAMES 91; wired full-profile output deep-equals raw native descriptors in order=true; native wire order positional mismatches vs canonical membership=55 (informational: membership order and wire order are distinct and both recorded)"
       },
       {
         "id": "full-passthrough",
@@ -6314,7 +6321,7 @@
       {
         "id": "static-coverage-expressible",
         "pass": true,
-        "detail": "best fixed module bundle statically covers every expected tool with 89/86 tools (2.2% descriptor reduction); single-toolset/core profiles do not"
+        "detail": "best fixed module bundle statically covers every expected tool with 90/86 tools (2.2% descriptor reduction); single-toolset/core profiles do not"
       },
       {
         "id": "default-shrink-readiness",
@@ -6324,7 +6331,7 @@
       {
         "id": "baseline-limit-disclosed",
         "pass": true,
-        "detail": "additive tools: patch_base, create_base_entry, list_base_views, get_note_context; unreferenced tools: 20"
+        "detail": "additive tools: start_direct_upload, patch_base, create_base_entry, list_base_views, get_note_context; unreferenced tools: 21"
       }
     ],
     "blockers": [
@@ -6332,7 +6339,7 @@
     ]
   },
   "contentDigest": {
-    "bytes": 110059,
-    "sha256": "3700672786e430544c7a0a3185c6fabd36bbdabfe4972ca79c17a795f5dcdc40"
+    "bytes": 110232,
+    "sha256": "0fb2a980cba1ef05e24b1e88425cbcd73b3b5793ded762226ac01aaf48fa4799"
   }
 }

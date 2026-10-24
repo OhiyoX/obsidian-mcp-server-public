@@ -63,12 +63,12 @@ export function vaultFixture(overrides = {}) {
 /** An untouched secondary Vault: Git disabled, no pending changes, no sweep. */
 export function secondaryVault(overrides = {}) {
   return vaultFixture({
-    id: "example-vault",
-    name: "Example",
+    id: "secondary-vault",
+    name: "Secondary",
     primary: false,
     writable: true,
-    root: "/srv/vaults/example-vault",
-    canonicalRoot: "/srv/vaults/example-vault",
+    root: "/srv/vaults/secondary",
+    canonicalRoot: "/srv/vaults/secondary",
     ...overrides,
     git: {
       state: "disabled",

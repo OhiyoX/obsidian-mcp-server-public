@@ -183,11 +183,11 @@ test("the two Publish tools read args.vaultId and fall back to the default Vault
 // 2. Ratchet over the whole canonical catalog.
 // ---------------------------------------------------------------------------
 
-test("ratchet: across all 90 canonical tools only the canonical vault-scoped set is vault-gated", async () => {
+test("ratchet: across all 91 canonical tools only the canonical vault-scoped set is vault-gated", async () => {
   // Contract §7 + §9.1 (every registered tool must be classified). The classification is
   // observed through the real middleware: a tool whose required vault is `secondary` while the
   // credential holds only `default` is denied; global tools and unknown names are allowed.
-  assert.equal(TOOL_NAMES.length, 90, "canonical tool count ratchet: 89 after .29 (patch_base) + 1 for #630 create_base_entry");
+  assert.equal(TOOL_NAMES.length, 91, "canonical tool count ratchet: 89 after .29 (patch_base) + 1 for #630 create_base_entry + 1 for #470 wave A start_direct_upload");
   assert.deepEqual([...GLOBAL_TOOLS], ["agent_bootstrap", "server_info"]);
   assert.equal(SCOPED_TOOLS_TODAY.length, TOOL_NAMES.length - GLOBAL_TOOLS.length);
   for (const name of SCOPED_TOOLS_TODAY) assert.ok(TOOL_NAMES.includes(name), `${name} is not canonical`);

@@ -29,7 +29,7 @@
       "source": "SEMANTIC-ORDER-EVIDENCE.md（现场）",
       "locator": "B1 / §7 确定性保证（项目自定收窄）",
       "quote": "保持现行「先全量编译所有公式」的确定性保证；不主张 parity。",
-      "url": "https://example.com/research/SEMANTIC-ORDER-EVIDENCE.md"
+      "url": "file:///D:/Coding/Codex/obsidian%20server%20projects/scratch/bases-p1/SEMANTIC-ORDER-EVIDENCE.md"
     }
   ],
   "note": "本组用 `parenDepth` / `unaryDepth` 描述输入（driver 生成 `\"(\".repeat(parenDepth) + \"!\".repeat(unaryDepth) + \"1\" + \")\".repeat(parenDepth)`），避免手写长括号串数错层数；边界语义在 docs/bases/BASES-GRAMMAR-CORPUS.md §5 冻结。",

@@ -17,6 +17,7 @@ import { oauthEndpointHardening } from "./src/oauth/hardening.js";
 import { createAdminRouter } from "./src/admin/router.js";
 import { createAccessPolicyWiring } from "./src/access-policy/server-wiring.js";
 import { createWebAppRouter } from "./src/app/routes.js";
+import { mountDirectUpload } from "./src/direct-upload.js";
 import { createWebSessionStore } from "./src/app/web-session-store.js";
 import { teardownLiveEvents } from "./src/app/live-events.js";
 import { DATA_PATH, READ_ONLY, VAULT } from "./src/config.js";
@@ -226,7 +227,7 @@ if (oauthService) {
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", CORS_ORIGIN);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
     ["Accept", "Authorization", "Content-Type", "Last-Event-ID", "Mcp-Session-Id", ...authCorsHeaders(), "mcp-session-id"].join(", "),
@@ -238,6 +239,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Issue #470 Wave A: `PUT /uploads/:uploadId` (DIRECT_UPLOAD_ENABLED=false removes it again).
+mountDirectUpload(app, { auth: mcpAuthMiddleware, accessRuntime: accessPolicy.runtime, resolveRuntime: (id) => vaultScopeDeps?.resolveVaultRuntime(id) ?? null, provider: oauthService?.provider ?? null, writable: !READ_ONLY });
 
 app.get("/", mcpAuthMiddleware, (_req, res) => {
   const release = deployedVersion();

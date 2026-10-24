@@ -16,6 +16,9 @@ const BASE_MODULES = [
   "controller.js",
   "document-kind.js",
   "styles.js",
+  // U12 split: the panel family of the parity stylesheet moved to its own module so
+  // styles.js has room for the 所有视图 section. Same budget, same bans.
+  "styles-panels.js",
   "toolbar.js",
   "panels.js",
   "mobile-viewport.js",
@@ -129,6 +132,19 @@ test("createBaseSurface returns the frozen mount contract", async () => {
   surface.destroy();
 });
 
+test("the desktop header is one row band tall (inventory F2) and stays one line", async () => {
+  const { BASE_SURFACE_CSS } = await import("../frontend/app/features/bases/styles.js");
+  // Desktop bytes: `.bases-thead{position:sticky;height:var(--bases-table-row-height)…}` (app.css@488533),
+  // `.bases-thead .bases-table-header{height:var(--bases-table-row-height)}` (@488885) and
+  // `.bases-td{height:var(--bases-table-row-height)}` (@494332) — the header uses the SAME 30px band as
+  // the body rows. `height` is a minimum on a table cell, so the block padding has to be zero as well.
+  assert.match(BASE_SURFACE_CSS, /\.base-table thead th\{[^}]*height:var\(--bases-table-row-height,30px\);padding-block:0;\}/);
+  // The sprite is `display:block` (Obsidian's `.svg-icon`); in a table cell that stacks a second block
+  // box under the label (measured 56.25 = 20 padding + 2 borders + 20.25 line + 14 icon), so the header
+  // icon must be inline again.
+  assert.match(BASE_SURFACE_CSS, /\.base-column-icon\{display:inline-block;/);
+});
+
 test("the request URL never exposes offset or pageNumber", async () => {
   const { buildBaseRequestUrl } = await import("../frontend/app/features/bases/index.js");
   const url = buildBaseRequestUrl({ path: "A b.base", view: "Table", limit: 100, cursor: null });
@@ -138,4 +154,18 @@ test("the request URL never exposes offset or pageNumber", async () => {
   assert.equal(url.includes("path=A+b.base"), true);
   assert.equal(url.includes("view=Table"), true);
   assert.equal(url.includes("limit=100"), true);
+});
+
+test("the desktop row height and the two active-tool fills stay in the stylesheet", async () => {
+  const { BASE_SURFACE_CSS } = await import("../frontend/app/features/bases/styles.js");
+  // Desktop bytes: `--bases-table-row-height:30px` (app.css@58915), `.bases-tr{height:…}` (@494000)
+  // and `.bases-td{height:…}` (@494332) — the 30px lives on the cell BOX, so the vertical padding
+  // band our `td{padding:10px 16px}` used to add must not come back (42–43px rows).
+  assert.match(BASE_SURFACE_CSS, /\.base-table tbody tr\{height:var\(--bases-table-row-height,30px\);\}/);
+  assert.match(BASE_SURFACE_CSS, /\.base-table tbody td\{padding-block:0;\}/);
+  // Two DIFFERENT desktop backgrounds: an open menu on a plain tool = `--background-modifier-hover`
+  // (@262772); only an active tool fills with `--background-modifier-active-hover` = accent 10%
+  // (@263133 / @263492, token @96013). Collapsing them into one accent rule would tint every menu.
+  assert.match(BASE_SURFACE_CSS, /\.base-action\[aria-expanded="true"\]\{background-color:var\(--background-modifier-hover/);
+  assert.match(BASE_SURFACE_CSS, /\.base-action\.base-action-active\[aria-expanded="true"\],\.base-action\.base-action-active:hover\{background-color:var\(--background-modifier-active-hover,/);
 });

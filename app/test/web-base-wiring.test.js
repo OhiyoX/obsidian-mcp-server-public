@@ -196,7 +196,7 @@ test("GET /api/web/v1/base serves the §8 DTO from the real catalog", async () =
     assert.equal(body.truncated, false);
     assert.equal(body.nextCursor, null);
     assert.equal(body.supportedSubset, true);
-    assert.deepEqual(body.capabilities, { editable: false, grouping: false, aggregation: false });
+    assert.deepEqual(body.capabilities, { editable: false, grouping: true, aggregation: false });
     assert.equal(typeof body.catalog.catalogId, "string");
     assert.ok(body.catalog.catalogId.length > 0);
     assert.equal(body.catalog.stale, false);

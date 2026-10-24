@@ -322,17 +322,19 @@ const SEMANTIC_KEY_CASES = Object.freeze([
     classification: "DISPLAY-METADATA",
     flip: false,
     // DISPLAY-METADATA: the display slice this row anticipated landed in
-    // `desktop-re/bases-ui-parity-2` (2026-10-21) — `columnLabel` now reads
-    // `properties[key].displayName` for every kind, so the declared label is the
-    // column label. The remaining fallback is the DESKTOP built-in name table for the
-    // 14 `file.*` keys (`desktop-re/bases-builtin-names`, 2026-10-21: `file.name` →
-    // `名称`), and only a key the desktop has no name for falls back to the key tail
-    // (`score` here, `status` when undeclared).
+    // `desktop-re/bases-ui-parity-2` (2026-10-21) and was CORRECTED by
+    // `desktop-re/column-label-surfaces` (2026-10-24): `properties[key].displayName` is
+    // consumed for a FORMULA column only. A note property keeps the DESKTOP built-in
+    // name table (`desktop-re/bases-builtin-names`, 14 `file.*` keys: `file.name` →
+    // `名称`), and a key the desktop has no name for falls back to the key tail — so the
+    // declared `Declared Status` is intentionally NOT the label of `status` (owner
+    // screenshots 01/04: the header reads `status` / `updated` for a `.base` that declares
+    // 状态 / 更新).
     yaml: baseYaml({ top: ["properties:", "  status:", '    displayName: "Declared Status"'] }),
     expect: {
       columns: [
         { key: "file.name", label: "名称", kind: "property" },
-        { key: "status", label: "Declared Status", kind: "property" },
+        { key: "status", label: "status", kind: "property" },
         { key: "score", label: "score", kind: "property" },
       ],
     },

@@ -1,12 +1,12 @@
 # SEMANTICS-FROZEN —— `groupBy × sort × limit × summaries` 冻结契约（刀4 前置）
 
 - **性质**：只读研究产物。本文件**不改**任何产品/测试代码，**不裁定**实现切法；它把 `BASES-COMPATIBILITY-MATRIX.md` §6 末行（`groupBy × sort × limit 组合形态`）与 §7 末行（`summaries × limit / group 相对顺序`）的 `CHARACTERIZE-PENDING` 换成**可引用的冻结契约**。
-- **桌面依据**：`<local-obsidian-asar-extract>/app.js`
+- **桌面依据**：`D:/Coding/Codex/obsidian server projects/scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/app.js`
   （3,942,126 字节 minified 单行；**sha256 `958ce57fe22f87fdf121546e46dfccd9c8ee971ce3fd8f801d60d4ece39a2df9`**）。i18n 依据：同目录 `i18n.js`。
-- **证据留档**：`(private research record)`（本次取证的**逐窗口原文**；下文 `@N` = 窗口起点，`±80` 为 `grep -obE` 匹配窗口的前缀宽度）。**未启桌面运行时**：全部结论来自 asar 静态读取。
+- **证据留档**：`evidence/semantics-freeze-asar-windows.txt`（本次取证的**逐窗口原文**；下文 `@N` = 窗口起点，`±80` 为 `grep -obE` 匹配窗口的前缀宽度）。**未启桌面运行时**：全部结论来自 asar 静态读取。
 - **复现**：
   ```bash
-  ASAR="<local-obsidian-asar-extract>"
+  ASAR="D:/Coding/Codex/obsidian server projects/scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4"
   dd if="$ASAR/app.js" bs=1 skip=2495950 count=700 2>/dev/null | fold -w 170   # UJ 构造器 + groupedData
   grep -obE '.{0,80}getSummaryValue.{0,80}' "$ASAR/app.js" | head
   ```

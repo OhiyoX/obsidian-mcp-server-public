@@ -80,7 +80,7 @@ const CORPUS_EXPECTATIONS = Object.freeze({
   "official-formula-formula-ref": { flipIn: null, flippedIn: "INT-B" }, // flipped in INT-B (reject -> accept): formula.<name> is wired
   "official-formula-this": { flipIn: null },
   "official-properties-displayname-formula": { columns: [["file.name", "名称"], ["formula.label", "Label"]], flipIn: null },
-  "official-properties-displayname-note": { columns: [["status", "Status"], ["formula.label", "Label"]], flipIn: null },
+  "official-properties-displayname-note": { columns: [["status", "status"], ["formula.label", "Label"]], flipIn: null },
   "official-view-complete-table": { flipIn: null, flippedIn: "CUT4" }, // flipped in CUT4 (groupBy + view/top summaries execute)
   "official-view-summaries-builtins": { flipIn: null, flippedIn: "CUT4" }, // flipped in CUT4 (view.summaries execute)
   "official-top-summaries-custom": { flipIn: null, flippedIn: "CUT4" }, // flipped in CUT4 (top-level summaries = registry, unreferenced)

@@ -26,13 +26,13 @@
 //       // and caps the page at `viewLimit`, so the transport window never overrides
 //       // the Base view's own limit.
 //     parseBaseError(error)       // optional; -> { status, code } | null for BaseQueryError-style errors
-//     evaluateSnapshot({ raw, viewName, records, limit, sortOverride, filterExtra, textQuery })
-//       // The three optional frozen overrides (`sort` / `filter` / `q`) are passed
-//       // straight through to the canonical A1 service; an absent override never
-//       // changes MCP behavior.
+//     evaluateSnapshot({ raw, viewName, records, limit, sortOverride, filterExtra, textQuery, groupOverride })
+//       // The four optional frozen overrides (`sort` / `filter` / `q` / `group`) are
+//       // passed straight through to the canonical A1 service; an absent override
+//       // never changes MCP behavior.
 //   })
 //
-// The frozen query-parameter contract (path/view/limit/cursor + sort/filter/q)
+// The frozen query-parameter contract (path/view/limit/cursor + sort/filter/q/group)
 // lives in base-params.js; this file owns HTTP status mapping and page slicing.
 //
 // The production createWebAppRouter applies the `/api/web/v1` securityHeaders
@@ -47,6 +47,8 @@ import {
   encodeBaseCursor,
 } from "./base-cursor.js";
 import { BaseReaderError, readBaseInRoot } from "./base-reader.js";
+import { buildPropertyCatalog } from "../base-property-catalog.js";
+import { BASE_FILTER_CONJUNCTIONS, BASE_FILTER_OPERATORS } from "../base-query.js";
 // Re-exported for existing importers/tests; the implementation now lives in
 // base-params.js so the route stays focused on status mapping and slicing.
 export { BASE_LIMIT_DEFAULT, BASE_LIMIT_MAX, BASE_LIMIT_MIN, BaseHttpError, parseBaseLimit, parseBaseQuery } from "./base-params.js";
@@ -57,6 +59,16 @@ function summarizeView(view) {
     name: typeof view?.name === "string" ? view.name : null,
     type: typeof view?.type === "string" ? view.type : null,
   };
+}
+
+function normalizeViewSort(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object" || typeof item.key !== "string" || !item.key) continue;
+    out.push({ key: item.key, dir: item.dir === "desc" ? "desc" : "asc" });
+  }
+  return out;
 }
 
 function summarizeViews(views, selected) {
@@ -89,6 +101,50 @@ function normalizeRow(row) {
   return { path: row?.path ?? null, values: row?.values ?? null };
 }
 
+// ── U12: the two declared filter layers, as a read-only menu projection ─────
+//
+// `filters: { base, view }` is ADDITIVE (the desktop filter menu's `所有视图` /
+// `当前视图` sections). Each layer is `null` when that layer declares no `filters:`,
+// otherwise `{ conjunction, count, conditions: [{property, operator, value,
+// expression}] }` where `count` is the number of LEAF conditions (the desktop
+// `.flair` number) and a leaf that is not a plain `reference <op> literal`
+// comparison carries its raw `expression` with the triple left null. The key is
+// always present so a client never has to tell "absent" from "not supported",
+// and every value is re-normalized here: the route never forwards a shape it has
+// not bounded itself (§9).
+function normalizeFilterCondition(condition) {
+  if (!condition || typeof condition !== "object") return null;
+  const text = (value) => (typeof value === "string" ? value : null);
+  const scalar = (value) => (
+    typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? value : null
+  );
+  return {
+    property: text(condition.property),
+    operator: BASE_FILTER_OPERATORS.includes(condition.operator) ? condition.operator : null,
+    value: scalar(condition.value),
+    expression: text(condition.expression),
+  };
+}
+
+function normalizeFilterLayer(layer) {
+  if (!layer || typeof layer !== "object") return null;
+  const conditions = Array.isArray(layer.conditions)
+    ? layer.conditions.map(normalizeFilterCondition).filter(Boolean)
+    : [];
+  return {
+    conjunction: BASE_FILTER_CONJUNCTIONS.includes(layer.conjunction) ? layer.conjunction : null,
+    count: Number.isSafeInteger(layer.count) && layer.count >= 0 ? layer.count : conditions.length,
+    conditions,
+  };
+}
+
+function normalizeFilterSummary(summary) {
+  return {
+    base: normalizeFilterLayer(summary?.base),
+    view: normalizeFilterLayer(summary?.view),
+  };
+}
+
 // TRANSPORT passthrough of an A1 field the route used to drop: `groups` is the
 // frozen cut-4 partition DTO (`base-query.js` buildGroupingDto) and carries no
 // semantics of its own -- the route re-projects it, exactly like `columns` and
@@ -102,6 +158,16 @@ function normalizeGroup(group) {
     count: Number.isSafeInteger(group?.count) ? group.count : 0,
     rowPaths: Array.isArray(group?.rowPaths) ? group.rowPaths.filter((path) => typeof path === "string") : [],
   };
+}
+
+// ADDITIVE (lane desktop-re/bases-grouping): the selected view's DECLARED `groupBy`
+// in the same `{ property, direction }` shape the `.base` file uses, so the
+// `分组依据` menu can open on the document's own rule instead of a blank page.
+// The effective rule the reader sees is `?group=` (when present) over this one.
+function normalizeViewGroupBy(groupBy) {
+  if (!groupBy || typeof groupBy !== "object") return null;
+  if (typeof groupBy.property !== "string" || groupBy.property === "") return null;
+  return { property: groupBy.property, direction: groupBy.direction === "DESC" ? "DESC" : "ASC" };
 }
 
 async function resolveBasePage(deps, vault, options) {
@@ -131,6 +197,7 @@ async function resolveBasePage(deps, vault, options) {
     sortOverride: options.sort ?? undefined,
     filterExtra: options.filter ?? undefined,
     textQuery: options.textQuery ?? undefined,
+    groupOverride: options.group ?? undefined,
   });
   if (result?.supportedSubset !== true) {
     throw new BaseHttpError(422, "unsupported", "Base view uses unsupported configuration");
@@ -149,6 +216,7 @@ async function resolveBasePage(deps, vault, options) {
     sort: options.sortIdentity,
     filter: options.filterIdentity,
     q: options.queryIdentity,
+    group: options.groupIdentity,
   };
   if (decoded) assertBaseCursorMatches(decoded, cursorIdentity);
 
@@ -158,6 +226,14 @@ async function resolveBasePage(deps, vault, options) {
   // reach. `truncated` and `nextCursor` share the same predicate.
   const viewLimit = Number.isSafeInteger(result.viewLimit) && result.viewLimit > 0 ? result.viewLimit : null;
   const rows = Array.isArray(result.rows) ? result.rows : [];
+  // The property catalog (see the `propertyCatalog` field below) is scoped to the records
+  // that survived the view filter, which is what the desktop menu reflects. `result.rows`
+  // carries the matched prefix; map it back onto the loaded records so the frontmatter the
+  // catalog reads is the same tree the query evaluated.
+  const matchedPaths = new Set(rows.map((row) => row?.path).filter((path) => typeof path === "string"));
+  const matchedRecords = matchedPaths.size > 0
+    ? (loaded.records || []).filter((record) => matchedPaths.has(record?.path))
+    : [];
   const pageEnd = viewLimit ? Math.min(offset + options.limit, viewLimit) : offset + options.limit;
   const pageRows = rows.slice(offset, pageEnd);
   const totalMatched = Number.isSafeInteger(result.totalMatched) ? result.totalMatched : pageRows.length;
@@ -177,14 +253,52 @@ async function resolveBasePage(deps, vault, options) {
     revision: base.revision,
     views: summarizeViews(result.views, view),
     view,
+    // ADDITIVE (lane desktop-re/panel-sort): the selected view's DECLARED sort, in the
+    // frozen override shape (`[{ key, dir }]`). The sort menu seeds its rows from it
+    // (`loadSort()` reads the view config on the desktop, asar app.js@2527053) and the
+    // URL override still wins whenever the client sends one. A caller that ignores the
+    // field keeps today's behavior byte for byte, and the evaluated row order is
+    // unchanged (the server already applies the view's own `sort:`).
+    viewSort: normalizeViewSort(result.viewSort),
+    // ADDITIVE (lane desktop-re/bases-grouping): the selected view's DECLARED grouping
+    // rule (`null` when it declares none). The menu seeds its single row from it; the
+    // `?group=` override still wins whenever the client sends one. A caller that ignores
+    // the field keeps today's behavior byte for byte.
+    viewGroupBy: normalizeViewGroupBy(result.viewGroupBy),
     columns: normalizeColumns(result.columns),
+    // ADDITIVE (lane desktop-re/panel-properties): the desktop Properties menu lists the
+    // whole property catalog — the checked rows are exactly this view's `order`, the
+    // unchecked ones are the Base's declared properties, the built-in `file.*` names and
+    // the frontmatter keys the MATCHED records really hold.
+    //
+    // SCOPE (coordinator, verified against the owner's own vault): the catalog is built
+    // from the rows that survived the view filter, NOT from every record in the Base's
+    // directory. Evidence: `_Workspace/40-Projects` holds 59 distinct frontmatter keys
+    // across 367 notes, but the 25 notes the `开发 dev` view matches carry 17 — and the
+    // owner's desktop screenshot lists exactly the non-checked subset of those 12
+    // (archived…source_commit) plus the built-ins. Sampling the whole directory gave 74
+    // rows, visibly more than the desktop shows.
+    // Caveat (recorded, not hidden): `result.rows` is the bounded prefix the adapter was
+    // asked for (`offset + limit`), so on a Base whose matched set exceeds that prefix the
+    // catalog covers the prefix only.
+    // Contract: docs/bases/BASES-COMPATIBILITY-MATRIX.md.
+    propertyCatalog: buildPropertyCatalog({
+      base: { path: base.path, raw: base.raw },
+      columns: Array.isArray(result.columns) ? result.columns : [],
+      records: matchedRecords,
+    }),
     rows: pageRows.map(normalizeRow),
     ...(Array.isArray(result.groups) ? { groups: result.groups.map(normalizeGroup) } : {}),
     totalMatched,
     truncated: hasMore,
     nextCursor,
     supportedSubset: true,
-    capabilities: { editable: false, grouping: false, aggregation: false },
+    // Grouping is EXECUTED (刀4) and a view's `groupBy` is writable through
+    // `PATCH /api/web/v1/base` (`set-view-option`), so this is a real capability, not a
+    // conservative placeholder: `分组` appears exactly when the server can partition.
+    // `aggregation` stays false until a summaries surface exists.
+    capabilities: { editable: false, grouping: true, aggregation: false },
+    filters: normalizeFilterSummary(result.filters),
     catalog: {
       catalogId: catalog.catalogId,
       generation: catalog.generation,

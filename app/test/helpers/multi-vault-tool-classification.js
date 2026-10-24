@@ -72,6 +72,10 @@ export const TOOL_CLASSIFICATION = Object.freeze({
   pull_file: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([]) }),
   write_file: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([]) }),
   start_file_upload: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([produces("uploadId")]) }),
+  // Issue #470 Wave A: the control plane of the direct HTTP upload also mints an `uploadId`, and the
+  // HTTP data plane consumes it (the MCP surface only produces it). vault-scoped: the handle is bound
+  // to the selected Vault's own uploads root.
+  start_direct_upload: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([produces("uploadId")]) }),
   file_upload_status: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([consumes("uploadId")]) }),
   upload_file_chunk: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([consumes("uploadId")]) }),
   cancel_file_upload: Object.freeze({ surface: "vault-scoped", module: "files.js", handles: Object.freeze([consumes("uploadId")]) }),

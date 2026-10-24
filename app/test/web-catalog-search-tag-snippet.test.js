@@ -21,7 +21,7 @@ const notes = {
   // `type: deployment` is a frontmatter value, never a tag.
   "Notes/block.md": "---\ntype: deployment\ntags:\n  - memory\n  - inbox\n---\nBody.\n",
   // The U22 desktop reference: a real block list rendered as `tags: a b c` (U22 fixtures).
-  "Notes/wordpress.md": "---\ntags:\n  - wordpress\n  - 运维\n  - mcp\n  - example-host\n---\nBody.\n",
+  "Notes/wordpress.md": "---\ntags:\n  - wordpress\n  - 运维\n  - mcp\n  - ops-host\n---\nBody.\n",
   // A folded (`>-`) tags scalar: real tags, no single line that carries them.
   "Notes/folded.md": "---\ntags: >-\n  alpha\n  beta\n---\nBody.\n",
   "Notes/nested.md": "---\ntags: [web/deploy, other]\n---\nBody.\n",
@@ -152,8 +152,8 @@ test("tag: queries excerpt the real document lines and keep matchCount", async (
     // 2b. The desktop reference string, verbatim, from a real block list (U22).
     const mcp = await app.search(`?q=${encodeURIComponent("tag:mcp")}&limit=50`);
     const mcpByPath = new Map(mcp.items.map((item) => [item.path, item]));
-    assert.deepEqual(mcpByPath.get("Notes/wordpress.md").snippets, ["tags: wordpress 运维 mcp example-host"]);
-    assertBlockExcerpt(mcpByPath.get("Notes/wordpress.md").snippets[0], notes["Notes/wordpress.md"], "tags", ["wordpress", "运维", "mcp", "example-host"]);
+    assert.deepEqual(mcpByPath.get("Notes/wordpress.md").snippets, ["tags: wordpress 运维 mcp ops-host"]);
+    assertBlockExcerpt(mcpByPath.get("Notes/wordpress.md").snippets[0], notes["Notes/wordpress.md"], "tags", ["wordpress", "运维", "mcp", "ops-host"]);
 
     // 3. Nested tags keep the evaluator's parent semantics.
     const parent = await app.search(`?q=${encodeURIComponent("tag:web")}&limit=50`);

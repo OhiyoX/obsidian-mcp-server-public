@@ -21,7 +21,7 @@ export const COMPACT_GROUPS = Object.freeze({
   obsidian_history: ["list_trash", "list_versions", "get_note_version", "compare_note_versions"],
   obsidian_file_read: ["get_file", "pull_file", "pull_note_file", "inspect_archive", "read_archive_entry", "file_upload_status"],
   obsidian_file_mutate: ["write_file", "create_archive", "extract_archive"],
-  obsidian_file_upload: ["start_file_upload", "upload_file_chunk", "cancel_file_upload"],
+  obsidian_file_upload: ["start_file_upload", "start_direct_upload", "upload_file_chunk", "cancel_file_upload"],
   obsidian_git_read: ["git_status", "git_diff", "git_log"],
   obsidian_git_commit: ["git_commit"],
   obsidian_git_sync: ["git_pull", "git_push"],

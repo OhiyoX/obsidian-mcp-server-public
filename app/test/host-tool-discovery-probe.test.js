@@ -32,7 +32,7 @@ const matrix = buildMatrix();
 
 // Descriptors registered after the frozen 85-tool host-matrix baseline. The baseline
 // artifact is historical evidence and is never regenerated; new tools are named here.
-const ADDITIVE_SINCE_MATRIX_BASELINE = ["get_note_context", "read_archive_entry", "list_base_views", "patch_base", "create_base_entry"];
+const ADDITIVE_SINCE_MATRIX_BASELINE = ["get_note_context", "read_archive_entry", "list_base_views", "patch_base", "create_base_entry", "start_direct_upload"];
 
 test("host matrix declares the required dimensions and a controlled vocabulary", () => {
   assert.equal(matrix.schemaVersion, "1.1.0");

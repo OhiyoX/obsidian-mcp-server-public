@@ -1,8 +1,9 @@
 // Frozen Web Base API parameter contract (D-PARITY-PLAN).
 //
 // Owns the transport-level parsing/normalization of `GET /api/web/v1/base`:
-// path/view/limit/cursor plus the three desktop-parity overrides `sort`/`filter`/`q`
-// and their canonical cursor-identity encodings. It is deliberately separate from
+// path/view/limit/cursor plus the desktop-parity overrides `sort`/`filter`/`q`
+// (`group` is the lane desktop-re/bases-grouping addition, same class of
+// override) and their canonical cursor-identity encodings. It is deliberately separate from
 // base-route.js (HTTP status mapping + page resolution) and base-query.js
 // (view-dependent canonical evaluation) so that:
 //
@@ -22,6 +23,11 @@ export const BASE_LIMIT_MAX = 500;
 
 // `q` is a bounded text predicate: the frozen contract caps it at 256 chars.
 export const BASE_QUERY_TEXT_MAX = 256;
+
+// `group` is the `.base` spelling, so the legal directions are exactly the ones
+// `readGroupByDeclaration` accepts (`base-grouping.js`): ASC | DESC, case-sensitive.
+export const BASE_GROUP_DIRECTIONS = Object.freeze(["ASC", "DESC"]);
+export const DEFAULT_BASE_GROUP_DIRECTION = "ASC";
 
 // Public offset/pageNumber are explicitly not part of the contract (§4.3).
 const PROHIBITED_PARAMS = ["offset", "pageNumber", "page", "skip", "start"];
@@ -88,6 +94,42 @@ export function parseBaseSort(raw) {
     return { key: item.key, dir };
   });
   return sort.length ? sort : null;
+}
+
+// `group` = `{"property": "<column key>", "direction"?: "ASC"|"DESC"}` — the SAME
+// single-rule shape a `.base` view declares (`views[].groupBy`), so the override
+// and the document cannot diverge in meaning. An absent/empty value means "no
+// override" (the view's own `groupBy`, if any, stays authoritative). Grouping is
+// ONE rule per view in the frozen domain (matrix §6 / N8: `setGroupBy` writes
+// `{property, direction}` only), so an array or a second key is refused instead
+// of being silently reduced.
+export function parseBaseGroup(raw) {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string") throw new BaseHttpError(400, "invalid-group", "group must be a single JSON string");
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new BaseHttpError(400, "invalid-group", "group is not valid JSON");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new BaseHttpError(400, "invalid-group", "group must be a JSON object");
+  }
+  for (const key of Object.keys(parsed)) {
+    if (key !== "property" && key !== "direction") {
+      throw new BaseHttpError(400, "invalid-group", `group has an unknown key "${key}"`);
+    }
+  }
+  if (typeof parsed.property !== "string" || parsed.property === "") {
+    throw new BaseHttpError(400, "invalid-group", "group needs a string property");
+  }
+  const direction = parsed.direction === undefined || parsed.direction === null
+    ? DEFAULT_BASE_GROUP_DIRECTION
+    : parsed.direction;
+  if (!BASE_GROUP_DIRECTIONS.includes(direction)) {
+    throw new BaseHttpError(400, "invalid-group", "group direction must be ASC or DESC");
+  }
+  return { property: parsed.property, direction };
 }
 
 // `filter` = `[{key,op,value}]` (AND list, the original frozen shape) OR the
@@ -211,6 +253,13 @@ export function encodeQueryIdentity(textQuery) {
   return typeof textQuery === "string" && textQuery.length ? textQuery : undefined;
 }
 
+// One canonical encoding for the single grouping rule, so `{"property":"a"}` and
+// `{"property":"a","direction":"ASC"}` cannot become two cursor identities.
+export function encodeGroupIdentity(group) {
+  if (!group) return undefined;
+  return JSON.stringify({ property: group.property, direction: group.direction });
+}
+
 export function parseBaseQuery(query = {}) {
   for (const name of PROHIBITED_PARAMS) {
     if (query[name] !== undefined) {
@@ -225,6 +274,7 @@ export function parseBaseQuery(query = {}) {
   const sort = parseBaseSort(query.sort);
   const filter = parseBaseFilter(query.filter);
   const textQuery = parseBaseTextQuery(query.q);
+  const group = parseBaseGroup(query.group);
 
   return {
     path: query.path,
@@ -234,8 +284,10 @@ export function parseBaseQuery(query = {}) {
     sort,
     filter,
     textQuery,
+    group,
     sortIdentity: encodeSortIdentity(sort),
     filterIdentity: encodeFilterIdentity(filter),
     queryIdentity: encodeQueryIdentity(textQuery),
+    groupIdentity: encodeGroupIdentity(group),
   };
 }

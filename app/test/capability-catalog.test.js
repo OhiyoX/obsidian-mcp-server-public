@@ -221,7 +221,7 @@ test("runtime tools/list names, order, schema, and annotations are unchanged", a
 
   // Additive context descriptor: historical Wave 1 descriptors stay byte-for-byte
   // identical; only the explicitly listed new tool may be absent from the baseline.
-  const additiveTools = new Set(["get_note_context", "list_base_views", "patch_base", "create_base_entry"]);
+  const additiveTools = new Set(["get_note_context", "list_base_views", "patch_base", "create_base_entry", "start_direct_upload"]);
   for (const tool of inventory.tools) {
     assert.ok(runtimeByName.has(tool.name), `runtime catalog removed historical tool ${tool.name}`);
   }

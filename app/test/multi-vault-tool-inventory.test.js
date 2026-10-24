@@ -235,8 +235,10 @@ test("cross-call handle anchors from §13.5 / §44 keep the correct direction", 
   assert.deepEqual(carriers("planId", "produces"), ["plan_delete_note", "plan_move_note", "plan_note_changes", "plan_restore_from_trash", "plan_restore_version"]);
   assert.deepEqual(carriers("planId", "consumes"), ["apply_note_plan", "get_note_plan"]);
 
-  // uploadId — produced by start_file_upload, consumed by the resumable-upload tools.
-  assert.deepEqual(carriers("uploadId", "produces"), ["start_file_upload"]);
+  // uploadId — produced by the two upload starters, consumed by the status/chunk/cancel tools.
+  // Issue #470 Wave A adds the direct HTTP control plane: it produces the same kind of Vault-bound
+  // handle (the HTTP data plane, not an MCP tool, consumes it).
+  assert.deepEqual(carriers("uploadId", "produces"), ["start_direct_upload", "start_file_upload"]);
   assert.deepEqual(carriers("uploadId", "consumes"), ["cancel_file_upload", "file_upload_status", "upload_file_chunk"]);
 
   // versionId — produced by list_versions (+ write responses), consumed by restore/delete/inspect.

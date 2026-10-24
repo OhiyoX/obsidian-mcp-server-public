@@ -19,7 +19,7 @@
 // Values are copied VERBATIM from the desktop's `i18n/zh.txt` at the line its key
 // occupies in `i18n/mapping.txt` (the two files are line-aligned, 2601 lines each);
 // both were read from the 1.14.4 extraction
-// `<local-desktop-research>/extract/obsidian-asar-1.14.4/`. The trailing number
+// `scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/`. The trailing number
 // beside each entry is that shared line number in BOTH files:
 //
 //   mapping.txt:2334-2347  `plugins.bases.label-file-prop-*`  ↔  zh.txt:2334-2347

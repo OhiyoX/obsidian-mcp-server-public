@@ -180,8 +180,8 @@ references and depth overflow` 的 `file.path` 用例一致。
 | 官方语法片段 | 官方来源 | 现行状态 | 证据 | 计划归属 |
 | --- | --- | --- | --- | --- |
 | `properties.formula.<name>.displayName` | S1 | `supported`（**被消费为列 label**） | `official-properties-displayname-formula`（`columns` 断言 `[["formula.label","Label"]]`）；`real-project-tag-filter-views-sort`（`Project`） | S1 |
-| `properties.<note prop>.displayName` | S1 | `supported`（**被消费为列 label**；2026-10-21 `desktop-re/bases-ui-parity-2` 按协调席 BRIEF-DELTA 接线，声明优先；未声明时走桌面内置名表（U5，14 条 `file.*`），最后才回退 key 尾巴） | `official-properties-displayname-note`（`columns` 断言 `[["status","Status"]]`）；`bases-semantic-keys-characterization.test.js` 的 `properties.status.displayName` 行（label = `Declared Status`）；`web-bases-ui-parity-2.test.js` | S1 |
-| `properties.file.<prop>.displayName` | S1（示例含 `file.ext`） | `supported`（**同样被消费**：`columnLabel` 对所有 kind 一视同仁；`file.ext` 本身不入列集时自然无 label） | `official-properties-displayname-note`（`status` → `Status`） | S1 |
+| `properties.<note prop>.displayName` | S1 | `supported`（**只有 formula 列消费它**；note 属性上的声明被**忽略**，label = 内置名表（U5）?? key 尾巴。2026-10-21 `desktop-re/bases-ui-parity-2` 曾让所有 kind 声明优先，2026-10-24 `desktop-re/column-label-surfaces` 按业主 01/04 表头改正，见 §14.10） | `official-properties-displayname-note`（`columns` 断言 `[["status","status"]]`）；`bases-semantic-keys-characterization.test.js` 的 `properties.status.displayName` 行（label = `status`）；`web-bases-ui-parity-2.test.js`；`web-bases-builtin-names.test.js` ③/③b/③c/③d/③e | S1 |
+| `properties.file.<prop>.displayName` | S1（示例含 `file.ext`） | `supported`（同样**只对 formula 列生效**；`file.*` 的 label 走内置名表，`file.ext` 本身不入列集时自然无 label。§14.10） | `official-properties-displayname-note`（`status` → `status`） | S1 |
 | properties 下的**未知配置键** | S1（"It is up to the individual view how to use these"） | `not-applicable`（显式分类为忽略：官方明说由各 view 自行决定用途，本实现忽略且不改变行集合） | `hostile-unknown-properties-key`（`accept`，`flipIn: null`） | **DISPLAY-METADATA**（不属 fail-closed 面；见 §12） |
 | `displayName` 不参与 filter/formula | S1 | `supported`（label 只用于列显示） | `official-properties-displayname-*` | S1 |
 
@@ -333,7 +333,7 @@ W0-B 曾把 RECON §2 的静默面逐项登记为 W0-D 输入；下表是 Wave 0
 | --- | --- | --- | --- | --- | --- |
 | D1 | 未实现的 `file.<prop>` 在 filter 里静默 `undefined`（`file.backlinks` / `file.embeds` / `file.basename` / `file.properties` …） | **P1-A expression typing**（`file` 属性名 allowlist） | `accept`，静默匹配 0 行 | `hostile-unsupported-file-property-filter`（`flipIn: null`） | 前缀 `file` **合法**，属"属性名未实现"而非"语法不支持"；W0-D 冻结的是走点引用的**未知 namespace** |
 | D2 | `constructor` 等**继承属性**经 filter 路径可读（不执行 getter，但不报错） | **P1-A 安全加固**（`propertyValue` own-key 化） | `accept`，匹配 0 行 | `hostile-inherited-constructor-filter`（`flipIn: null`） | `constructor` 是**裸属性名**（无点），不属 W0-D 的 namespace 守卫面，也不应因为"看着像危险键"就顺手修 |
-| D3 | 非 formula `properties.<key>.displayName` 被忽略（列 label 回退为 key 后缀） | **展示窄刀**（独立，非 W0-D） | **已闭环（2026-10-21，`desktop-re/bases-ui-parity-2`）**：`accept` 且 label 采用 `displayName`；未声明时走内置名表（U5），最后才回退 key 尾巴 | `official-properties-displayname-note`（`status` → `Status`）；W0-A 冻结表 `properties.status.displayName`（label = `Declared Status`） | 原为展示 parity 缺口；修它同时改变列 label，已同步更新两处冻结期望与 fixture 的 `note` |
+| D3 | 非 formula `properties.<key>.displayName` 被忽略（列 label 回退为 key 后缀） | **展示窄刀**（独立，非 W0-D） | **最终口径（2026-10-24，`desktop-re/column-label-surfaces`）**：`accept`，但 label **不采用**非 formula 的 `displayName`——它是内置名表（U5）?? key 尾巴；只有 formula 列消费 displayName。（2026-10-21 `desktop-re/bases-ui-parity-2` 曾改为声明优先，已被业主 01/04 表头否定） | `official-properties-displayname-note`（`status` → `status`）；W0-A 冻结表 `properties.status.displayName`（label = `status`） | 原为展示 parity 缺口；两轮修正后两处冻结期望与 fixture 的 `note` 已同步 |
 | D4 | 未知顶层键（含顶层 `sort`）无明确 allowlist/denylist | **待席位裁定** | `accept`，忽略 | W0-A 冻结表 `<unknown top-level key>`；本文件 §4 末行 | 官方五节 schema 无机器可读封闭性定义（§9 V5 同类）；无证据就 reject 有拒绝合法文件的风险 |
 
 ## 12.3 本刀未做的两件事（防外溢声明）
@@ -415,7 +415,7 @@ fixture 三件套形状与 `flipIn` / `flippedIn` 语义写在 `app/test/bases-c
 
 业主 2026-10-21 两张截图（筛选弹层高级模式 / 属性弹层）指「UI 看起来粗糙，不像复刻桌面端」后，本刀按 asar 1.14.4
 静态读对齐了 Bases 两个弹层。**读法**：引用一律 `文件@字节偏移` + 唯一片段（不用行号）；`app.css` 668,223 B、`app.js` 3,942,126 B、
-`i18n.js` 132,996 B，取自 `<local-desktop-research>/extract/obsidian-asar-1.14.4/`。**五条登记**如下（U5 已于 2026-10-21 由刀 `desktop-re/bases-builtin-names` 闭环，其余四条仍为偏差），其余项按桌面改（见 HANDOFF-UI-PARITY-2.md 逐条读数）。
+`i18n.js` 132,996 B，取自 `scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/`。**五条登记**如下（U5 已于 2026-10-21 由刀 `desktop-re/bases-builtin-names` 闭环，其余四条仍为偏差），其余项按桌面改（见 HANDOFF-UI-PARITY-2.md 逐条读数）。
 
 **第 2 条（属性名）以协调席 BRIEF-DELTA 为准**：`properties.<key>.displayName` 是作者的声明，**对所有 kind 都优先**——
 `app/src/base-query.js` 的 `columnLabel()` 原先只对公式列读 `displayName`，非公式列直接吐 key 尾巴（`file.mtime` → `mtime`），
@@ -427,7 +427,7 @@ fixture 三件套形状与 `flipIn` / `flippedIn` 语义写在 `app/test/bases-c
 | U1 | 筛选弹层宽度 | `--bases-filter-menu-width: 520px`（`app.css@57465`），由 `.bases-toolbar-menu.bases-toolbar-filter-menu{width:var(--bases-filter-menu-width)}` 应用（`app.css@455631`，同块另有 `min-width:220px;max-width:100vw`） | **已采纳桌面宽度**（`desktop-re/bases-css-port-impl`）：`:where(.base-panel[data-base-panel="filter"]){width:var(--bases-filter-menu-width,520px)}`，零特异性，窄档仍归样式表 | 上一条「保持 320px」的**机制已消失**：弹层现在是桌面 `.menu` 盒（`position:fixed`，`styles.js`），不再被 `overflow:hidden` 外壳裁切，`panel-position.js` 按锚点右对齐并收进文档列（`anchor.right - width`，列内放不下则退回视口）。实读（1024 档：弹层未越过窗口右缘、自身无溢出）与改前/改后截图在 lane 根 `evidence/`。旧读数（`worktrees/desktop-re/bases-1024-stacking/evidence/readings.json`）仍是那条旧判据的历史证据。 |
 | U2 | `清除筛选` | 桌面筛选菜单**无此动作**（清理由每条件的 `plugins.bases.tooltip-remove-filter` 承担） | 保留（行为契约，既有测试 `web-bases-popovers.test.js` 断言其存在与效果） | 删掉即功能回归；本刀只把它从「等宽撑满」改为桌面形态的整行动作行（`.bases-toolbar-menu-actions{display:flex;flex-direction:column;padding:var(--size-4-1)}`，`app.css@459374`）。 |
 | U3 | 公式列文本 `ƒ ` 前缀 | 桌面表头只加 `mod-formula` 类 + 一个 icon 元素（`app.js@3222931`：`r.toggleClass("mod-formula","formula"===a)`、`i.iconEl=c.createDiv({cls:"bases-table-header-icon"})`）；`app.js` 里 `ƒ`（U+0192）**只**出现在数学实体表与 CodeMirror completion 图标，Bases 面 0 处 | 表头/卡片/看板标签仍是文本 `ƒ <名字>`（`<名字>` = 作者声明的 `displayName`，已生效；见 §14.2 第 2 条） | **本刀不动**（协调席 BRIEF-DELTA 第 2 条：该斜体 `f` 是本仓公式列徽标、有意为之）；若要换成桌面式 icon 元素，需改 `web-bases-formula-ui.test.js:96/117` 与 `web-bases-kanban.test.js:135` 三条断言 ⇒ 待裁定。 |
-| U5 | 未声明时的**内置属性显示名** | 桌面**有**内置名表 `o$`（`app.js` **@2351488**，14 个 `file.*` 键：`file.file / name / basename / fullname / path / folder / ext / ctime / mtime / size / links / backlinks / embeds / tags`，值取自 i18n `label-file-prop-*`（en `modified time` 在 `i18n.js@115390`；zh 逐键见下）。`getDisplayName()` 的优先级是 **声明 → 内置名表 → 属性名**（`app.js@2352471`：`this.displayName?this.displayName:Object.hasOwn(o$,this.propertyId)?o$[this.propertyId]():UQ(this.propertyId).name`），**无 kind 分支**。**注意 `编辑时间` 不是桌面内置名**，那是业主自己 `.base` 里的 `displayName` 声明值（见 `BRIEF-DELTA`），不得混用 | **已闭环（2026-10-21，刀 `desktop-re/bases-builtin-names`）**：本项目**也有一份**同一张表，唯一副本在 `app/src/base-builtin-names.js`（14 键逐条抄 `i18n/zh.txt`，来源按 `i18n/mapping.txt` 行号标在表内：`file.file`=2334、`name`=2335、`basename`=2336、`fullname`=2337、`path`=2338、`folder`=2339、`ext`=2340、`ctime`=2341、`mtime`=2342、`size`=2343、`links`=2345、`backlinks`=2344、`embeds`=2346、`tags`=2347；两文件逐行对齐）。`columnLabel()` 的优先级改为 **`properties.<key>.displayName` → 内置名表 → key 尾巴**，**对所有 kind 一视同仁**（`src/base-query.js`）；`panel-chrome.js` 的 stale-key 分支（`columnOptions()`）从 `label: key` 改为复用同一份表（它是唯一需要客户端表的路径：stale key 按定义不在服务端返回的 `columns` 里）。自定义属性（非 `file.*`）仍回退 key 尾巴（`status` → `status`） | 上一 head（`.30`）把此处登记为**有意偏差**，回退 key 尾巴（`file.mtime` → `mtime`、`file.size` → `size`）；本刀按桌面 `o$` 补齐回退表后偏差消失。**可核描述**：桌面 `o$` 显式列举 14 键 + `getDisplayName()` 无 kind 分支（`app.js@2351488` / `@2352471`，两个偏移都能静态复读）；本项目同 14 键同顺序（`links` 在 `backlinks` 前，与 `o$` 一致），值逐条对齐 `zh.txt` 同行。测试 `app/test/web-bases-builtin-names.test.js` 把三个面（表头 / 属性弹层 / 筛选·排序下拉）钉在同一标签上，并把表本身钉在桌面 14 键上；负控：删掉表里 `file.mtime` 那行、或把它的值改错，三面断言均变红。预算账（**一处账目**）见 `app/scripts/web-firstload-baseline.json` `notes[0]` |
+| U5 | 未声明时的**内置属性显示名** | 桌面**有**内置名表 `o$`（`app.js` **@2351488**，14 个 `file.*` 键：`file.file / name / basename / fullname / path / folder / ext / ctime / mtime / size / links / backlinks / embeds / tags`，值取自 i18n `label-file-prop-*`（en `modified time` 在 `i18n.js@115390`；zh 逐键见下）。`getDisplayName()` 的优先级是 **声明 → 内置名表 → 属性名**（`app.js@2352471`：`this.displayName?this.displayName:Object.hasOwn(o$,this.propertyId)?o$[this.propertyId]():UQ(this.propertyId).name`），**无 kind 分支**。**注意 `编辑时间` 不是桌面内置名**，那是业主自己 `.base` 里的 `displayName` 声明值（见 `BRIEF-DELTA`），不得混用 | **已闭环（2026-10-21，刀 `desktop-re/bases-builtin-names`）**：本项目**也有一份**同一张表，唯一副本在 `app/src/base-builtin-names.js`（14 键逐条抄 `i18n/zh.txt`，来源按 `i18n/mapping.txt` 行号标在表内：`file.file`=2334、`name`=2335、`basename`=2336、`fullname`=2337、`path`=2338、`folder`=2339、`ext`=2340、`ctime`=2341、`mtime`=2342、`size`=2343、`links`=2345、`backlinks`=2344、`embeds`=2346、`tags`=2347；两文件逐行对齐）。`columnLabel()` 的优先级改为 **内置名表 → key 尾巴**（**只有 formula 列**用 `properties.<key>.displayName`；2026-10-24 `desktop-re/column-label-surfaces` 按业主 01/04 表头更正 `.30`/`bases-ui-parity-2` 的「所有 kind 声明优先」，见 §14.10）（`src/base-query.js`）；`panel-chrome.js` 的 stale-key 分支（`columnOptions()`）从 `label: key` 改为复用同一份表（它是唯一需要客户端表的路径：stale key 按定义不在服务端返回的 `columns` 里）。自定义属性（非 `file.*`）仍回退 key 尾巴（`status` → `status`） | 上一 head（`.30`）把此处登记为**有意偏差**，回退 key 尾巴（`file.mtime` → `mtime`、`file.size` → `size`）；本刀按桌面 `o$` 补齐回退表后偏差消失。**可核描述**：桌面 `o$` 显式列举 14 键 + `getDisplayName()` 无 kind 分支（`app.js@2351488` / `@2352471`，两个偏移都能静态复读）；本项目同 14 键同顺序（`links` 在 `backlinks` 前，与 `o$` 一致），值逐条对齐 `zh.txt` 同行。测试 `app/test/web-bases-builtin-names.test.js` 把三个面（表头 / 属性弹层 / 筛选·排序下拉）钉在同一标签上，并把表本身钉在桌面 14 键上；负控：删掉表里 `file.mtime` 那行、或把它的值改错，三面断言均变红。预算账（**一处账目**）见 `app/scripts/web-firstload-baseline.json` `notes[0]` |
 | U4 | 公式失败文案 | 桌面走 i18n `plugins.bases.msg-error-*`（zh：`无法解析数据库文件：` 等） | `controller.js` 的 `FORMULA_MESSAGES` 仍为英文（`Invalid function in formula.` 等） | 同上：`web-bases-formula-ui.test.js:151` 逐字钉住英文；其余**所有**内部英文（HTTP 状态映射、`closed`/`network`/`superseded` 等约 20 条、stale 横幅）本刀已改中文并把 `code`/原始英文留在节点上（`data-error-code` / `data-catalog-stale-code` / `title`）。 |
 
 **§14.3 弹层外壳 CSS 移植登记（`desktop-re/bases-css-port-impl`，2026-10-22，基线 `.33` `15556114`）**
@@ -500,3 +500,307 @@ fixture 三件套形状与 `flipIn` / `flippedIn` 语义写在 `app/test/bases-c
 > （U7 贴类、U8 的 0 值、预算与证据）与两条顺带项（G5 谓词空真、G10 登记）已修，**逐条改法 / 真 Chromium 读数 / 负控**
 > 与**预算净额 + 四条回收实测**在 lane 根 `HANDOFF-MENU-CONTENT.md` §FIX-R1；本表只登记状态与口径，不复述数字。
 > 首屏棘轮在本刀仍未闭合（`firstScreen 126253 > 125426`、`issue414 819375 > 818548`，全在 `app.js`）——基线未改、不自签，等协调席签字。
+
+### 14.5 lane `desktop-re/bases-menu-surface`（P5 表面：筛选面板读起来像菜单，不像表单）
+
+基座 `97a55209`（分支 `feat/bases-menu-surface`）。四项验收（动作行 `.menu-item` 化 / 连接词紧凑行内 /
+`</>` 归位 / 区块标题）的桌面偏移、逐项 computed 读数与暗色截图对比在 lane 根
+`HANDOFF-MENU-SURFACE.md`；**本表只登记状态与理由**。
+
+| # | 项 | 桌面 | 本仓 | 理由 |
+| --- | --- | --- | --- | --- |
+| U9 | 筛选面板的连接词行 | `div.filter-group > div.filter-group-header > select.conjunction.dropdown`（`app.js@2464626`/`@2464745`）；`@471459` 让 header 成为 ROW；控件皮肤 `@471630`（`background-color:transparent;box-shadow:none;text-align:start;font-size:var(--font-ui-small)`）+ hover `@471841` | **同结构、同皮肤**：`.base-panel-group-header`（桌面类名 `filter-group-header` 未借用）+ `select.base-panel-select.conjunction.dropdown`；可见盒子是生成的 `.select-control`，故皮肤写在**该 wrapper** 上（`:not()` 无、`:focus-within` 代 `:focus-visible`） | 桌面那一族 `.input-*` 未移植（`gaps.md` G11），本刀只取筛选面板真正用到的子集；`--size-2-1`/`--size-2-2` 本层未声明，写桌面解析值 `2px`/`4px` |
+| U10 | `</>` 高级模式开关的落点 | **条件行的动作区**：`app.js@2468679` `l.createDiv("filter-row-actions")` → `@2468775` `createEl("button",{cls:"clickable-icon filer-expression-mode-toggle"})`；`@474298` `.filter-expression .filter-row-actions{display:flex;padding:var(--size-2-1);margin-inline-start:auto;height:var(--input-height)}` | 落在**面板级动作行**（`div.base-panel-actions`，桌面 `filter-group-actions` 形状），且**不带** `margin-inline-start:auto` | 桌面的开关把**一行**切进公式编辑器；本 build 的 raw 表达式模式是**面板级**的（`data-filter-advanced-mode` 文本域），因此不可能挂在某个条件行里。本行动作行只有添加动作、没有填满行的输入，保留 `auto` 会把它钉在面板右缘（业主截图里的"漏出来的控件"） |
+| U11 | `添加筛选器组` 动作 | `filter-group-actions` 里的第二个 `+`（`app.js@2465689`），建可继续编辑的嵌套 `.filter-group` | **不渲染**（not-ported） | 本面板的构建器只有一层（`panel-filter.js` 的 `leavesOf`/`withConjunction` 只读一层叶子列表），且 `capabilities.grouping` 在 `app/src/app/base-route.js:187` 硬编码 `false` —— 画出来会是一个点不动的假控件。既有断言（`web-bases-popovers.test.js` 的"不存在该字符串"）**不放宽** |
+| U12 | `所有视图` 区块（桌面筛选面板的第二个区块，业主截图 01 有 `> 所有视图 2`） | 列出 Base 文件级 `filters`，计数进 `.flair`（`app.js@2479449`/`@2480093`）；区块是 `bases-toolbar-section`（`app.js@2479077`），条件盒是 `.filter-group`（列 flex `@470677`）`> .filter-group-statements`（`@470700`），带边框的是嵌套 `.filter-group` 体（`@470985`），行是 `.filter-row`（`@472153`，属性格外层 `@472522`） | **已渲染**（lane `desktop-re/all-views-section`，2026-10-23）：新增 **additive** DTO 字段 `filters:{base,view}`（见 §14.6）+ 客户端 `所有视图` 区块与两个真实 `.flair`；声明层条件以**只读**行渲染（无控件、无逐行动作） | 见 §14.6：计数 = 该层**叶**条件数（含嵌套组叶），与 `.flair` 的 `toggle(t>0)` 语义一致；DTO 缺 `filters` 时退回 pre-U12 形状（不造假数） |
+| U13 | `.clickable-icon` 的圆角 token | `@258658` `border-radius:var(--clickable-icon-radius)` | `var(--radius-s)`（4px） | 本层不声明 `--clickable-icon-radius`；已在上一刀登记，本刀复核仍成立（`padding:var(--size-2-2) var(--size-2-3)` = 桌面解析值 `4px 6px` 已按字面写） |
+
+**本刀同时修掉的两个上一任缺陷**（都在 `styles.js`，见 HANDOFF §2）：两条规则被**逐字重复输出**
+（`.base-panel-actions .base-panel-mode:hover` 与 `…[data-filter-mode="advanced"]`，各两遍）；以及
+**两条本层未声明的 token 被当作 `var()` 写**（`padding-top:var(--size-2-2)`、`padding-bottom:var(--size-2-1)`），
+后者在计算值阶段失效 → 实际 `0px`，与桌面 `4px`/`2px` 不符；现按本表 U4 的既有口径写桌面解析值。
+
+## 14.6 lane `desktop-re/all-views-section`（U12：`所有视图` 区块 + 条件行 + DTO 暴露 filter 结构）
+
+基座 `56cdbf73`（Gitea `origin/main`，= PR #665 合并点）。逐项证据（桌面偏移 → 改动 → 截图对比 → 读数 →
+预算净额 → `audit:` 段）在 lane 根 `HANDOFF-ALL-VIEWS.md`；**这里只登记契约与状态**。
+
+### 14.6.1 Web DTO 契约变更（**只增**，`GET /api/web/v1/base`）
+
+新增一个**始终存在**的顶层字段（`app/src/app/base-route.js` `normalizeFilterSummary`）：
+
+```
+filters: {
+  base: null | { conjunction: "and"|"or"|"not"|null,
+                 count: <该层叶条件数>,
+                 conditions: [ { property, operator, value, expression } ] },
+  view: null | { ...同上 },
+}
+```
+
+- `null` = **该层没有声明** `filters:`；声明了但为空组（如 `{or: []}`）= `{conjunction:"or", count:0, conditions:[]}`。
+- `count` 是**叶**条件数（嵌套组递归展开），就是桌面 `.flair` 的数字（`app.js@2480449` `n=function(e){return e?e instanceof t$?e.filters.length:1:0}` +
+  `i=function(e,t){e.setText(String(t)),e.toggle(t>0)}` @2480472，调用 @2480522）。
+  **[未证实/偏差] 嵌套组的差异**：桌面把顶层的**直接条目**计数（一个嵌套组算 1 个条目，且它渲染成一个嵌套子框），
+  本刀把嵌套组展平为叶行，因此 flair = 可见行数 = 叶数；业主锚点（两层都是平铺）两口径相等，
+  差异只在嵌套组出现时可见（本 builder 也造不出嵌套组，U11 not-ported）。
+- `conditions[]` 的 `property`/`operator`/`value` 只在**能读出来**时给：`.base` 侧走既有表达式解析器
+  （`base-expression.js` `parseBaseExpression`），仅 `reference <cmp> literal` 成立时映射为 `{property, operator, value}`
+  （`==`→`is` / `!=`→`is-not` / `>`→`gt` / `<`→`lt` / `>=`→`gte` / `<=`→`lte`，全部取自 `BASE_FILTER_OPERATORS`）；
+  其余（如 `file.inFolder("…")`、逻辑链）三项为 `null`，`expression` 带作者原文（上限 240 字符）。
+- 语义不变、权限不变：`capabilities` 仍是 `{editable:false, grouping:false, aggregation:false}`，`supportedSubset` 判据未动；
+  老客户端忽略该字段即得到逐字节相同的行为。
+- 值来源：`app/src/base-filter-summary.js`（新模块，复用 `assertBaseFilterTree` 与既有常量，**不新写解析器**），
+  由 `base-snapshot-adapter.js` 挂到 snapshot 上；tree 形状已在 `compileBaseView` 校验过一遍。
+
+### 14.6.2 状态登记
+
+| # | 项 | 桌面 | 本仓 | 状态 |
+| --- | --- | --- | --- | --- |
+| U12 | `所有视图` 区块 + `.flair` 真数 | `app.js@2479449`（section 顺序里 globalFilters 在前）+ `@2480093`（计数） | `所有视图`（`data-filter-group="base"`）在 `当前视图` 之前；两个 flair 都取**该层叶数 + 本 surface 自己的 URL 覆盖叶数** | **ported**。`所有视图` 只在 DTO 带 `filters` 时出现（老服务端 ⇒ 退回 pre-U12，不造假数） |
+| U12-a | `所有视图` 的连接词选择器 | `select.conjunction.dropdown`（`app.js@2464745`） | **不渲染**（read-only） | not-ported：那是**写**控件，本刀只读呈现；要编辑得走 `PATCH /api/web/v1/base` |
+| U12-f | 嵌套组的计数口径 | 顶层**直接条目**数（`app.js@2480449`：组算 1 个条目，并渲染为嵌套子框） | 展平为**叶**行，flair = 行数 | **deviation**（[未证实] 桌面嵌套渲染未逐像素对比）：业主锚点两层均平铺，两口径相等；带嵌套组的文档下两者不等，已在 §14.6.1 登记 |
+| U12-b | 条件行的逐行动作（`</>` / 垃圾桶） | `filter-row-actions`（`app.js@2468679`，`@474298`） | **不渲染**：声明层行不带任何控件（`select/input/textarea/button` = 0） | not-ported：删/改一条**声明**的筛选器＝改 `.base` 文件，本刀不做写回。`</>` 仍按 U10 留在面板级动作行（本刀未挪） |
+| U12-c | 带边框盒的归属 | 边框在**嵌套** `.filter-group` 体上（`app.css@470985`） | 每个区块的 statements 盒（`data-filter-statements`）都画该边框 | **deviation**：业主截图 01 看到的是一段带框条件区，本刀按「每区块一个框」落地；面板高度因此偏高（实测 244 vs 桌面判据 191），记为待裁定项 |
+| U12-d | `</>` 图标尺寸 | `.clickable-icon` 在菜单行里 `--icon-s` = 16px | 实测 **13×13**（`.base-panel-icon` 的 `width/height:13px`） | **未定案**（[未证实]）：本刀只量到 13×13；改它会动 U10 已裁定的控件皮肤，等协调席裁 |
+| U12-e | 复核指出的 4 处引用精度 | — | `panel-chrome.js` / `panel-filter.js` / `styles.js` 的 `@284660`、`@2480093`、`@2464626`/`@2464745`、`@2479077` 已按复核结论订正 | 见 HANDOFF §4（值相同、选择器不同的那条按复核结论标注） |
+
+
+## 14.7 lane `desktop-re/panel-properties`（属性面板 = 桌面 26 行菜单）
+
+基座 `e58913d6`（`origin/main`）。逐项证据在 lane 根 `HANDOFF-PROPERTIES.md`；这里只登记契约与状态。
+
+### 14.7.1 Web DTO 契约变更（**只增**，`GET /api/web/v1/base`）
+
+新增一个**始终存在**的顶层字段（`app/src/app/base-route.js` → `app/src/base-property-catalog.js`）：
+
+```
+propertyCatalog: [
+  { key: "formula.note", label: "项目", kind: "formula", checked: true,  source: "column"   },
+  { key: "archived",     label: "archived", kind: "boolean", checked: false, source: "observed" },
+  …
+]
+```
+
+- `checked` = 该 key 是否在本视图的 `order` 里（客户端仍以**本地隐藏集**决定勾选框，见 §14.7.2）；
+  已勾行按 `order` 顺序在前，未勾行按 key 字典序在后（业主截图 02 的 23 行未勾项就是 key 字典序）。
+- `kind`：`formula`（视图列）/ `property`（视图列里的普通属性）/ `builtin`（`file.*` 内置 14 项）/
+  `text|number|boolean|date|list|object`（**由目录里实际出现的值推断**，不是声明类型）。**注意**：`kind` 是推断值，但客户端**会**用它选行内类型图标 —— 这属于**已登记的偏离**（见 §14.7.2 P7-h），不是“不画图标”；推断与声明不同时图标可能与桌面相反（`next_action`、值全空的属性）。
+- `source` 只作溯源：`column`（视图列）/ `declared`（`.base` 的 `properties:`）/ `observed`（目录里出现的 frontmatter 键）/
+  `builtin`（内置表）。
+- 三个数据源都是既有真源，没有第二套目录：① `BASE_BUILTIN_PROPERTY_NAMES`（`src/base-builtin-names.js`，
+  桌面 `o$` 表 `app.js@2351488`）；② `.base` 自身的 `properties:` + 已解析列 `label`（displayName 优先级同 `columnLabel`）；
+  ③ 该 `.base` **所在目录**（递归）里记录的真实 frontmatter —— 记录集就是本次查询已经加载的那一批
+  （`base-record-source.js` `loadRecords`），**没有额外 IO**，也没有第二次扫描。
+- 语义不变、权限不变：`capabilities`、`supportedSubset`、错误码与游标身份全部未动；老客户端忽略该字段即逐字节相同。
+- 形状断言：`app/test/base-property-catalog.test.js`（五项字段、唯一性、字典序、目录边界、坏文档降级）。
+
+### 14.7.1a 本刀**未静默**的三条口径（复核 `rev-properties-2` 要求登记）
+
+1. **属性目录的取样范围**：目录 = 内置 `file.*`（13，排除 `file.file`）+ `.base` 的 `properties:` + **命中当前视图筛选的记录**的 frontmatter 键。
+   桌面机制与此一致（`app.js@2550063 getProperties()` = FILE_PROPERTIES ∪ 命中行 ∪ 查询公式，键取自 `@2548697` 的结果集）。
+   **偏离**：`.base` 的 `properties:` 键我们**无条件**入册；桌面只在搜索框有输入时才并入 `metadataTypeManager.getAllProperties()`。
+   影响：业主这份 `.base` 没有孤儿键（即声明了但任何记录都不带的键），所以当前不显形。
+2. **行序**：已勾（视图 `order`）→ 内置 `file.*` 按 key → 作者键按 key。桌面由 `Intl.Collator`（`@1307315`）比较**完整标识符**，
+   因此 `file.*` 天然排在 `note.*` 之前 —— 是**结构性**保证，不是我们另加的"分组"。
+3. **标签**：只有**公式行**用 `.base` 的 displayName（`项目`）；note 行显示**原始键**（`status`/`updated`），内置行显示内置名。
+   依据：业主 02 截图逐行如此（`02-properties-open.png`：`项目` y≈228 / `status` y≈276 / `updated` y≈324）。
+   **2026-10-23 更正（lane `desktop-re/property-label-surfaces`）**：本节原文还写了「表格表头显示 `状态/更新` 是**表头**的行为」——
+   这句话**与业主截图相反**：01 的表头读 `status`（`01-filter-open.png`，原图 2452x800，表头 y≈162，`status` x≈862）、
+   04 的表头读 `updated`（`04-sort-popover.png`，1298x552，y≈168，x≈310-405），而同一 `.base`
+   （`_Workspace/40-Projects/Projects.base`）确实声明了 `status:{displayName:状态}` / `updated:{displayName:更新}`。
+   即：**表头是否消费 note 属性的 displayName 尚未证实**（我们仍按 `column.label` = displayName 优先画表头，本刀不改）。
+   分面契约（选择器 vs 表头）与未证实项见 §14.9。
+
+### 14.7.2 状态登记
+
+| # | 项 | 桌面 | 本仓 | 状态 |
+| --- | --- | --- | --- | --- |
+| P7-a | 属性菜单行集 | 全目录（业主 26 行 = 3 已勾 + 23 未勾） | 全 `propertyCatalog`（同一 Base 实测 74 行：目录子树里出现的键更多） | **ported**；行数差异是**取样范围**差异（本仓按 `.base` 目录递归），登记为 [未证实] 待与桌面逐键对账 |
+| P7-b | 区块头 `已显示` | 无 | 已删除（`[data-prop-section]` = 0） | **ported** |
+| P7-c | 每行右侧 `›` | `app.css@469509` 槽位 | `.base-panel-action-icon` + `chevron-right`，`aria-hidden`（子菜单未移植） | **ported（仅形状）** |
+| P7-d | 未勾行暗色 | `app.css@467406`（`mod-hidden` → `--text-faint`） | 同一类名 → 实测 `rgb(93,109,126)` vs 已勾 `rgb(218,218,218)` | **ported** |
+| P7-e | 行内公式原文 `ƒ …` | 无（只有 `Edit formula...` 子菜单） | **已删除**：`[data-formula-source]` = 0，行文本 = displayName（`项目`） | **ported** |
+| P7-f | 底部 `全部隐藏` | `bases-toolbar-menu-actions`（`app.css@459374`，`padding:4px`）+ `.menu-item` 皮肤（`@283971`） | 复用 `.base-panel-actions .base-panel-button`；实测 `border-width:0`、`padding:4px 8px`、footer `border-top:0` | **ported** |
+| P7-g | `添加公式` | 有 | **不画**（无公式写入路由） | not-ported（`添加公式` 字符串仍不存在，既有断言未放宽） |
+| P7-h | 属性类型图标（`☰`/`📅`/`ⓘ`/`ƒ`） | 三分支（1.14.4 `app.js@2381738`）：内置 `file.*` → info（ⓘ）、公式 → `lucide-square-function`、note 属性 → **声明类型**的图标（`metadataTypeManager.getTypeInfo(...).expected.icon`） | **已画**，但按**推断 kind**（`propertyIconName()`）：内置→`circle-info`、公式→`code`、date→`calendar`、text→`text`、list→`tag`、number/object/boolean→`text`；未命中→`circle-info`（兜底**指向存在**的符号） | **registered deviation**（不是 not-ported，也不是造假）：本仓没有声明类型，只能由命中记录的值推断。两处已知代价：①值全空的属性保留文本图标；②`next_action`（我们 📅 / 桌面 ☰）与 `created` 可能与桌面相反。sprite 无 `square-function`，公式用 `code`（**不发明 path**）。复核依据：`rev-properties-2/REVIEW.md` + `work/checkbox-pixels.json` |
+| P7-i | 行距 / 面板宽 | 桌面读数 ≈25.75 CSS / 220 CSS | 实测 **27.5 CSS** / **234.6 CSS** | **deviation**：行距差额 = 行盒（13px × `--line-height-normal:1.5` = 19.5 + 8 内边距），面板宽差额 = 最长未勾属性名把 shrink-to-fit 撑到 220 下限之上；两项都标 [未证实] |
+
+## 14.8 lane `desktop-re/panel-sort`（排序菜单 = 桌面「排序依据」页）
+
+基座 `98264a1a`（`origin/main`）。逐项证据（偏移 → 改动 → 并排截图 → 读数 → 负控）在 lane 根
+`HANDOFF-SORT.md`；这里只登记契约与状态。**基准 = 桌面 1.14.4**（本刀所有偏移都在
+`scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/` 上重量过，清单 D 段里那些 1.13.7 偏移已弃用）。
+
+### 14.8.1 Web DTO 契约变更（**只增**，`GET /api/web/v1/base`）
+
+新增一个**始终存在**的顶层字段（`app/src/app/base-route.js` → `base-snapshot-adapter.js` `summarizeBaseSort`）：
+
+```
+viewSort: [ { key: "updated", dir: "desc" } ]
+```
+
+- 语义：**选中视图**在 `.base` 里**声明**的 `views[].sort`，投影成与 URL 覆盖（`?sort=`）完全相同的形状
+  （`[{key, dir}]`）。`key` 就是声明的 `property` 原文（即 `order`/列键词汇），`direction` 映射为 `asc`/`desc`；
+  缺 `direction` 视同 `ASC`（与文档管线 `item.direction || "ASC"` 同一默认）。
+- 为什么必须有：桌面排序页的行是**从视图配置读出来**的
+  （`display()` 合并 `currentSort` 与 `loadSort(){ return queryController.getViewConfig()?.getSort() ?? [] }`，
+  1.14.4 `app.js@2526324`/`@2527053`）；客户端此前拿不到声明，打开即空。
+- 语义不变、权限不变：行顺序**本来就是**服务端按视图 `sort:` 排好的（`viewSort` 只是把同一事实投影出来），
+  `capabilities`/`supportedSubset`/游标身份均未改；不带 URL 覆盖时请求仍不发送 `sort`，老客户端忽略该字段即逐字节相同。
+- 无属性 / 重复属性 / 非字符串属性的条目直接丢弃（桌面一行一属性）；**不**在这里截断 4 级上限（那是编辑器约束）。
+- 键集由 `test/web-base-route.test.js` 的 §8 冻结契约（已按既有先例加注 `viewSort`）与本 lane
+  `test/web-bases-sort-seed.test.js` 双重钉住。
+
+### 14.8.2 状态登记
+
+| # | 项 | 桌面（1.14.4） | 本仓 | 状态 |
+| --- | --- | --- | --- | --- |
+| D1 | 打开带出声明 sort | `loadSort()` 读视图配置（`app.js@2527053`） | 菜单行 = URL 覆盖非空时用覆盖，否则用 `viewSort`；实测打开 **1 行** `updated` / `从新到旧` | **ported** |
+| D2 | 行首拖拽把手 | `createDiv("grip-handle")` + `lucide-grip-vertical` 插在 `firstChild`（`app.js@2528519`），`cursor:grab`（`app.css@453866` 族） | 同一节点 + `grip-vertical` 精灵；**拖拽真实可用**（HTML5 drag → `onSort` 同一写路径），实测 `display:flex`/`cursor:grab`/16px | **ported**（键盘排序 not-ported：桌面也只有指针拖拽） |
+| D3 | 一行一个外框两段 | `.base-toolbar-sort-item`（`app.css@461837`）+ `.combobox-button{radius:0;background:--background-modifier-form-field}`（`@462364`）+ `.bases-sort-direction{min-width:5.25em;border-left;padding-inline-start}`（`@458358`） | 同一形状：外框 `base-toolbar-sort-item`（实测 `display:flex`/`radius:4px`/bg=菜单底）、属性段 `--interactive-normal`、方向段 form-field + 1px 左分隔线 | **ported**（属性段标签遗留的「用 DTO `label`=displayName `更新`、业主图是原始键 `updated`」已由 §14.9 闭环：属性段现在读 `propertyPickerLabel`，即内置名 ?? 原始键，公式行才用 displayName） |
+| D4 | 菜单内 `--input-height:28px` | `.bases-toolbar-menu{--input-height:28px}`（`app.css@455463`） | 声明在排序面板作用域，`.select-control` 用 `height:var(--input-height,30px)` 消费；实测两段均 28 | **ported**（filter/properties 菜单仍 30，等各自量） |
+| D6 | `+ 添加排序` = 无边框菜单行 | 独立 `.bases-toolbar-section.bases-toolbar-menu-actions`（`app.js@2526713`）+ `C$` 行 `bases-toolbar-menu-item bases-toolbar-menu-action`（`app.js@2373586`） | 动作行是行区块的**兄弟** section（`section:not(:last-child)` 分割线由区块自己画），复用 `.base-panel-actions` 菜单行皮肤；实测 `border-width:0`/`border-style:none`/透明底 | **ported** |
+| D7 | 面板宽 | 只写 `min-width:220px`；248.5 是内容撑开 | 实测 **228** CSS（属性段 14em 上限 + 方向段 5.25em）；**不硬编码宽度**（`web-bases-sort-seed` 有钉子） | 内容驱动，差额登记 [未证实] |
+| D8 | 标题无计数徽标 | header 只有文案（`app.js@2526548`），`flairEl` 是工具栏 badge | 排序区块头不再传 `count`，实测无 `[data-section-count]` 节点、无数字 | **ported** |
+| D9 | 方向文案按类型 | `getWidgetForIdent`（`app.js@2482225`）：date→从旧到新/从新到旧、number→0 → 1/1 → 0、其它→A → Z/Z → A（i18n.js@115815） | 同一映射；**date 两串由 `旧 → 新/新 → 旧` 改为桌面原文**；类型仍按当前页值样本推断（DTO 无声明类型） | **ported（文案）**；类型来源 = registered deviation |
+| D10 | 候选排除 `file.file`/`file.backlinks` | `propertyFilter`（`app.js@2528675`） | 我们的候选集只来自视图列 + 已引用键，这两个键在 DTO 里根本不存在 | **不可达**（[未证实] 无需实现） |
+| — | 行尾删除图标 | `clickable-icon` + `lucide-trash-2`（`app.js@2481117`） | 同一 `trash-2`（sprite 新增，lucide 路径取自 `app.js@1167742`），无边框 28px 命中盒 | **ported**（本刀顺带修：此前是带框的 `x`） |
+| — | `清除排序` | 排序页**没有**该动作（只有 `添加排序`） | 保留（本 surface 的清空手段，URL 覆盖无法表达「显式无排序」；删掉会丢功能） | 登记为**多出**；清理声明级排序需 `PATCH`，不在本刀 |
+
+## 14.9 lane `desktop-re/property-label-surfaces`（标签分面：表头 vs 三个选择器）
+
+基座 `ece280ed`（`origin/main`，PR #681 合并后）。逐面证据、负控与预算账在 lane 根 `HANDOFF-LABELS.md`；
+这里只登记契约与状态。**基准 = 桌面 1.14.4 + 业主截图**（这一条 asar 静态读不足以定案，见 §14.9.2）。
+
+### 14.9.1 两个标签面（契约）
+
+| 面 | 规则 | 依据 |
+| --- | --- | --- |
+| 表格表头（`view.js` 的 `.base-column-label`） | 服务端 `column.label`（**本刀未改**；下一个刀改正为「formula → displayName；否则内置名表 ?? 原始键」，见 §14.10） | 本仓既有实现（`.30` + U5）；§14.9.2-1 已在 §14.10 结案 |
+| 三个选择器：属性菜单行 / 排序行 / 筛选属性下拉 | `propertyPickerLabel(key, column)`：公式行 → displayName；否则 **内置名表 ?? 原始键** | 业主截图：02 `项目`（y≈228）/ `status`（y≈276）/ `updated`（y≈324）；04 排序行 `updated`（1298×552，y≈240，x≈690-810）；01 筛选行 `kind`（2452×800，条件行 y≈396，x≈1624-1796） |
+
+- **单一实现**：`app/frontend/app/features/bases/panel-chrome.js` 的 `propertyPickerLabel()`。`columnOptions()`
+  （排序下拉 + 筛选下拉 + stale URL 覆盖键）与 `property-panelRows()` 的「老服务端无目录」降级分支共用它；
+  服务端目录 `src/base-property-catalog.js` 的 `label()` 早已是同一规则（§14.7.1a 第 3 条）。表头**不**用它。
+- **测试**：`app/test/web-bases-builtin-names.test.js` 新增「4 个面 × {内置键 `file.mtime`、note 键 `status`/`updated`、
+  公式键 `formula.note`}」的 DOM 文本断言（走 `propertyCatalog` 生产路径）；三条旧钉子按面拆开（表头 / 选择器 / 一张表）。
+  **负控**：把 `propertyPickerLabel` 的公式分支去掉（即回到「所有面都用 displayName」）⇒ 该断言 12 个标签里 6 个变红，
+  `web-bases-ui-parity-2` 的 3 条同步变红。
+
+### 14.9.2 [已结案]（本刀留下的问题由 §14.10 回答）
+
+1. **表头是否消费 note 属性的 displayName** → **不消费（已证，2026-10-24）**。01/04 的表头读 `status` / `updated`
+   **原始键**，而同一 `.base`（`_Workspace/40-Projects/Projects.base`）声明了 `status:{displayName:状态}` /
+   `updated:{displayName:更新}`。结案证据与改法见 §14.10.1。
+2. **属性菜单的搜索匹配什么**：行现在画选择器标签，搜索只匹配「该行画出来的标签 + 原始键」（`columnMatchesSearch`）。
+   因此按表头名（如 `更新`）搜不到 `updated` 行 —— `test/web-bases-popovers.test.js` 已按新行为钉住。桌面行为 [未证实]；
+   若要同时支持表头名，需服务端在目录里多带一个 `headerLabel`（本刀不做，避免 DTO 变更）。
+3. formula 行的 displayName 来源仍是服务端 `column.label`（已按 `formulaDisplayName` 解析）；公式未声明时它是
+   `formula.<name>`，与选择器规则的「原始键」回退一致。
+
+### 14.9.3 预算
+
+`app.js` **+27 gzip**（88313 → 88340；firstScreen 128253 → 128280，issue414 822219 → 822246；deferred 700587 与
+shellEagerRawBytes 6773 逐字节不变，`editor.js` / `reader.js` / `app.css` / `icons.svg` 未动）。基线**未抬**
+（本刀不自签）；唯一账目在 lane 根 `HANDOFF-LABELS.md` §预算。
+
+## 14.10 lane `desktop-re/column-label-surfaces`（`column.label` 统一：表头 / 卡片 / 列表 / MCP）
+
+基座 `db99f27c`（`origin/main`，#682 合并后）。逐面证据与 `audit:` 在 lane 根 `HANDOFF-COLUMN-LABEL.md`。
+
+### 14.10.1 契约：一条规则，所有面
+
+| 面 | 读什么 | 依据 |
+| --- | --- | --- |
+| 服务端单一真源 | `app/src/base-query.js` `columnLabel()`：formula → `properties.<key>.displayName` → 公式键；否则 **内置名表（U5）?? key 尾巴** | 业主截图（下述） |
+| 表头 `view.js` `.base-column-label` | `column.label`（不再有 displayName 优先） | 01 表头 `status`（x≈862, y≈162）；04 表头 `updated`（y≈168） |
+| 卡片布局 `row-layouts.js`（`bases-cards-label`，第 131 行附近） | `column.label` + 公式 `ƒ ` 标记 | 同一 `columns` DTO，无第二个决策点 |
+| 列表布局 `row-layouts.js`（`bases-list-*`） | **不画列标签**（只画值）；它读同一 `columns` DTO，无 label 槽可漂 | 桌面 list 布局同形 |
+| 属性菜单 / 排序 / 筛选选择器 | `propertyPickerLabel()`（客户端）＋服务端目录 `label()` | 与 §14.9.1 同规则，现在与前四面**一致** |
+| MCP `query_base` | json DTO 不带 `columns`（B1 DTO lock）；label 只出现在 `csv` / `tsv` / `md` 的**表头行** | 见 14.10.2 |
+
+**业主截图证据（独立复核席位亲自读图，本仓不重测）**：01（2452×800）表头 `项目`（公式）/ `status`（x≈862, y≈162）；
+04 表头 `updated`（y≈168）；02/04 选择器 `status` / `updated` / `kind`；而 `_Workspace/40-Projects/Projects.base`
+确实声明 `status:{displayName:状态}` / `updated:{displayName:更新}` —— 所以「只有公式列用 displayName」。
+
+### 14.10.2 MCP `query_base` 口径（**显式裁定**）
+
+- **跟随桌面**：json DTO 不变（`columns` 本来就不在契约里，B1 DTO lock）；`csv`/`tsv`/`md` 的表头行改用同一 `columnLabel`
+  的值，所以带 `displayName` 的 note 属性从 `状态` / `更新` 变成 `status` / `updated`。对外可见的 API 语义变化，已登记。
+- **grep 结果（开刀前）**：仓内消费 `columns[].label` 的位置共 4 处：`base-formats.js`（三种文本表头）、`view.js`（表头）、
+  `row-layouts.js`（卡片）、`base-property-catalog.js`（属性菜单，formula 行走 `column.label`，其余自己算）。
+  **没有任何客户端 / 文档 / 测试依赖 `状态` 这类非 formula 中文标签**（唯一两处冻结期望是官方 fixture 与 W0-A 表征表，已按新规则更新并改注释，**不是**删断言）。仓库外 MCP 客户端无法 grep，如实记作未证实风险。
+
+### 14.10.3 状态登记
+
+| 项 | 状态 | 证据 |
+| --- | --- | --- |
+| §14.9.2-1「表头是否消费 note 属性 displayName」 | **已证（原 `[未证实]`）** | 业主 01/04 表头坐标 + 02/04 选择器 + `.base` 声明 + 复核席位独立读图 |
+| `columnLabel()` 非 formula 分支 | **改**（一处，`app/src/base-query.js`） | `git show` 单行；`web-bases-builtin-names.test.js` ③/③b/③c/③d/③e |
+| 与 `propertyPickerLabel()` / 目录 `label()` 的关系 | **等价**（注释写明 + 行为断言） | ③d：同一列在「DTO / 客户端选择器 / 目录」三处同值 |
+| MCP 文本格式表头 | **跟随**（见 14.10.2） | `mcp-base-query-formats.test.js` 129/129 绿；fixture 均未声明 displayName |
+| 预算 | **服务端 0 字节**（不进 `app.js`） | 客户端未改 ⇒ firstScreen / issue414 逐字节不变（`git diff` 只涉服务端与测试） |
+
+## 14.11 lane `desktop-re/grouping-honesty`（`分组` 按钮按布局收窄；cards/list 组头 not-ported）
+
+基座 `6220d210`（`origin/main`，`#685` 合并后；`#684` 已把 `capabilities.grouping` 翻成 `true`）。
+复核 D5 的实测：**list / cards 两种布局完全不读 `state.groups`**，`分组` 按钮在那两种布局下是**没有效果的控件**。
+本刀只把它做诚实；本轮**未**移植 cards/list 的组头。逐项读数与 `audit:` 在 lane 根 `HANDOFF-GROUP-HONESTY.md`，
+探针/截图/读数在 lane 根 `evidence/`（按 standing rule §5.22 不入仓）。
+
+| # | 项 | 事实（本 head 已读） | 本仓行为 | 状态 |
+| --- | --- | --- | --- | --- |
+| G1 | 能力位 vs 布局位 | `capabilities.grouping` 是**表面**能力（`app/src/app/base-route.js` 一处 `true`），DTO 里 `groups[]` 与布局无关，list/cards 照样收到 | **不改服务端 / DTO**：能力位继续按表面声明；**客户端 UI 按布局收窄** | 已落地（收窄，不是能力回退） |
+| G2 | 组头在哪画 | 表格：`group-heading.js` 画 `groups[]`；kanban：`kanban-runtime.js` 列 = 组 | `visibleActionItems(capabilities, viewType)` 只给 `layout ∈ {table, kanban}` 的 `分组` 条目；未知/缺失 layout = table（`normalizeViewType`，与 `view.js` 分派同一规则） | 已落地 |
+| G3 | list / cards 的 `分组` | 两种布局都不存在组头，按钮点了不改任何可见内容 | **不渲染**（不是 disabled 假控件）；同一动作行的其余按钮不变 | 已落地 |
+| G4 | 切布局时的开面板 | — | 动作因布局收窄而消失时，其已开面板一并剪掉：否则面板没有按钮可关，且切回时会自行重开 | 已落地（真 Chromium 断言） |
+| G5 | **cards / list 组头** | **桌面有**（asar 1.14.4 静态读，本机 `scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/app.js`）：共享 `_J.createGroupHeadingEl()` `@2499736`（`createDiv("bases-group-heading mod-collapsible")`，带属性名/值/折叠箭头），表格 `_7.render` `@3226622`、列表 `A7` `@3185086`（`bases-list-group` + `bases-list-group-list`）、卡片 `s7` `@3154320`（`bases-cards-group`）都调它；kanban `@3167346`/`@3176550` 自己的 `bases-group-heading`。附带读数：`createGroupHeadingEl` 对无值组 `if(!e.key)return null`（不画组头）——与本仓表格画 `无值` 不同，属 B 刀的另一条差异 | **not-ported（真实缺口，不是只收窄就够了）**：list/cards 仍平铺、无组头，也没有桌面组的折叠态。本刀只收窄按钮，**不以隐藏按钮掩盖缺口** | 未实现；B（移植组头 + 折叠）是后续刀，预算明显大于本刀，需先报数 |
+| G6 | 服务端分组与 `?group=` | 服务端执行、override、组序不动（`#684`） | 不回归：`web-bases-grouping.test.js` 既有断言逐条仍绿，新增断言单列一条 | 不变 |
+| G7 | 预算 | 客户端新增布局闸门 | **+111 gzip**（只在 `app.js`；firstScreen 130092→130203、issue414 824058→824169；其余首屏资产与 deferred 逐字节不变） | **基线未抬、未自签**；账目与回收实测见 `HANDOFF-GROUP-HONESTY.md` §预算 |
+
+**判据（行为化，可重跑）**：`visibleActionItems({grouping:true}, "table"|"kanban"|"list"|"cards")` 的输出集合（
+`app/test/web-bases-grouping.test.js`「分组 is narrowed …」）；真 Chromium 四个布局的工具栏 + 切换布局后的面板读数
+（lane 根 `evidence/probe-bases-group-honesty.mjs` / `group-honesty-readings.json`）。
+
+
+
+## 14.12 lane `desktop-re/group-headings-list-cards`（B：cards / list 的组头 + 折叠）
+
+承接 §14.11 G5 登记的真实缺口。桌面读数全部来自本机 1.14.4 解包副本
+（`scratch/obsidian-desktop-re/extract/obsidian-asar-1.14.4/`，**字节偏移，不按行号**）。
+
+### 14.12.0 桌面读数（recon）
+
+| # | 事实 | 偏移 / 依据 |
+| --- | --- | --- |
+| R1 | 组头工厂 `_J.createGroupHeadingEl(e)`：`if(!e.key)return null`；`createDiv("bases-group-heading mod-collapsible")`；子节点顺序 = 可选 `div.bases-group-property`（`if(config.groupBy)`，文本 = `getDisplayName(groupBy.property)`）→ `div.bases-group-value`（`RJ(el, key, app)`：空值走 `labelGroupKeyNone()`，其余 `key.renderTo`）→ `div.collapse-indicator collapse-icon`（`LM(el,"lucide-chevron-right")`） | `app.js@2499736` |
+| R2 | 折叠交互：组头 `click`（`!defaultPrevented && button===0`）→ `preventDefault()` + `toggleGroupCollapsed(e)` + `bO(r, isGroupCollapsed(e))`。`bO(e,t)` = 在组头**和** `.collapse-icon` 上 `toggleClass("is-collapsed", t)` | `app.js@2499736` / `app.js@1498694` |
+| R3 | 折叠态存储：`queryController.getGroupFolds()`（Set，`saveGroupFolds()` 持久化），id = `getGroupId(e)` = `` `${key.constructor}:${key}` ``，无 key 返回 `null`（不可折叠） | `app.js@2499736` |
+| R4 | 表格 `_7.render`：children = `[heading?, summaryRow?, tbodyEl]` ⇒ 组头是 `.bases-tbody` 的**兄弟**，不是行 | `app.js@3226622` |
+| R5 | 列表 `A7`：`createDiv("bases-list-group")` → 组头 append **进组容器** → `createDiv("bases-list-group-list")` 装行；`render` 对组容器 `toggleClass("is-collapsed")`，折叠时把所有行 `detach()`，并把组头高度量进 `headerHeight` | `app.js@3185086` |
+| R6 | 卡片 `s7`：`containerEl = createDiv("bases-cards-group")`，`groupHeadingEl = createDiv("bases-group-heading")`（占位，`render` 用工厂结果替换）；`updateCollapsed` 对组容器 `toggleClass("is-collapsed")` + `padding:0 / borderWidth:0`；卡片的组渲染把**组头与组容器当兄弟**依次推入容器（`q=!!key` 才推组头） | `app.js@3154320` |
+| R7 | 卡片/列表的几何是**虚拟化的绝对定位**：`groupHeadingHeight = tester.groupHeadingEl.offsetHeight`，组头 `top:R`、组容器 `top:R+headingHeight`，`groupGap`/`groupPad`/`cardGap` 从 computed style 读。本仓无此虚拟化 ⇒ 组头走正常流（登记差异，不假装同几何） | `app.js@3154320`、`app.js@3185086` |
+| R8 | `is-grouped` 类：`viewContainerEl.toggleClass("is-grouped", !!config.groupBy)`（`data-view-type` 在同一个元素上） | `app.js@2546799` |
+| R9 | CSS：`.bases-group-heading` = flex / `align-items:baseline` / `line-height:var(--bases-table-row-height)` / `gap:var(--size-4-1)` / 省略号；`.mod-collapsible{cursor:var(--cursor)}`；`.mod-collapsible .collapse-icon{flex-shrink:0;align-self:center;padding-inline:var(--size-2-1)}`；箭头 `transform:rotate(calc(var(--direction)*90deg))`，`.is-collapsed` 时 `transform:none`；`.collapse-indicator` 在 `@media (hover:hover)` 下 hover 才 `opacity:1`，`(hover:none)` 恒 1；`.bases-group-property{font-size:var(--bases-group-heading-property-size)=var(--font-ui-smaller);weight:var(--font-normal);color:var(--text-muted);display:block}`；`.bases-group-value{font-size:var(--font-smaller);weight:var(--font-semibold);overflow:hidden;text-overflow:ellipsis}` | `app.css@447337`、`@447865`、`@447931`、`@448062`、`@448184`、`@448311`、`@448423`、`@448504`、`@448773`、token `@57575`/`@57638`/`@57699`/`@57758`/`@57815`/`@57875` |
+| R10 | CSS：`.bases-list-container{position:relative;min-height:100px}`、`.bases-list-group{position:absolute;width:100%}`、`.bases-list-group-list{position:relative}`；`.is-grouped .bases-cards-container .bases-group-heading{position:absolute;padding:var(--size-4-1) 0 var(--size-4-2)}`；`.is-grouped .bases-cards-container .bases-cards-group{padding:0 0 var(--size-4-4) 0;border:0 0 1px 0 solid var(--background-modifier-border)}`；`.bases-cards-group{position:absolute;gap:var(--size-4-3)}`；`.bases-table .bases-group-heading{width:100%;height:var(--bases-table-row-height);padding-inline-start:var(--size-4-2)}` | `app.css@484683`、`@484742`、`@484800`、`@475598`、`@475726`、`@475905`、`@488413` |
+| R11 | **sticky**：组头**不是** sticky。整个 `app.css` 里 `position:sticky` 只出现在 `.setting-page-titlebar` `@172656`、`.bases-thead` `@488569`、`.bases-table-footer` `@491293`；组头是相对/绝对定位的普通块（R10），随内容滚走 | `app.css` 全量 `position: sticky` 扫描 |
+| R12 | **无值组**：`createGroupHeadingEl` 对 falsy key 返回 `null` ⇒ 桌面**不画无值组头**（列表/卡片只画组容器与它的行）。`labelGroupKeyNone()` 只在 `RJ` 里对「非 null 的空值」可达 | `app.js@2499736`、`app.js@2489496`(`RJ`) |
+
+### 14.12.1 状态
+
+实现与预算见 lane 根 `HANDOFF-GROUP-HEADINGS.md`；本节的 R1–R12 是**桌面事实**，与实现是否采用它们分开记账。
+
+### 14.12.1 落地状态（承接 §14.11 G5 的 not-ported 项）
+
+| # | 项 | 本仓行为 | 状态 |
+| --- | --- | --- | --- |
+| H1 | list / cards 的组头 | `row-layouts.js` 按 `groupPage(state)`（`state.groups` × 本页窗口）分组：列表 `div.bases-list-group`（组头 + `div.bases-list-group-list[role=list]`），卡片组头与 `div.bases-cards-group` 为兄弟；组头 = `bases-group-heading mod-collapsible` + `bases-group-property` + `bases-group-value` + `collapse-indicator collapse-icon`（R1） | 已落地 |
+| H2 | 折叠 | 点组头 → `is-collapsed` 写在**组盒**与组头的 chevron 上（R2/R5/R6），行由 CSS 不画（桌面是 detach）；折叠态按挂载期 `Set` 保存，翻页/动作重渲染不丢 | 已落地 |
+| H3 | 折叠态持久化 | 桌面写 `saveGroupFolds()`（R3）；本仓**只在挂载期记忆**，不写 localStorage/URL | **未移植（登记差异）** |
+| H4 | 无值组 | 本仓画 `无值` 组头（与自己的表格一致）；桌面 `if(!e.key)return null` **不画组头**（R12） | **登记差异**（与 #684 表格同口径） |
+| H5 | 几何 | 桌面是虚拟化容器里的绝对定位（R7/R10）；本仓正常流，只对齐「谁包谁」+ 皮肤 token。列表组头 `padding:4px 0 8px` 取自卡片 `@475598`，列表侧无桌面值 | 部分 `[未证实]` |
+| H6 | sticky | 桌面组头**不 sticky**（R11）；本仓也不 sticky | 与桌面一致 |
+| H7 | 键盘 | 桌面组头是纯 `div` + click（无 `role`/`tabindex`）；本仓同样，未发明键盘折叠 | 与桌面一致 |
+| H8 | `分组` 按钮的布局闸门 | `GROUPING_LAYOUTS` 回到四种布局（`#686` 的收窄是「缺口未补」期间的诚实措施，缺口补上后放宽）；`web-bases-grouping.test.js` 对应断言**改写**（不是删除），能力闸门与未知=表格两条规则仍被断言 | 已落地 |
+| H9 | 预算 | **+841 gzip**（app.js 90263 → 91104；firstScreen 130203 → **131044**、issue414 824169 → **825010**；其余首屏资产与 deferred 逐字节不变）。骨架版首次读数 +863，实测回收 −22 | **未签、未抬基线**（等协调席 §5.9） |

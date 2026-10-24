@@ -44,7 +44,9 @@ function requireNonNegativeInteger(value, field, { min = 0 } = {}) {
 
 // The query-override identity fields are optional; when present they must be
 // non-empty strings (the canonical encodings produced by base-params.js).
-const OVERRIDE_FIELDS = ["sort", "filter", "q"];
+// `group` joined the set with the lane desktop-re/bases-grouping: a partition is
+// result identity, so a cursor must never cross two different grouping rules.
+const OVERRIDE_FIELDS = ["sort", "filter", "q", "group"];
 
 function assignOverrides(target, fields) {
   for (const field of OVERRIDE_FIELDS) {
@@ -119,7 +121,10 @@ export function assertBaseCursorMatches(decoded, identity) {
     decoded.orderContract !== identity.orderContract ||
     (decoded.sort ?? null) !== (identity.sort ?? null) ||
     (decoded.filter ?? null) !== (identity.filter ?? null) ||
-    (decoded.q ?? null) !== (identity.q ?? null);
+    (decoded.q ?? null) !== (identity.q ?? null) ||
+    // The grouping rule is part of the result identity: the same row window under a
+    // different partition is a different page (lane desktop-re/bases-grouping).
+    (decoded.group ?? null) !== (identity.group ?? null);
   if (mismatch) {
     throw new BaseCursorError("cursor is stale; refresh the current Base view", "BASE_CURSOR_STALE");
   }

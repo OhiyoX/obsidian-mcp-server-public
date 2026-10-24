@@ -124,7 +124,7 @@ export function panelBackdrop(doc, onClose) {
 // ---------------------------------------------------------------------------
 //
 // The desktop builds `.bases-toolbar-section` > `.bases-toolbar-section-header` +
-// `.bases-toolbar-section-content` (asar app.js@2479077: `scrollEl.createDiv(
+// `.bases-toolbar-section-content` (asar app.js@2479465: `scrollEl.createDiv(
 // "bases-toolbar-section", t => { t.createDiv("bases-toolbar-section-header", …);
 // t.createDiv("bases-toolbar-section-content") })`), and THIS is the shape the previous
 // cut was missing: the heading text alone had nowhere to put the desktop header's own
@@ -136,7 +136,7 @@ export function panelBackdrop(doc, onClose) {
 // header (`n.globalFiltersFlairEl=e.createSpan({cls:"flair"})` app.js@2479449,
 // `n.localFiltersFlairEl=e.createSpan({cls:"flair"})` @2479951) and fills it with the real
 // number of active filters (`i=function(e,t){e.setText(String(t)),e.toggle(t>0)}`
-// app.js@2480093, called as `i(this.localFiltersFlairEl,o)`). So a bare number was the
+// app.js@2480449, called as `i(this.localFiltersFlairEl,o)` @2480522). So a bare number was the
 // wrong shape: the desktop paints it as a flair chip. `count` is still rendered only when
 // the caller has a real number for it — never a placeholder.
 //
@@ -215,6 +215,20 @@ export function panelButton(doc, { text, icon = null, attributes = {}, focusKey 
   return button;
 }
 
+// The label a property PICKER row paints — the properties menu row, the sort row and the
+// filter property dropdown — which is NOT the table header's label. Owner screenshots
+// (`scratch/desktop-re/owner-shots`, 1.14.4): 02 reads `status` / `updated` / `项目`, 01 the
+// filter row `kind`, 04 the sort row `updated`, while the same `.base`
+// (`_Workspace/40-Projects/Projects.base`) declares `status:{displayName:状态}` and
+// `updated:{displayName:更新}`. So a selector row shows the desktop built-in name, else the
+// raw key; only a FORMULA row keeps its declared displayName. `view.js` keeps painting the
+// header from `column.label` (displayName priority).
+// `column` is the server column DTO when one exists: its `kind` selects the formula branch and
+// its `label` already carries the declared displayName (or the formula key when silent).
+export function propertyPickerLabel(key, column = null) {
+  return (column?.kind === "formula" ? column.label : null) ?? builtinPropertyName(key) ?? key;
+}
+
 // The desktop Properties/Sort/Filter menus list every property the view declares,
 // including the ones that are currently hidden — a hidden column must stay
 // sortable/filterable. `keys` are the keys already referenced by the state; a key
@@ -227,17 +241,20 @@ export function columnOptions(columns, keys = []) {
     const key = column && typeof column.key === "string" ? column.key : null;
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    options.push({ value: key, label: column.label ?? key });
+    options.push({
+      value: key,
+      label: propertyPickerLabel(key, column),
+    });
   }
   for (const key of Array.isArray(keys) ? keys : []) {
     if (typeof key !== "string" || !key || seen.has(key)) continue;
     seen.add(key);
     // A key the view no longer declares (stale URL override) is still offered, under
-    // the same label rule as every other property: the desktop built-in name when the
-    // desktop has one, else the raw key (see `src/base-builtin-names.js`, U5). The
-    // server cannot label this one — it is by definition absent from `columns` — so
-    // the table is imported here rather than a second copy being kept in the client.
-    options.push({ value: key, label: builtinPropertyName(key) ?? key });
+    // the same picker rule: the desktop built-in name when the desktop has one, else the
+    // raw key (see `src/base-builtin-names.js`, U5). The server cannot label this one —
+    // it is by definition absent from `columns` — so the table is imported here rather
+    // than a second copy being kept in the client.
+    options.push({ value: key, label: propertyPickerLabel(key) });
   }
   return options;
 }

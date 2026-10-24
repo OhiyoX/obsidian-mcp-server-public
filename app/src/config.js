@@ -50,6 +50,21 @@ export function configuredWebVaultsRoot() {
 export function configuredWebDefaultVault() {
   return String(process.env.WEB_DEFAULT_VAULT || "").trim();
 }
+
+/**
+ * The PRIMARY Vault's identity as the registry plane derives it (#659).
+ *
+ * This is the expression `app/vault-registry.js` used inline (`WEB_DEFAULT_VAULT || basename(VAULT)
+ * || "vault"`), lifted into one place so the three consumers cannot drift apart by editing one copy.
+ * It is deliberately NOT the same fallback as the auth plane's `DEFAULT_VAULT_ID` (which falls back
+ * to the literal `"vault"`): in the documented deployment `WEB_DEFAULT_VAULT` is always set
+ * (`docker-compose.yaml`: `${WEB_DEFAULT_VAULT:-vault}`), and in that configuration the two are
+ * identical — see `app/test/primary-vault-id.test.js`, which pins the identity AND pins the single
+ * configuration where they legitimately differ.
+ */
+export function configuredPrimaryVaultId() {
+  return String(configuredWebDefaultVault() || path.basename(VAULT) || "vault").trim();
+}
 // W2 (#437) — Vault hot discovery + admission. EXPLICITLY OFF by default: without it the process
 // keeps the pre-W2 behaviour (plain registry refresh, no admission gate, no `vault-admissions.json`).
 // When enabled, discovery is gated by the persisted admission record and a missing/corrupt record
@@ -177,6 +192,7 @@ export const TOOL_NAMES = [
   "pull_file",
   "write_file",
   "start_file_upload",
+  "start_direct_upload",
   "file_upload_status",
   "upload_file_chunk",
   "cancel_file_upload",

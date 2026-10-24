@@ -84,8 +84,14 @@ const FROZEN = Object.freeze({
     // is gone and the three former direct readers consume the single read point. They are helpers
     // (not frozen constants) so each consumer still evaluates them at its own module load, exactly
     // as before; the `envReaders` ratchet below is what proves the single read point.
-    configuredWebVaultsRoot: Object.freeze(["src/app/vault-registry.js", "src/oauth/primitives.js", "src/vault.js"]),
-    configuredWebDefaultVault: Object.freeze(["src/app/vault-registry.js", "src/oauth/primitives.js", "src/vault.js"]),
+    // #659 (TIGHTENING): `src/vault.js` no longer reads these helpers at all — its `PRIMARY_VAULT_ID`
+    // used to be a verbatim re-derivation of `oauth/primitives.js#DEFAULT_VAULT_ID`; it is now that
+    // import, so the helper reads left the importer set instead of being duplicated. Two importers,
+    // not three: the surface shrank, the ratchet must record it.
+    configuredWebVaultsRoot: Object.freeze(["src/app/vault-registry.js", "src/oauth/primitives.js"]),
+    // `vault-registry.js` stopped importing this one too (it now calls
+    // `config.js#configuredPrimaryVaultId`, which is the only caller left besides the auth plane).
+    configuredWebDefaultVault: Object.freeze(["src/oauth/primitives.js"]),
   }),
   // `WEB_VAULTS_ROOT` / `WEB_DEFAULT_VAULT` are read ONLY by `config.js` since Wave F / F1 (the
   // brief's "_WEB_VAULTS_ROOT_ is not exported" asymmetry is resolved). Files reading

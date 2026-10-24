@@ -13,9 +13,10 @@
 // (contract §10.1); lane B1 wires no background consumer.
 
 import path from "node:path";
-import { DATA_PATH, HISTORY_PATH, READ_ONLY, RETRIEVAL_INDEX_PATH, TRASH_PATH, VAULT, configuredWebDefaultVault, configuredWebVaultsRoot } from "./config.js";
+import { DATA_PATH, HISTORY_PATH, READ_ONLY, RETRIEVAL_INDEX_PATH, TRASH_PATH, VAULT } from "./config.js";
 import { trackGitMutation } from "./git.js";
 import { requireRequestAuthor } from "./request-context.js";
+import { DEFAULT_VAULT_ID } from "./oauth/primitives.js";
 import { vaultDataPaths } from "./vault-runtime/paths.js";
 import { createVaultRuntime } from "./vault-runtime/runtime.js";
 
@@ -38,9 +39,9 @@ export {
 // Primary Vault ID. Byte-identical derivation to the auth plane's `DEFAULT_VAULT_ID`
 // (`oauth/primitives.js`), so Wave C's `allowedVaults` gate compares the same string;
 // `test/vault-runtime-factory-core.test.js` ratchets the two against drift.
-const PRIMARY_VAULT_ID = configuredWebVaultsRoot()
-  ? (configuredWebDefaultVault() || "vault")
-  : "default";
+// #659: this was a verbatim copy of the auth plane's `DEFAULT_VAULT_ID` (same two branches); the
+// copy is now the import, so a future edit to the rule has exactly one home. Behaviour is identical.
+const PRIMARY_VAULT_ID = DEFAULT_VAULT_ID;
 
 const primaryPaths = vaultDataPaths({
   primary: true,

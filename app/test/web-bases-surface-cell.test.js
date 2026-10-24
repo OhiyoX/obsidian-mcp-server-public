@@ -43,24 +43,31 @@ test("scalars map to deterministic locale-neutral text", () => {
   assert.deepEqual(describeCellValue(false), { type: "boolean", value: false, text: "false" });
 });
 
-test("date values keep the source and render the desktop `MM / DD / YYYY` form", () => {
+test("date values keep the source and render the desktop `MM/DD/YYYY` form", () => {
   const explicit = describeCellValue("2026-10-04T15:30:00Z", "date");
   assert.equal(explicit.type, "date");
   assert.equal(explicit.value, "2026-10-04T15:30:00Z");
   assert.equal(explicit.iso, "2026-10-04");
-  assert.equal(explicit.text, "10 / 04 / 2026");
+  assert.equal(explicit.text, "10/04/2026");
 
   // A bare ISO calendar date is inferred without a declared date column, like desktop Bases.
   const inferred = describeCellValue("2026-09-11");
   assert.equal(inferred.type, "date");
   assert.equal(inferred.iso, "2026-09-11");
-  assert.equal(inferred.text, "09 / 11 / 2026");
+  assert.equal(inferred.text, "09/11/2026");
 
   // A YAML date arrives as an ISO timestamp and keeps the same calendar day.
   const stamped = describeCellValue("2026-09-19T00:00:00.000Z");
   assert.equal(stamped.type, "date");
   assert.equal(stamped.iso, "2026-09-19");
-  assert.equal(stamped.text, "09 / 19 / 2026");
+  assert.equal(stamped.text, "09/19/2026");
+
+  // Desktop moment `L` writes the separators with NO spaces (owner shot `10/21/2026`); a padded
+  // `MM / DD / YYYY` string is the thing this guards, so the shape is asserted, not only equality.
+  for (const text of [explicit.text, inferred.text, stamped.text]) {
+    assert.match(text, /^\d{2}\/\d{2}\/\d{4}$/);
+    assert.doesNotMatch(text, /\s/);
+  }
 
   assert.equal(formatDateValue("not-a-date"), "not-a-date");
   assert.equal(describeCellValue("2026-02-31").type, "string", "impossible calendar dates stay text");

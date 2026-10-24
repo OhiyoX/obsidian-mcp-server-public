@@ -76,8 +76,8 @@ async function captureWarnings(fn) {
 }
 
 test("Push failure summaries never echo credentials", () => {
-  const summary = scrubCredentials("fatal: unable to access 'https://deploy:s3cr3t-token@git.example.com/example/obsidian-vault.git/': 403");
-  assert.ok(!summary.includes("s3cr3t-token"));
+  const summary = scrubCredentials("fatal: unable to access 'https://ci-user:test-token@git.example.com/example/obsidian-vault.git/': 403");
+  assert.ok(!summary.includes("test-token"));
   assert.ok(summary.includes("https://***@git.example.com"));
   assert.ok(!scrubCredentials("Authorization: Basic YWJjOmRlZg==").includes("YWJjOmRlZg=="));
   assert.ok(!scrubCredentials("remote: token=ghp_abcdefghijklmnopqrstuvwxyz012345").includes("ghp_"));

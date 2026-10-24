@@ -16,7 +16,7 @@ const contracts = {
   get_file: ["path extension encoding revision stat", "content range"],
   pull_file: ["path suggestedFilename mimeType encoding content byteLength sha256 revision complete stat"],
   write_file: ["path created previousSizeInBytes currentSizeInBytes revision removedHeadings removedBlocks shrinkRatio preWriteVersionId"],
-  start_file_upload: ["uploadId vaultPath totalBytes uploadedBytes overwrite acceptedOnly status createdAt expiresAt recommendedChunkBytes", "expectedSha256"],
+  start_direct_upload: ["uploadId method relativePath expiresAt maxBytes sha256Required mode", "vaultId path totalBytes sha256 overwrite"],  start_file_upload: ["uploadId vaultPath totalBytes uploadedBytes overwrite acceptedOnly status createdAt expiresAt recommendedChunkBytes", "expectedSha256"],
   file_upload_status: ["uploadId path status uploadedBytes totalBytes nextOffset createdAt expiresAt completedAt result"],
   upload_file_chunk: ["uploadId complete", "path uploadedBytes totalBytes nextOffset size sha256 revision idempotentReplay"],
   cancel_file_upload: ["uploadId cancelled", "complete result"],
@@ -97,8 +97,8 @@ const contracts = {
 };
 
 const arrayFields = new Set("tools workflow boundaries acceptedExtensions entries headings blocks tags outgoingLinks frontmatterFields notes results replacements inline all updatedLinksIn backlinks versions nodes edges links tasks templates properties aliases changed skipped bases rows changes pendingAutoCommitPaths commits collisions outputs suggestions skills matches errors warnings triggers paths files resources unchanged removedHeadings removedBlocks views".split(" "));
-const booleanFields = new Set("ok versionHistoryEnabled readOnly truncated created complete overwrite acceptedOnly cancelled backupRemoved recursive valid supportedSubset committed pulled pushed force embeddings queuedFollowUp semanticRequested semanticUsed hybridUsed fallbackUsed executionAuthorized trusted dryRun exists changed removed idempotentReplay clean published".split(" "));
-const numberFields = new Set("maxVersionsPerFile maxReadBytes byteLength previousSizeInBytes currentSizeInBytes totalCount totalScanned totalMatched totalCandidates uploadedBytes totalBytes nextOffset size recommendedChunkBytes entryCount fileCount compressedBytes uncompressedBytes extracted imported notes chunks embeddedChunks links line shrinkRatio".split(" "));
+const booleanFields = new Set("ok versionHistoryEnabled readOnly truncated created complete overwrite acceptedOnly cancelled backupRemoved recursive valid supportedSubset committed pulled pushed force embeddings queuedFollowUp semanticRequested semanticUsed hybridUsed fallbackUsed executionAuthorized trusted dryRun exists changed removed idempotentReplay clean published sha256Required".split(" "));
+const numberFields = new Set("maxVersionsPerFile maxReadBytes byteLength previousSizeInBytes currentSizeInBytes totalCount totalScanned totalMatched totalCandidates uploadedBytes totalBytes nextOffset size recommendedChunkBytes entryCount fileCount compressedBytes uncompressedBytes extracted imported notes chunks embeddedChunks links line shrinkRatio maxBytes".split(" "));
 const objectFields = new Set("writes entrypoints routing nextRead compatibility index onboarding cache stat range canvas summary frontmatter moved configuration author push semantic indexJob counts orphans deadends base configuredTypes block writeAuthor validation".split(" "));
 const nullableFields = new Set("backup completedAt expectedSha256 semanticError branch path updatedAt embeddingModel view type reason finishedAt publicPath publicUrl publishedAt preWriteVersionId defaultView".split(" "));
 

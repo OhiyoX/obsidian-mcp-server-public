@@ -121,3 +121,21 @@ test("every icon call site resolves to a real sprite symbol (full inventory)", a
     assert.match(sprite, new RegExp(`<symbol id="${name}" viewBox="0 0 24 24">`), `${name} is defined`);
   }
 });
+
+// The Properties menu picks its per-row glyph from a KIND→symbol map at runtime, so the call-site
+// audit above cannot see the symbol names (they never appear as an `icon("…")` literal). That is
+// exactly how `?? "info"` survived pointing at a symbol the sprite does not define, which painted
+// an empty slot on the boolean rows. This guard names every symbol the map can return.
+test("every property-row type glyph names a symbol the sprite really defines", async () => {
+  const { propertyIconName } = await import("../frontend/app/features/bases/panel-properties.js");
+  const kinds = ["builtin", "formula", "date", "text", "list", "number", "object", "boolean", "unknown-kind"];
+  for (const kind of kinds) {
+    const id = propertyIconName(kind);
+    const body = symbol(id);
+    assert.ok(body, `kind ${kind} -> ${id} must exist in the sprite`);
+    assert.equal(body.trim().length > 0, true, `#${id} must have geometry`);
+  }
+  // Built-in file properties read the desktop's info glyph (ⓘ), NOT the question-mark circle.
+  assert.equal(propertyIconName("builtin"), "circle-info");
+  assert.equal(symbol("circle-info"), '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/>');
+});

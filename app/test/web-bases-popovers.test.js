@@ -77,7 +77,10 @@ test("the sort direction labels follow the property type inferred from real valu
   assert.equal(inferSortKind(["alpha", 2]), "text");
   assert.equal(inferSortKind([]), "text");
   assert.deepEqual(sortDirectionLabels("number"), { asc: "0 → 1", desc: "1 → 0" });
-  assert.deepEqual(sortDirectionLabels("date"), { asc: "旧 → 新", desc: "新 → 旧" });
+  // Desktop i18n values (`labelSortOldNew`/`labelSortNewOld`, asar i18n.js@115815 =
+  // 从旧到新/从新到旧) selected by `getWidgetForIdent()` in `configureSortRow`
+  // (app.js@2482225). The earlier 旧 → 新 pair was this surface's own wording.
+  assert.deepEqual(sortDirectionLabels("date"), { asc: "从旧到新", desc: "从新到旧" });
   assert.deepEqual(sortDirectionLabels("text"), { asc: "A → Z", desc: "Z → A" });
   assert.deepEqual(sortDirectionLabels("unknown"), { asc: "A → Z", desc: "Z → A" });
 });
@@ -108,7 +111,9 @@ test("the sort popover has the desktop shape and no group-by / per-column grid",
   assert.equal(node.getAttribute("aria-label"), "排序");
   const section = node.querySelector("[data-sort-section]");
   assert.equal(section.querySelector(".base-panel-section-label").textContent, "排序依据");
-  assert.equal(section.querySelector(".base-panel-count").textContent, "0");
+  // D8: the desktop header is the bare label — no flair/count node at all
+  // (app.js@2525647 `o.createDiv({cls:"bases-toolbar-section-header",text:l1.labelSortBy()})`).
+  assert.equal(section.querySelector(".base-panel-count"), null, "the sort header carries no count badge");
   // 分组依据 needs a grouping contract the DTO reports as unavailable.
   assert.equal(node.textContent.includes("分组依据"), false);
   // No column grid: with no sort there is exactly one row — the footer.
@@ -126,7 +131,8 @@ test("the sort popover can add several named levels and edits them through selec
   const two = build("sort", { state: { sort: [{ key: "name", dir: "asc" }, { key: "status", dir: "desc" }] } });
   const rows = two.node.querySelectorAll("[data-sort-row]");
   assert.deepEqual(rows.map((row) => row.getAttribute("data-sort-row")), ["name", "status"]);
-  assert.equal(two.node.querySelector("[data-sort-section] .base-panel-count").textContent, "2");
+  // D8: two levels, still no count badge in the header.
+  assert.equal(two.node.querySelector("[data-sort-section] .base-panel-count"), null);
 
   const first = rows[0];
   const property = first.querySelector("[data-sort-property]");
@@ -182,6 +188,67 @@ test("sorting is disabled when the view declares no column", () => {
   assert.match(add.title, /没有可排序的属性/);
 });
 
+// --- D1/D2/D3/D6: the desktop sort row -------------------------------------
+
+test("the sort popover opens on the sort the view declares, and the URL override wins", () => {
+  // D1: `loadSort()` seeds from the view config (asar app.js@2527053); the DTO carries it
+  // as `viewSort`, so an untouched menu is not empty any more.
+  const seeded = build("sort", { state: { viewSort: [{ key: "updated", dir: "desc" }] } });
+  const rows = seeded.node.querySelectorAll("[data-sort-row]");
+  assert.deepEqual(rows.map((row) => row.getAttribute("data-sort-row")), ["updated"]);
+  assert.equal(rows[0].querySelector("[data-sort-direction]").getAttribute("data-sort-direction"), "desc");
+  // The declared list is what a mutation starts from, so the first edit keeps it.
+  const property = rows[0].querySelector("[data-sort-property]");
+  property.value = "status";
+  property.dispatchEvent({ type: "change" });
+  assert.deepEqual(seeded.calls.sort.at(-1), [{ key: "status", dir: "desc" }]);
+
+  // The URL override is this surface's write path and always wins over the declaration.
+  const overridden = build("sort", {
+    state: { sort: [{ key: "name", dir: "asc" }], viewSort: [{ key: "updated", dir: "desc" }] },
+  });
+  assert.deepEqual(overridden.node.querySelectorAll("[data-sort-row]").map((row) => row.getAttribute("data-sort-row")), ["name"]);
+});
+
+test("every sort row is one desktop frame with the grip handle first and the trash last", () => {
+  const { node } = build("sort", { state: { viewSort: [{ key: "name", dir: "asc" }, { key: "status", dir: "desc" }] } });
+  const rows = node.querySelectorAll("[data-sort-row]");
+  for (const row of rows) {
+    // D3: the desktop row class (app.js@2481117), not this layer's generic row.
+    assert.equal(row.className, "base-toolbar-sort-item");
+    // D2: `div.grip-handle` + `lucide-grip-vertical`, inserted BEFORE the first child
+    // (`this.rowEl.insertBefore(r,i.firstChild)`, app.js@2528519).
+    assert.equal(row.firstChild.className, "grip-handle");
+    assert.equal(row.firstChild.querySelector("use").getAttribute("href"), "/app/assets/icons.svg#grip-vertical");
+    // The trailing action is the desktop's `lucide-trash-2` clickable icon (app.js@2481117's
+    // own `LM(l,"lucide-trash-2")`), not an `x`.
+    const remove = row.querySelector("[data-sort-remove]");
+    assert.equal(remove.querySelector("use").getAttribute("href"), "/app/assets/icons.svg#trash-2");
+  }
+});
+
+test("the grip handle re-orders the levels through the same write path as the selects", () => {
+  const { node, calls } = build("sort", { state: { sort: [{ key: "name", dir: "asc" }, { key: "status", dir: "desc" }] } });
+  const rows = node.querySelectorAll("[data-sort-row]");
+  const dataTransfer = { data: null, setData(_type, value) { this.data = value; }, getData() { return this.data; } };
+  rows[0].firstChild.ondragstart({ dataTransfer });
+  rows[1].ondrop({ dataTransfer, preventDefault() {} });
+  assert.deepEqual(calls.sort.at(-1), [{ key: "status", dir: "desc" }, { key: "name", dir: "asc" }]);
+});
+
+test("the add/clear actions are the desktop's borderless menu rows in their own section", () => {
+  // D6: the actions live in `.bases-toolbar-section.bases-toolbar-menu-actions` AFTER the rows
+  // section (app.js@2526713), which is what gives the rows section its `:not(:last-child)`
+  // hairline — the old build nested the footer inside the section content.
+  const { node } = build("sort", { state: { sort: [{ key: "name", dir: "asc" }] } });
+  const add = node.querySelector("[data-sort-add]");
+  const section = node.querySelector("[data-sort-section]");
+  assert.equal(section.parentNode.parentNode, add.parentNode.parentNode, "the action row is a SIBLING of the rows section");
+  assert.equal(add.parentNode.className, "base-panel-footer base-panel-actions");
+  assert.equal(add.parentNode.parentNode.className, "base-panel-scroll menu-scroll");
+  assert.notEqual(node.querySelector("[data-sort-clear]"), null);
+});
+
 // --- filter popover ---------------------------------------------------------
 
 test("the filter popover shows the real 当前视图 count and the conjunction selector", () => {
@@ -195,7 +262,10 @@ test("the filter popover shows the real 当前视图 count and the conjunction s
   assert.equal(group.getAttribute("data-filter-group"), "view");
   assert.equal(group.querySelector(".base-panel-section-label").textContent, "当前视图");
   assert.equal(group.querySelector(".base-panel-count").textContent, "2");
-  // 所有视图 would need the Base-file-level filters, which the DTO never exposes.
+  // `所有视图` needs the Base-file-level filters. This fixture carries no U12
+  // `filters` summary, so the section must stay absent: the menu degrades to the
+  // pre-U12 shape instead of drawing an empty block
+  // (the positive path is pinned in web-bases-all-views-section.test.js).
   assert.equal(node.textContent.includes("所有视图"), false);
   // G3: the conjunction is now a real selector (desktop All/Any/None). A legacy
   // AND list reads as "and" and its labels are the desktop三条 collection lines.
@@ -244,21 +314,19 @@ test("the filter popover adds, removes and clears conditions through the frozen 
 
 // --- properties popover -----------------------------------------------------
 
-test("the properties popover groups 已显示 / 全部属性 and never offers 添加公式", () => {
+test("the properties popover lists one flat row set and never offers 添加公式", () => {
   const { node, calls } = build("properties", { context: { visibleColumns: [COLUMNS[0], COLUMNS[2]], config: { hidden: ["status"], widths: {} } } });
   assert.equal(node.getAttribute("data-base-panel"), "properties");
   assert.equal(node.getAttribute("role"), "dialog");
   assert.equal(node.getAttribute("aria-label"), "属性");
   assert.notEqual(node.querySelector("[data-prop-search]"), null);
-  const sections = node.querySelectorAll("[data-prop-section]");
-  assert.deepEqual(sections.map((section) => section.textContent), ["已显示", "全部属性"]);
-  const visibleRows = node.querySelectorAll('[data-prop-group="visible"] [data-prop-row]');
-  const allRows = node.querySelectorAll('[data-prop-group="all"] [data-prop-row]');
-  assert.deepEqual(visibleRows.map((row) => row.getAttribute("data-prop-row")), ["name", "updated"]);
-  // 全部属性 is the difference `declared − 已显示` (owner report 2026-10-20): the popover
-  // lists a property once, and the hidden one is the only entry below the fold.
-  assert.deepEqual(allRows.map((row) => row.getAttribute("data-prop-row")), ["status"]);
-  assert.deepEqual(allRows.map((row) => row.querySelector("[data-prop-toggle]").checked), [false]);
+  // The desktop menu has no `已显示` heading: the checkbox IS the state (owner screenshot 02).
+  assert.deepEqual(node.querySelectorAll("[data-prop-section]"), []);
+  const rows = node.querySelectorAll('[data-prop-group="all"] [data-prop-row]');
+  assert.deepEqual(rows.map((row) => row.getAttribute("data-prop-row")), ["name", "status", "updated"]);
+  // Checked = shown; the hidden one is present with an unchecked box, so it stays reachable.
+  assert.deepEqual(rows.map((row) => row.querySelector("[data-prop-toggle]").checked), [true, false, true]);
+  assert.equal(node.querySelector('[data-prop-row="status"]').classList.contains("mod-hidden"), true);
   // 添加公式 needs a formula-write route: read-only surface, so no button at all.
   assert.equal(node.textContent.includes("添加公式"), false);
 
@@ -266,31 +334,28 @@ test("the properties popover groups 已显示 / 全部属性 and never offers �
   assert.deepEqual(calls.toggle, ["status"]);
 });
 
-test("the properties search filters both lists in place", () => {
-  // One hidden column, so both groups are non-empty and the search can hide every row.
+test("the properties search filters the flat list in place", () => {
+  // One hidden column, so the search has both a checked and an unchecked row to hide.
   const { node } = build("properties", { context: { visibleColumns: [COLUMNS[0], COLUMNS[1]], config: { hidden: ["updated"], widths: {} } } });
   const search = node.querySelector("[data-prop-search]");
   const keys = (group) => node.querySelectorAll(`[data-prop-group="${group}"] [data-prop-row]`).map((row) => row.getAttribute("data-prop-row"));
-  assert.deepEqual(keys("all"), ["updated"]);
-  assert.deepEqual(keys("visible"), ["name", "status"]);
+  assert.deepEqual(keys("all"), ["name", "status", "updated"]);
   search.value = "upd";
   search.oninput();
   assert.deepEqual(keys("all"), ["updated"]);
-  assert.deepEqual(keys("visible"), []);
-  search.value = "更新"; // matches the label of a column whose key is English
-  search.oninput();
-  assert.deepEqual(keys("all"), ["updated"]);
-  assert.deepEqual(keys("visible"), [], "the label search is case-insensitive but text-exact");
-  search.value = "STATUS";
+  search.value = "更新"; // the row paints the picker label (`updated`), not the column's 更新
   search.oninput();
   assert.deepEqual(keys("all"), []);
-  assert.deepEqual(keys("visible"), ["status"]);
+  assert.equal(columnMatchesSearch(COLUMNS[2], "updated"), true, "the raw key still matches");
+  search.value = "STATUS";
+  search.oninput();
+  assert.deepEqual(keys("all"), ["status"]);
   search.value = "不存在";
   search.oninput();
   assert.deepEqual(keys("all"), []);
   search.value = "";
   search.oninput();
-  assert.deepEqual(keys("all"), ["updated"]);
+  assert.deepEqual(keys("all"), ["name", "status", "updated"]);
   assert.equal(normalizePropertySearch("  Name "), "name");
   assert.equal(columnMatchesSearch(COLUMNS[2], "更新"), true);
 });
@@ -305,10 +370,10 @@ test("全部隐藏 is a real bulk action and the last-column checkbox guard stay
   // through the checkbox path), while 全部隐藏 is the explicit escape hatch.
   assert.equal(node.querySelector('[data-prop-row="name"] [data-prop-toggle]').disabled, true);
   const empty = build("properties", { context: { visibleColumns: [], config: { hidden: ["name", "status", "updated"], widths: {} } } });
-  assert.equal(empty.node.querySelector('[data-prop-hide-all]').disabled, true);
-  assert.deepEqual(empty.node.querySelectorAll('[data-prop-group="visible"] [data-prop-row]'), []);
-  // Nothing to show below the fold either, but the difference group is the whole set.
+  assert.equal(empty.node.querySelector("[data-prop-hide-all]").disabled, true);
+  // Nothing is shown, but every declared property is still listed with an unchecked box.
   assert.deepEqual(empty.node.querySelectorAll('[data-prop-group="all"] [data-prop-row]').map((row) => row.getAttribute("data-prop-row")), ["name", "status", "updated"]);
+  assert.deepEqual(empty.node.querySelectorAll('[data-prop-group="all"] [data-prop-toggle]').map((input) => input.checked), [false, false, false]);
 });
 
 // --- surface wiring: floating popovers, dismissal ---------------------------

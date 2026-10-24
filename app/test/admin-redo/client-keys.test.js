@@ -13,7 +13,7 @@
 // instead of silently passing.
 //
 // Run it (the shared Playwright runtime lives outside the worktrees):
-//   PLAYWRIGHT_MODULE="/path/to/playwright/index.mjs" \
+//   PLAYWRIGHT_MODULE="D:/Coding/Codex/obsidian server projects/shared/playwright-runtime/node_modules/playwright/index.mjs" \
 //     node --test test/admin-redo/client-keys.test.js
 // Without a resolvable Playwright runtime/Chromium the browser part skips with the reason, so
 // `npm test` stays honest on a machine that has no browser (see CHECKPOINT.md for the recorded run).
