@@ -1,0 +1,27 @@
+{
+  "collapse-filter": false,
+  "search": "",
+  "showTags": true,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    { "query": "tag:#project", "color": { "a": 1, "rgb": 8224758 } },
+    { "query": "tag:#engineering", "color": { "a": 1, "rgb": 5023999 } },
+    { "query": "tag:#research", "color": { "a": 1, "rgb": 3793320 } },
+    { "query": "tag:#daily", "color": { "a": 1, "rgb": 9934502 } }
+  ],
+  "collapse-display": true,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1.15,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": true,
+  "centerStrength": 0.52,
+  "repelStrength": 12,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 1,
+  "close": false
+}

@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Obsidian MCP Server — one memory, many agents</title>
+<meta name="description" content="One self-hosted Markdown vault shared by Claude, Cursor, Codex and your own agents — same knowledge and memory, per-agent credentials, revision-safe writes." />
+<meta property="og:title" content="Obsidian MCP Server — one memory, many agents" />
+<meta property="og:description" content="One self-hosted vault that many agents can share across machines: the same knowledge and memory, per-agent credentials and attributed writes." />
+<meta property="og:type" content="website" />
+<meta name="theme-color" content="#eef1ea" />
+<link rel="stylesheet" href="assets/styles.css" />
+<script>
+  try {
+    if (localStorage.getItem("obsidian-mcp-lang") === "zh") {
+      document.documentElement.dataset.lang = "zh";
+      document.documentElement.lang = "zh-CN";
+    }
+  } catch {}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <a class="wordmark" href="#top"><span class="mark">◈</span> Obsidian MCP</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#shared"><span class="i18n-en">Agents</span><span class="i18n-zh" lang="zh-CN">Agent 共享</span></a>
+      <a href="#tour"><span class="i18n-en">Tour</span><span class="i18n-zh" lang="zh-CN">导览</span></a>
+      <a href="#protocol"><span class="i18n-en">Protocol</span><span class="i18n-zh" lang="zh-CN">协议</span></a>
+      <a href="#tools"><span class="i18n-en">Tools</span><span class="i18n-zh" lang="zh-CN">工具</span></a>
+      <a href="#security"><span class="i18n-en">Security</span><span class="i18n-zh" lang="zh-CN">安全</span></a>
+      <a href="#start"><span class="i18n-en">Start</span><span class="i18n-zh" lang="zh-CN">开始</span></a>
+      <a class="repo" href="https://github.com/OhiyoX/obsidian-mcp-server-public" rel="noopener">GitHub</a>
+    </nav>
+    <button class="lang" id="langToggle" type="button" aria-label="Switch language">中文</button>
+  </div>
+</header>
+
+<main id="main">
+<a id="top"></a>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="shell hero-grid">
+    <div class="hero-copy">
+      <p class="folio i18n-en">Self-hosted · Markdown-native · MCP</p>
+      <p class="folio i18n-zh" lang="zh-CN">自托管 · Markdown 原生 · MCP</p>
+
+      <h1 class="i18n-en">Your notes are already the interface.</h1>
+      <h1 class="i18n-zh" lang="zh-CN">你的笔记，<br />本身就是界面。</h1>
+
+      <p class="standfirst i18n-en">One self-hosted Markdown vault that multiple agents can share — Claude, Cursor, Codex, or your own tools, from different machines and networks. They read and write the same knowledge and memory, with per-agent credentials and attributed writes.</p>
+      <p class="standfirst i18n-zh" lang="zh-CN">一个自托管的 Markdown Vault，多个 Agent 共享——Claude、Cursor、Codex，或你自己的工具，来自不同机器和网络。它们读写同一份知识与记忆；每个 Agent 独立凭据，写入带归属。</p>
+
+      <p class="hero-note i18n-en">It speaks Streamable HTTP MCP, returns a revision on every note write, and keeps memory and skills as plain Markdown you can open. The memory is one set of files, not one silo per agent.</p>
+      <p class="hero-note i18n-zh" lang="zh-CN">它使用 Streamable HTTP MCP，每次笔记写入返回 revision，把记忆和 Skill 保持为可直接打开的 Markdown。记忆是一组文件，而不是每个 Agent 各一套孤岛。</p>
+
+      <div class="hero-actions">
+        <a class="btn solid i18n-en" href="https://github.com/OhiyoX/obsidian-mcp-server-public" rel="noopener">Read the code</a>
+        <a class="btn solid i18n-zh" lang="zh-CN" href="https://github.com/OhiyoX/obsidian-mcp-server-public" rel="noopener">看代码</a>
+        <a class="btn i18n-en" href="#start">Run it locally</a>
+        <a class="btn i18n-zh" lang="zh-CN" href="#start">本地跑起来</a>
+      </div>
+    </div>
+
+    <figure class="plate hero-figure">
+      <img src="screenshots/01-workspace-home.png" alt="Obsidian Web workspace: explorer, properties, reading view and outline" width="1440" height="900" />
+      <figcaption>
+        <span class="i18n-en">The workspace shell: explorer, properties, reading view, outline.</span>
+        <span class="i18n-zh" lang="zh-CN">工作区：文件树、属性、阅读视图、大纲。</span>
+        <span class="plate-id">01</span>
+      </figcaption>
+      <span class="annotation i18n-en">same files, two readers</span>
+      <span class="annotation i18n-zh" lang="zh-CN">同一份文件，两个读者</span>
+    </figure>
+  </div>
+
+  <div class="shell">
+    <div class="ledger">
+      <div><b>87</b><span class="i18n-en">MCP tools in the full profile</span><span class="i18n-zh" lang="zh-CN">完整发现模式的 MCP 工具</span></div>
+      <div><b>1</b><span class="i18n-en">shared endpoint for many agents</span><span class="i18n-zh" lang="zh-CN">多个 Agent 共用一个端点</span></div>
+      <div><b>31 / 75</b><span class="i18n-en">notes and links in the demo</span><span class="i18n-zh" lang="zh-CN">演示库中的笔记与链接</span></div>
+      <div><b>2.1</b><span class="i18n-en">OAuth with PKCE, plus scoped keys</span><span class="i18n-zh" lang="zh-CN">OAuth + PKCE，另支持受限 API Key</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SHARED AGENTS ============ -->
+<section class="shared" id="shared">
+  <div class="shell">
+    <div class="section-head">
+      <span class="roman">⊕</span>
+      <div>
+        <h2 class="i18n-en">One memory, many agents.</h2>
+        <h2 class="i18n-zh" lang="zh-CN">一份记忆，多个 Agent。</h2>
+        <p class="i18n-en">The point is not another chat client. It is a shared substrate: one self-hosted vault, reachable over HTTPS, where different agents on different machines read and write the same knowledge and memory.</p>
+        <p class="i18n-zh" lang="zh-CN">重点不是再做一个聊天客户端，而是一层共享底座：一个自托管 Vault，通过 HTTPS 可达，让不同机器上的不同 Agent 读写同一份知识与记忆。</p>
+      </div>
+    </div>
+
+    <div class="agent-flow" role="img" aria-label="Different MCP hosts connect over HTTPS to one MCP endpoint and one shared vault">
+      <div class="agent-stack">
+        <p class="flow-label i18n-en">MCP hosts, for example</p>
+        <p class="flow-label i18n-zh" lang="zh-CN">MCP 客户端，例如</p>
+        <div class="agent"><b>Claude</b><span class="i18n-en">laptop · another city</span><span class="i18n-zh" lang="zh-CN">笔记本 · 另一个城市</span></div>
+        <div class="agent"><b>Cursor</b><span class="i18n-en">desktop · office</span><span class="i18n-zh" lang="zh-CN">桌面 · 办公室</span></div>
+        <div class="agent"><b>Codex</b><span class="i18n-en">runner · server</span><span class="i18n-zh" lang="zh-CN">runner · 服务器</span></div>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="endpoint">
+        <b>HTTPS · /mcp</b>
+        <span class="i18n-en">OAuth 2.1 or a scoped API key per agent</span>
+        <span class="i18n-zh" lang="zh-CN">每个 Agent 独立 OAuth 或受限 API Key</span>
+      </div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="vault">
+        <b class="i18n-en">One vault</b><b class="i18n-zh" lang="zh-CN">一个 Vault</b>
+        <span class="i18n-en">memory · skills · projects · publish</span>
+        <span class="i18n-zh" lang="zh-CN">记忆 · Skill · 项目 · 发布</span>
+      </div>
+    </div>
+
+    <p class="flow-note i18n-en">Not a sync product: one server and one vault, with many clients. Remote access is your network boundary — HTTPS, a VPN, or a private tunnel.</p>
+    <p class="flow-note i18n-zh" lang="zh-CN">它不是多点同步产品：一个服务端、一个 Vault、多个客户端。异地访问取决于你的网络边界——HTTPS、VPN 或私有隧道。</p>
+
+    <div class="shared-points">
+      <div>
+        <h3 class="i18n-en">Same memory, no silo</h3>
+        <h3 class="i18n-zh" lang="zh-CN">同一份记忆，没有孤岛</h3>
+        <p class="i18n-en">Every connected agent calls the same <code>memory_recall</code> and reads the same files. A decision captured by one agent is available to the next, without an export step.</p>
+        <p class="i18n-zh" lang="zh-CN">每个接入的 Agent 调用同一个 <code>memory_recall</code>，读同一批文件。一个 Agent 记下的决策，下一个 Agent 直接可用，不需要导出。</p>
+      </div>
+      <div>
+        <h3 class="i18n-en">Per-agent credentials</h3>
+        <h3 class="i18n-zh" lang="zh-CN">每个 Agent 独立凭据</h3>
+        <p class="i18n-en">Give each agent its own OAuth account or API key, scoped to read, write or files and limited to chosen vaults. Revoke one without touching the others.</p>
+        <p class="i18n-zh" lang="zh-CN">每个 Agent 使用独立的 OAuth 账户或 API Key，按 read / write / files 分权，并限制到指定 Vault。撤销一个不影响其他 Agent。</p>
+      </div>
+      <div>
+        <h3 class="i18n-en">Attributed writes</h3>
+        <h3 class="i18n-zh" lang="zh-CN">写入带归属</h3>
+        <p class="i18n-en">Writes can carry an author and model trailer, and the admin audit records which agent acted. You can tell who changed what.</p>
+        <p class="i18n-zh" lang="zh-CN">写入可带 author / model 归属，Admin 审计记录是哪个 Agent 操作。谁改了什么，可以追溯。</p>
+      </div>
+      <div>
+        <h3 class="i18n-en">Conflict-safe by default</h3>
+        <h3 class="i18n-zh" lang="zh-CN">默认冲突安全</h3>
+        <p class="i18n-en">Every note write returns a revision. A stale write is rejected instead of silently overwriting another agent's change; multi-note plans are journaled.</p>
+        <p class="i18n-zh" lang="zh-CN">每次笔记写入返回 revision。过期写入会被拒绝，不会静默覆盖另一个 Agent 的修改；多笔记计划写入 journal。</p>
+      </div>
+    </div>
+
+    <p class="scenario-title i18n-en">A day with three agents</p>
+    <p class="scenario-title i18n-zh" lang="zh-CN">三个 Agent 的一天</p>
+    <p class="scenario i18n-en"><span>09:10</span> Cursor captures a design decision. <span>14:30</span> Claude, on another machine, recalls it. <span>22:00</span> a scripted agent updates the project README. Same vault, same memory, different credentials.</p>
+    <p class="scenario i18n-zh" lang="zh-CN"><span>09:10</span> Cursor 记录一条设计决策。<span>14:30</span> 另一台机器上的 Claude 召回它。<span>22:00</span> 脚本 Agent 更新项目 README。同一个 Vault、同一份记忆、不同凭据。</p>
+  </div>
+</section>
+
+<!-- ============ TOUR ============ -->
+<section class="tour" id="tour">
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">I</span>
+        <div>
+          <h2 class="i18n-en">Workspace</h2>
+          <h2 class="i18n-zh" lang="zh-CN">工作区</h2>
+          <p class="i18n-en">Browse, read and edit the vault in the browser. Every document has a deterministic route; the explorer, properties and outline stay in reach.</p>
+          <p class="i18n-zh" lang="zh-CN">在浏览器里浏览、阅读和编辑 Vault。每个文档有稳定路由，文件树、属性和大纲始终在手边。</p>
+        </div>
+      </div>
+      <div class="stop-body">
+        <div class="stop-text">
+          <p class="i18n-en">Three view modes — reading, source and live preview — share the same document. Properties come from frontmatter and can be edited in place. Writes carry a revision, so a stale tab is rejected instead of silently overwriting a newer note.</p>
+          <p class="i18n-zh" lang="zh-CN">阅读、源码、实时预览三种视图共享同一份文档。属性直接来自 frontmatter，可就地编辑。写入携带 revision，过期标签页会被拒绝，而不是静默覆盖新内容。</p>
+          <ul class="i18n-en">
+            <li><strong>Explorer</strong> in tree or flat mode, with per-folder note creation.</li>
+            <li><strong>Revision-aware writes</strong> that refuse stale editors.</li>
+            <li><strong>Attachments and themes</strong> served from the vault itself.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>文件树</strong>支持树状/平铺，可按目录新建笔记。</li>
+            <li><strong>写入带 revision</strong>，过期编辑器会被拒绝。</li>
+            <li><strong>附件与主题</strong>直接从 Vault 提供。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <figure class="plate">
+            <img src="screenshots/06-editor-live.png" alt="Live preview editor with properties, tasks and headings" loading="lazy" />
+            <figcaption><span class="i18n-en">Live preview, properties and tasks in one surface.</span><span class="i18n-zh" lang="zh-CN">实时预览、属性与任务在同一界面。</span><span class="plate-id">06</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">II</span>
+        <div>
+          <h2 class="i18n-en">Memory</h2>
+          <h2 class="i18n-zh" lang="zh-CN">记忆</h2>
+          <p class="i18n-en">Durable memory is a folder of typed Markdown: decisions, facts, episodes and preferences. Each note carries its kind, confidence, entities and project links, so recall can explain itself.</p>
+          <p class="i18n-zh" lang="zh-CN">长期记忆是带类型的 Markdown：决策、事实、片段、偏好。每条都有 kind、置信度、实体和项目关联，召回结果可以解释。</p>
+        </div>
+      </div>
+      <div class="stop-body reverse">
+        <div class="stop-text">
+          <p class="i18n-en">Memory is managed under <code>_Workspace/20-Memory</code>, but it never restricts free-form notes elsewhere. Capture and recall are MCP tools; the underlying records stay ordinary files you can open, diff and link.</p>
+          <p class="i18n-zh" lang="zh-CN">记忆统一放在 <code>_Workspace/20-Memory</code>，但不会限制 Vault 其他区域的自由笔记。捕获与召回是 MCP 工具；底层仍是可打开、可 diff、可链接的普通文件。</p>
+          <ul class="i18n-en">
+            <li><strong>memory_capture</strong> for structured records; the agent contract forbids full transcripts.</li>
+            <li><strong>memory_recall</strong> with lexical and optional semantic signals.</li>
+            <li><strong>Typed frontmatter</strong>: kind, status, confidence, entities, projects.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>memory_capture</strong> 只写结构化记录；Agent 契约禁止保存整段对话。</li>
+            <li><strong>memory_recall</strong> 支持词法与可选语义信号。</li>
+            <li><strong>类型化 frontmatter</strong>：kind、status、confidence、entities、projects。</li>
+          </ul>
+          <p class="side-note i18n-en">A decision you can read six months later is worth more than a vector you cannot inspect.</p>
+          <p class="side-note i18n-zh" lang="zh-CN">半年后还能读懂的决策，比一个无法检查的向量更有价值。</p>
+        </div>
+        <div class="stop-figure plate-stack">
+          <figure class="plate">
+            <img src="screenshots/02-memory-note.png" alt="A managed memory note showing memory_kind, confidence, entities and projects" loading="lazy" />
+            <figcaption><span class="i18n-en">One decision, one file, with its metadata intact.</span><span class="i18n-zh" lang="zh-CN">一个决策一个文件，元数据完整保留。</span><span class="plate-id">02</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">III</span>
+        <div>
+          <h2 class="i18n-en">Skills</h2>
+          <h2 class="i18n-zh" lang="zh-CN">Skill</h2>
+          <p class="i18n-en">Skills are directory packages with a SKILL.md and optional references, scripts and assets. They are validated, matched and exported as files — matching never executes one.</p>
+          <p class="i18n-zh" lang="zh-CN">Skill 是目录包：SKILL.md 加可选的 references、scripts、assets。可校验、可匹配、可打包导入导出；匹配到 Skill 不等于执行。</p>
+        </div>
+      </div>
+      <div class="stop-body">
+        <div class="stop-text">
+          <p class="i18n-en">A skill declares its triggers, allowed tools, trust and risk. Validation checks names, metadata and package paths. Import and export use zip archives with path-traversal checks.</p>
+          <p class="i18n-zh" lang="zh-CN">Skill 声明 triggers、allowed-tools、trust 与 risk。校验会检查命名、元数据和包路径；导入导出使用 zip，并做路径穿越检查。</p>
+          <ul class="i18n-en">
+            <li><strong>Portable</strong> agent-skills package layout.</li>
+            <li><strong>Validated</strong> before it is offered to a host.</li>
+            <li><strong>No side effects</strong>: match returns <code>executionAuthorized: false</code>.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>可移植</strong>的 agent-skills 包结构。</li>
+            <li><strong>先校验</strong>再提供给宿主。</li>
+            <li><strong>无副作用</strong>：匹配返回 <code>executionAuthorized: false</code>。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <figure class="plate">
+            <img src="screenshots/03-skill-package.png" alt="SKILL.md with triggers, allowed tools, trust flag and steps" loading="lazy" />
+            <figcaption><span class="i18n-en">A SKILL.md you can review before you trust it.</span><span class="i18n-zh" lang="zh-CN">先审阅 SKILL.md，再决定是否信任。</span><span class="plate-id">03</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">IV</span>
+        <div>
+          <h2 class="i18n-en">Search and reading</h2>
+          <h2 class="i18n-zh" lang="zh-CN">检索与阅读</h2>
+          <p class="i18n-en">Search runs an exact lexical pass first, with semantic recall as a fallback. Results carry snippets, match counts and reasons. The reader renders Markdown, KaTeX, Mermaid, tables and footnotes from the vault itself.</p>
+          <p class="i18n-zh" lang="zh-CN">检索先精确匹配，语义召回只作为回退；结果带片段、命中数和原因。阅读视图直接从 Vault 渲染 Markdown、KaTeX、Mermaid、表格和脚注。</p>
+        </div>
+      </div>
+      <div class="stop-body reverse">
+        <div class="stop-text">
+          <p class="i18n-en">The ranking is explainable: each hit includes <code>score</code>, <code>reasons</code>, <code>matchCount</code> and the lines that matched. By default, semantic retrieval is optional and only escalates when the exact pass is empty.</p>
+          <p class="i18n-zh" lang="zh-CN">排序是可解释的：每个命中都带 <code>score</code>、<code>reasons</code>、<code>matchCount</code> 和命中的原文行。默认情况下，语义检索是可选项，只在精确结果为空时升级。</p>
+          <ul class="i18n-en">
+            <li><strong>Lexical-first</strong> for identifiers, paths, tags and aliases.</li>
+            <li><strong>Hybrid fallback</strong> through an optional embedding service.</li>
+            <li><strong>Local rendering</strong> for math and diagrams; no external CDN.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>先词法</strong>，适合标识符、路径、标签和别名。</li>
+            <li><strong>混合回退</strong>，可选接入 embedding 服务。</li>
+            <li><strong>本地渲染</strong>公式与图表，不依赖外部 CDN。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <div class="plate-pair">
+            <figure class="plate">
+              <img src="screenshots/04-search-results.png" alt="Search results with highlighted snippets" loading="lazy" />
+              <figcaption><span class="i18n-en">Snippets with reasons.</span><span class="i18n-zh" lang="zh-CN">带原因的命中片段。</span><span class="plate-id">04</span></figcaption>
+            </figure>
+            <figure class="plate">
+              <img src="screenshots/05-reader-math.png" alt="Reader rendering a KaTeX formula and a footnote" loading="lazy" />
+              <figcaption><span class="i18n-en">KaTeX and footnotes.</span><span class="i18n-zh" lang="zh-CN">KaTeX 与脚注。</span><span class="plate-id">05</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">V</span>
+        <div>
+          <h2 class="i18n-en">Bases</h2>
+          <h2 class="i18n-zh" lang="zh-CN">Bases</h2>
+          <p class="i18n-en">Bases stay in the vault as <code>.base</code> files. Filters, sort, views and a narrow formula subset are evaluated safely; unsupported expressions fail closed instead of running JavaScript.</p>
+          <p class="i18n-zh" lang="zh-CN"><code>.base</code> 文件留在 Vault 里，支持筛选、排序、视图和受限公式子集；不支持的表达式直接拒绝，不执行任意 JavaScript。</p>
+        </div>
+      </div>
+      <div class="stop-body">
+        <div class="stop-text">
+          <p class="i18n-en">Projects and memory become live tables without a second schema. The view definitions are versionable files, and the same query surface is available to agents through MCP.</p>
+          <p class="i18n-zh" lang="zh-CN">项目与记忆不需要第二套 schema 就能变成实时表格。视图定义本身是可版本化的文件，Agent 也能通过 MCP 使用同一套查询面。</p>
+          <ul class="i18n-en">
+            <li><strong>Project board</strong> filtered by tag, sorted by priority.</li>
+            <li><strong>Memory index</strong> built from typed frontmatter.</li>
+            <li><strong>Fail-closed</strong> on unknown filters and formulas.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>项目板</strong>按标签筛选、按优先级排序。</li>
+            <li><strong>记忆索引</strong>直接来自类型化 frontmatter。</li>
+            <li><strong>Fail closed</strong>：未知筛选与公式直接拒绝。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <div class="plate-pair">
+            <figure class="plate">
+              <img src="screenshots/07-bases-project.png" alt="Bases table of active projects with status and priority" loading="lazy" />
+              <figcaption><span class="i18n-en">Projects as a live view.</span><span class="i18n-zh" lang="zh-CN">项目实时视图。</span><span class="plate-id">07</span></figcaption>
+            </figure>
+            <figure class="plate">
+              <img src="screenshots/08-bases-memory.png" alt="Bases memory table with kind, status and confidence" loading="lazy" />
+              <figcaption><span class="i18n-en">Memory as a live view.</span><span class="i18n-zh" lang="zh-CN">记忆实时视图。</span><span class="plate-id">08</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">VI</span>
+        <div>
+          <h2 class="i18n-en">Publish</h2>
+          <h2 class="i18n-zh" lang="zh-CN">发布</h2>
+          <p class="i18n-en">Publish one note to a read-only page and revoke the link later. The source note is untouched, and the catalogue records vault, path and time.</p>
+          <p class="i18n-zh" lang="zh-CN">把单篇笔记发布成只读页面，之后可以撤销链接；原笔记不受影响，目录记录 Vault、路径和时间。</p>
+        </div>
+      </div>
+      <div class="stop-body reverse">
+        <div class="stop-text">
+          <p class="i18n-en">This is a narrow sharing primitive, not a clone of Obsidian Publish. It is per document, independent of the official service, and manageable from both the workspace and the admin console.</p>
+          <p class="i18n-zh" lang="zh-CN">它是窄范围的分享能力，不是 Obsidian Publish 的复制品。按文档发布、独立于官方服务，并可在工作区与 Admin 两侧管理。</p>
+          <ul class="i18n-en">
+            <li><strong>Anonymous read-only</strong> public page.</li>
+            <li><strong>Revocable</strong> without deleting the source.</li>
+            <li><strong>Cross-vault catalogue</strong> with publication time.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>匿名只读</strong>公开页。</li>
+            <li><strong>可撤销</strong>，不删除原文。</li>
+            <li><strong>跨库发布目录</strong>记录发布时间。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <figure class="plate">
+            <img src="screenshots/09-publish-page.png" alt="A published read-only note page" loading="lazy" />
+            <figcaption><span class="i18n-en">A published note, with its properties and math intact.</span><span class="i18n-zh" lang="zh-CN">发布后的笔记，属性与公式完整保留。</span><span class="plate-id">09</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">VII</span>
+        <div>
+          <h2 class="i18n-en">Several vaults</h2>
+          <h2 class="i18n-zh" lang="zh-CN">多 Vault</h2>
+          <p class="i18n-en">One server, several vaults. Agents select a vault per call with <code>vaultId</code>; the browser session switches vaults and keeps its own tree, search scope and allowlist.</p>
+          <p class="i18n-zh" lang="zh-CN">一个服务器，多个 Vault。Agent 按调用传 <code>vaultId</code>，浏览器会话可以切换 Vault；文件树、搜索范围和账户白名单各自独立。</p>
+        </div>
+      </div>
+      <div class="stop-body">
+        <div class="stop-text">
+          <p class="i18n-en">Each vault gets its own catalog and index. A search in one vault cannot cite another, and the admin allowlist decides which accounts see which vault at all.</p>
+          <p class="i18n-zh" lang="zh-CN">每个 Vault 有独立的目录与索引：一个库里的搜索不会引用另一个库；账户能看到哪些 Vault 由 Admin 白名单决定。</p>
+          <ul class="i18n-en">
+            <li><strong>Per-call scoping</strong> for agents working across projects.</li>
+            <li><strong>Per-account allowlist</strong> enforced at session and admin layers.</li>
+            <li><strong>Isolated catalogs</strong> so indexes never bleed.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>按调用指定</strong>，适合跨项目的 Agent。</li>
+            <li><strong>账户级白名单</strong>，在会话与 Admin 两层校验。</li>
+            <li><strong>目录隔离</strong>，索引不串库。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <div class="plate-pair">
+            <figure class="plate">
+              <img src="screenshots/10-vault-switch.png" alt="Vault switcher showing aurora and atlas" loading="lazy" />
+              <figcaption><span class="i18n-en">Switch vaults in the session.</span><span class="i18n-zh" lang="zh-CN">会话内切换 Vault。</span><span class="plate-id">10</span></figcaption>
+            </figure>
+            <figure class="plate">
+              <img src="screenshots/11-atlas-vault.png" alt="Second vault with an isolated tree" loading="lazy" />
+              <figcaption><span class="i18n-en">A second vault, a separate tree.</span><span class="i18n-zh" lang="zh-CN">第二个 Vault，独立的文件树。</span><span class="plate-id">11</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">VIII</span>
+        <div>
+          <h2 class="i18n-en">Theme</h2>
+          <h2 class="i18n-zh" lang="zh-CN">主题</h2>
+          <p class="i18n-en">Follow the desktop, follow the system, or force light or dark. Vault community themes are supported too.</p>
+          <p class="i18n-zh" lang="zh-CN">跟随桌面端、跟随系统，或强制浅色/深色；也支持 Vault 的社区主题。</p>
+        </div>
+      </div>
+      <div class="stop-body reverse">
+        <div class="stop-text">
+          <p class="i18n-en">The same reading surface, at whatever contrast you need. The preference is saved per browser, and a vault’s own theme CSS can replace the default look.</p>
+          <p class="i18n-zh" lang="zh-CN">同一个阅读界面，按你需要的对比度呈现。偏好保存在当前浏览器；Vault 自带的主题 CSS 可以替换默认外观。</p>
+          <ul class="i18n-en">
+            <li><strong>Desktop / system / light / dark</strong> color modes.</li>
+            <li><strong>Vault themes</strong> through standard Obsidian theme files.</li>
+            <li><strong>Saved locally</strong>, not in the vault.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>桌面端 / 系统 / 浅色 / 深色</strong>四种模式。</li>
+            <li><strong>Vault 主题</strong>兼容标准 Obsidian 主题文件。</li>
+            <li><strong>本地保存</strong>，不写入 Vault。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <div class="plate-pair">
+            <figure class="plate">
+              <img src="screenshots/20-theme-light.png" alt="The same workspace in light mode" loading="lazy" />
+              <figcaption><span class="i18n-en">Light mode.</span><span class="i18n-zh" lang="zh-CN">浅色模式。</span><span class="plate-id">20</span></figcaption>
+            </figure>
+            <figure class="plate">
+              <img src="screenshots/21-theme-settings.png" alt="Theme settings with color mode options" loading="lazy" />
+              <figcaption><span class="i18n-en">Color mode and vault theme.</span><span class="i18n-zh" lang="zh-CN">颜色模式与 Vault 主题。</span><span class="plate-id">21</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">IX</span>
+        <div>
+          <h2 class="i18n-en">Admin</h2>
+          <h2 class="i18n-zh" lang="zh-CN">管理</h2>
+          <p class="i18n-en">A separate admin surface with its own password: scoped API keys, OAuth accounts, dynamic clients, access and refresh grants, publish records and a secret-free audit log.</p>
+          <p class="i18n-zh" lang="zh-CN">独立的管理面板，使用独立密码：带 scope 的 API Key、OAuth 账户、动态客户端、访问/刷新授权、发布目录，以及不含秘密值的审计日志。</p>
+        </div>
+      </div>
+      <div class="stop-body">
+        <div class="stop-text">
+          <p class="i18n-en">Credentials are scoped to read, write and files, and bound to an explicit vault allowlist. The audit records the actor, credential type, source and outcome — never the credential value.</p>
+          <p class="i18n-zh" lang="zh-CN">凭据按 read、write、files 分权，并绑定明确的 Vault 白名单。审计记录操作者、凭据类型、来源和结果，但不记录凭据值。</p>
+          <ul class="i18n-en">
+            <li><strong>API keys</strong> with scopes and vault allowlists.</li>
+            <li><strong>OAuth 2.1 + PKCE</strong> grants with rotation and revocation.</li>
+            <li><strong>Audit</strong> with action, agent, source and outcome.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>API Key</strong> 带 scope 与 Vault 白名单。</li>
+            <li><strong>OAuth 2.1 + PKCE</strong>，支持轮换与撤销。</li>
+            <li><strong>审计</strong>记录动作、Agent、来源和结果。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <div class="plate-pair">
+            <figure class="plate">
+              <img src="screenshots/13-admin-overview.png" alt="Admin overview with credential and audit counts" loading="lazy" />
+              <figcaption><span class="i18n-en">Overview and runtime state.</span><span class="i18n-zh" lang="zh-CN">概览与运行状态。</span><span class="plate-id">13</span></figcaption>
+            </figure>
+            <figure class="plate">
+              <img src="screenshots/19-admin-audit.png" alt="Admin audit log" loading="lazy" />
+              <figcaption><span class="i18n-en">A secret-free audit trail.</span><span class="i18n-zh" lang="zh-CN">不含秘密值的审计记录。</span><span class="plate-id">19</span></figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="stop">
+    <div class="shell">
+      <div class="stop-head">
+        <span class="roman">X</span>
+        <div>
+          <h2 class="i18n-en">Mobile</h2>
+          <h2 class="i18n-zh" lang="zh-CN">移动端</h2>
+          <p class="i18n-en">The shell collapses into a drawer without losing the tree, search, reader or editor. The same routes, auth and workspace on a phone.</p>
+          <p class="i18n-zh" lang="zh-CN">移动端把文件树收进抽屉，但搜索、阅读、编辑和路由都保留；手机上是同一套认证与工作区。</p>
+        </div>
+      </div>
+      <div class="stop-body reverse">
+        <div class="stop-text">
+          <p class="i18n-en">It is not a stripped-down viewer. The full folder tree is in the drawer, and a web app manifest ships with the shell. Installable PWA support is still on the roadmap.</p>
+          <p class="i18n-zh" lang="zh-CN">它不是删减版查看器：完整文件树在抽屉里；随应用提供 Web App Manifest，可安装 PWA 仍在路线图中。</p>
+          <ul class="i18n-en">
+            <li><strong>Full tree</strong> in a touch drawer.</li>
+            <li><strong>Same routes and auth</strong> as desktop.</li>
+            <li><strong>Web app manifest</strong>; installable PWA is planned, not shipped.</li>
+          </ul>
+          <ul class="i18n-zh" lang="zh-CN">
+            <li><strong>完整文件树</strong>收进触摸抽屉。</li>
+            <li><strong>同一路由与认证</strong>。</li>
+            <li><strong>Web App Manifest</strong>；可安装 PWA 仍在规划中，尚未交付。</li>
+          </ul>
+        </div>
+        <div class="stop-figure plate-stack">
+          <figure class="plate">
+            <img src="screenshots/12-mobile-shell.png" alt="Mobile layout with the folder tree drawer open" loading="lazy" />
+            <figcaption><span class="i18n-en">The same workspace, 390 pixels wide.</span><span class="i18n-zh" lang="zh-CN">同一工作区，390 像素宽。</span><span class="plate-id">12</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ============ PROTOCOL ============ -->
+<section class="specimen" id="protocol">
+  <div class="shell">
+    <p class="folio i18n-en">Specimen · selected fields from the local demo</p>
+    <p class="folio i18n-zh" lang="zh-CN">标本 · 本地演示实例的选定字段</p>
+    <h2 class="i18n-en">What the agent actually sees.</h2>
+    <h2 class="i18n-zh" lang="zh-CN">Agent 实际看到什么。</h2>
+    <p class="lead i18n-en">A standard Streamable HTTP MCP endpoint: initialize, list tools, call one. Paths below are vault-relative; absolute host paths are deliberately omitted.</p>
+    <p class="lead i18n-zh" lang="zh-CN">标准的 Streamable HTTP MCP 端点：初始化、列工具、调用。下面只出现 Vault 相对路径，刻意省略本机绝对路径。</p>
+
+    <div class="specimen-grid">
+      <div>
+        <h3 class="i18n-en">Search explains its ranking</h3>
+        <h3 class="i18n-zh" lang="zh-CN">检索会解释排序</h3>
+        <p class="note i18n-en">Real response, truncated. The top hit carries the exact score and the reason it matched.</p>
+        <p class="note i18n-zh" lang="zh-CN">真实响应，已截断。首个命中带精确分数和命中原因。</p>
+      </div>
+      <div class="code">
+        <div class="code-head"><span>JSON-RPC · streamable HTTP</span><span class="lang">demo</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c">→ initialize</span>
+{ <span class="s">"jsonrpc"</span>: <span class="s">"2.0"</span>, <span class="s">"id"</span>: 1, <span class="s">"method"</span>: <span class="s">"initialize"</span>,
+  <span class="s">"params"</span>: { <span class="s">"clientInfo"</span>: { <span class="s">"name"</span>: <span class="s">"demo-agent"</span> } } }
+
+<span class="c">← serverInfo</span>
+{ <span class="s">"name"</span>: <span class="s">"obsidian-mcp-server"</span>, <span class="s">"version"</span>: <span class="s">"1.0.0"</span> }
+
+<span class="c">→ tools/list</span>
+<span class="ok">← 87 tools</span>
+
+<span class="c">→ tools/call search_notes</span>
+{ <span class="s">"name"</span>: <span class="s">"search_notes"</span>,
+  <span class="s">"arguments"</span>: { <span class="s">"query"</span>: <span class="s">"release"</span>, <span class="s">"limit"</span>: 3 } }
+
+<span class="c">← top result (truncated)</span>
+{ <span class="s">"path"</span>: <span class="s">"_Workspace/40-Projects/aurora-launch/README.md"</span>,
+  <span class="s">"score"</span>: <span class="n">1.30</span>, <span class="s">"matchCount"</span>: <span class="n">6</span>,
+  <span class="s">"reasons"</span>: [<span class="s">"exact"</span>, <span class="s">"query:release"</span>] }</pre>
+      </div>
+    </div>
+
+    <div class="specimen-grid">
+      <div>
+        <h3 class="i18n-en">Memory and skills are files with a contract</h3>
+        <h3 class="i18n-zh" lang="zh-CN">记忆与 Skill 是有契约的文件</h3>
+        <p class="note i18n-en">Recall returns a path, typed metadata and a score. Skill matching returns validation and trust, never an execution.</p>
+        <p class="note i18n-zh" lang="zh-CN">召回返回路径、类型化元数据和分数；Skill 匹配返回校验与信任状态，绝不执行。</p>
+      </div>
+      <div>
+        <div class="code">
+          <div class="code-head"><span>memory_recall + skill_match</span><span class="lang">demo</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c">// memory_recall</span>
+{ <span class="s">"query"</span>: <span class="s">"retrieval decision"</span>,
+  <span class="s">"results"</span>: [{
+    <span class="s">"path"</span>: <span class="s">"_Workspace/20-Memory/Decisions/2026-10-20 lexical-first retrieval.md"</span>,
+    <span class="s">"score"</span>: <span class="n">0.925</span>,
+    <span class="s">"metadata"</span>: { <span class="s">"memoryKind"</span>: <span class="s">"decision"</span>, <span class="s">"status"</span>: <span class="s">"active"</span> },
+    <span class="s">"reasons"</span>: [<span class="s">"lexical:1.000"</span>, <span class="s">"metadata:0.500"</span>] }] }
+
+<span class="c">// skill_match</span>
+{ <span class="s">"matches"</span>: [{
+    <span class="s">"skill"</span>: <span class="s">"demo-release-check"</span>, <span class="s">"score"</span>: <span class="n">0.661</span>,
+    <span class="s">"validation"</span>: { <span class="s">"valid"</span>: <span class="ok">true</span> }, <span class="s">"trusted"</span>: <span class="ok">true</span> }],
+  <span class="s">"executionAuthorized"</span>: <span class="ok">false</span> }</pre>
+        </div>
+        <div class="code">
+          <div class="code-head"><span>graph_health</span><span class="lang">demo vault</span><button class="copy" type="button">Copy</button></div>
+<pre>{ <span class="s">"notes"</span>: <span class="n">31</span>, <span class="s">"links"</span>: <span class="n">75</span>,
+  <span class="s">"counts"</span>: { <span class="s">"resolved"</span>: <span class="n">67</span>, <span class="s">"unresolved"</span>: <span class="n">2</span>, <span class="s">"attachment"</span>: <span class="n">6</span> },
+  <span class="s">"orphans"</span>: { <span class="s">"count"</span>: <span class="n">4</span> },
+  <span class="s">"issues"</span>: [
+    { <span class="s">"raw"</span>: <span class="s">"[[Nonexistent Note]]"</span> },
+    { <span class="s">"raw"</span>: <span class="s">"[[Design System Archive]]"</span> } ] }</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOOLS ============ -->
+<section class="catalogue" id="tools">
+  <div class="shell">
+    <div class="section-head">
+      <span class="roman">87</span>
+      <div>
+        <h2 class="i18n-en">Grouped by the job, not by the transport.</h2>
+        <h2 class="i18n-zh" lang="zh-CN">按任务分组，而不是按传输层分组。</h2>
+        <p class="i18n-en">Counts come from the live <code>tools/list</code> response. The discovery profile can be narrowed for small-context hosts.</p>
+        <p class="i18n-zh" lang="zh-CN">数量来自真实 <code>tools/list</code> 响应。宿主上下文紧张时，可以裁剪发现配置。</p>
+      </div>
+    </div>
+    <div class="tool-columns">
+      <div class="tool-group"><h3><span class="i18n-en">Memory &amp; context</span><span class="i18n-zh" lang="zh-CN">记忆与上下文</span><span>5</span></h3><div class="names"><code>agent_bootstrap</code><code>server_info</code><code>get_note_context</code><code>memory_capture</code><code>memory_recall</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Skills</span><span class="i18n-zh" lang="zh-CN">Skill</span><span>5</span></h3><div class="names"><code>skill_list</code><code>skill_match</code><code>skill_validate</code><code>skill_export</code><code>skill_import</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Notes</span><span class="i18n-zh" lang="zh-CN">笔记</span><span>14</span></h3><div class="names"><code>get_note</code><code>get_metadata</code><code>write_note</code><code>append_to_note</code><code>patch_note</code><code>replace_in_note</code><code>manage_frontmatter</code><code>manage_tags</code><code>list_notes</code><code>list_recent</code><code>list_aliases</code><code>list_properties</code><code>rename_property</code><code>set_property_type</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Search &amp; index</span><span class="i18n-zh" lang="zh-CN">检索与索引</span><span>7</span></h3><div class="names"><code>search_notes</code><code>recall</code><code>find_related</code><code>suggest_links</code><code>list_tags</code><code>index_status</code><code>reindex_vault</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Links &amp; graph</span><span class="i18n-zh" lang="zh-CN">链接与图谱</span><span>6</span></h3><div class="names"><code>get_backlinks</code><code>get_graph</code><code>get_unresolved_links</code><code>get_orphans</code><code>get_deadends</code><code>graph_health</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Files &amp; transfer</span><span class="i18n-zh" lang="zh-CN">文件与传输</span><span>13</span></h3><div class="names"><code>list_files</code><code>pull_note_file</code><code>get_file</code><code>pull_file</code><code>write_file</code><code>start_file_upload</code><code>upload_file_chunk</code><code>file_upload_status</code><code>cancel_file_upload</code><code>create_archive</code><code>inspect_archive</code><code>read_archive_entry</code><code>extract_archive</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Structure</span><span class="i18n-zh" lang="zh-CN">结构</span><span>3</span></h3><div class="names"><code>manage_folders</code><code>move_note</code><code>delete_note</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Versions &amp; trash</span><span class="i18n-zh" lang="zh-CN">版本与回收站</span><span>8</span></h3><div class="names"><code>list_trash</code><code>restore_from_trash</code><code>list_versions</code><code>delete_trash_entry</code><code>restore_version</code><code>delete_version</code><code>get_note_version</code><code>compare_note_versions</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Plans</span><span class="i18n-zh" lang="zh-CN">变更计划</span><span>7</span></h3><div class="names"><code>plan_restore_from_trash</code><code>plan_restore_version</code><code>plan_delete_note</code><code>plan_move_note</code><code>plan_note_changes</code><code>get_note_plan</code><code>apply_note_plan</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Daily, tasks, templates</span><span class="i18n-zh" lang="zh-CN">日常、任务、模板</span><span>5</span></h3><div class="names"><code>daily_note</code><code>list_templates</code><code>create_from_template</code><code>list_tasks</code><code>update_task</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Bases &amp; canvas</span><span class="i18n-zh" lang="zh-CN">Bases 与 Canvas</span><span>6</span></h3><div class="names"><code>list_bases</code><code>get_base</code><code>write_base</code><code>query_base</code><code>get_canvas</code><code>write_canvas</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Publish</span><span class="i18n-zh" lang="zh-CN">发布</span><span>2</span></h3><div class="names"><code>get_publish_status</code><code>manage_publish</code></div></div>
+      <div class="tool-group"><h3><span class="i18n-en">Git</span><span class="i18n-zh" lang="zh-CN">Git</span><span>6</span></h3><div class="names"><code>git_status</code><code>git_diff</code><code>git_log</code><code>git_commit</code><code>git_pull</code><code>git_push</code></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section class="controls" id="security">
+  <div class="shell">
+    <div class="section-head">
+      <span class="roman">‡</span>
+      <div>
+        <h2 class="i18n-en">Writes are the dangerous part.</h2>
+        <h2 class="i18n-zh" lang="zh-CN">写入是最危险的部分。</h2>
+        <p class="i18n-en">The server assumes an agent can be wrong, a tab can be stale, and a path can escape. The defaults are built around those failures.</p>
+        <p class="i18n-zh" lang="zh-CN">服务端默认假设：Agent 可能出错，标签页可能过期，路径可能逃逸。默认行为围绕这些故障设计。</p>
+      </div>
+    </div>
+    <div class="controls-grid">
+      <div class="control"><h3 class="i18n-en">OAuth 2.1 + PKCE</h3><h3 class="i18n-zh" lang="zh-CN">OAuth 2.1 + PKCE</h3><p class="i18n-en">Authorization-code flow with discovery, dynamic client registration, refresh rotation and revocation. Scoped API keys remain available.</p><p class="i18n-zh" lang="zh-CN">授权码流程，含发现、动态客户端注册、刷新轮换与撤销；同时保留受限 API Key。</p></div>
+      <div class="control"><h3 class="i18n-en">Scope and vault allowlist</h3><h3 class="i18n-zh" lang="zh-CN">Scope 与 Vault 白名单</h3><p class="i18n-en">Read, write and files permissions are separate, and every credential is bound to explicit vaults.</p><p class="i18n-zh" lang="zh-CN">read、write、files 权限分离，每个凭据绑定明确的 Vault。</p></div>
+      <div class="control"><h3 class="i18n-en">Optimistic concurrency</h3><h3 class="i18n-zh" lang="zh-CN">乐观并发</h3><p class="i18n-en">Reads return a SHA-256 revision. Stale writes must fail instead of merging silently.</p><p class="i18n-zh" lang="zh-CN">读取返回 SHA-256 revision；过期写入必须失败，而不是静默合并。</p></div>
+      <div class="control"><h3 class="i18n-en">Path containment</h3><h3 class="i18n-zh" lang="zh-CN">路径约束</h3><p class="i18n-en">Traversal and symlink escapes are rejected, root deletion is refused, and writes are atomic.</p><p class="i18n-zh" lang="zh-CN">拒绝路径穿越与符号链接逃逸，拒绝删除根目录，写入原子化。</p></div>
+      <div class="control"><h3 class="i18n-en">Versions, trash, journal</h3><h3 class="i18n-zh" lang="zh-CN">版本、回收站、Journal</h3><p class="i18n-en">Pre-write versions and recoverable trash live outside the vault; multi-note plans are journaled.</p><p class="i18n-zh" lang="zh-CN">写入前版本与可恢复回收站放在 Vault 外；多笔记计划写入 journal。</p></div>
+      <div class="control"><h3 class="i18n-en">Secret-free audit</h3><h3 class="i18n-zh" lang="zh-CN">不含秘密值的审计</h3><p class="i18n-en">Audit records the actor, credential type, source and outcome — never the credential itself.</p><p class="i18n-zh" lang="zh-CN">审计记录操作者、凭据类型、来源和结果，绝不记录凭据本身。</p></div>
+      <div class="control"><h3 class="i18n-en">Read-only mode</h3><h3 class="i18n-zh" lang="zh-CN">只读模式</h3><p class="i18n-en">One switch stops all vault writes while health, search and reads keep working.</p><p class="i18n-zh" lang="zh-CN">一个开关停止所有 Vault 写入，健康检查、搜索和读取继续工作。</p></div>
+      <div class="control"><h3 class="i18n-en">Bounded inputs</h3><h3 class="i18n-zh" lang="zh-CN">有界输入</h3><p class="i18n-en">Read, transfer, archive and search limits are explicit; unsupported Base expressions fail closed.</p><p class="i18n-zh" lang="zh-CN">读取、传输、归档与搜索都有显式上限；不支持的 Base 表达式直接拒绝。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ START ============ -->
+<section class="start" id="start">
+  <div class="shell">
+    <div class="section-head">
+      <span class="roman">→</span>
+      <div>
+        <h2 class="i18n-en">Bring your own vault. Or start from the demo.</h2>
+        <h2 class="i18n-zh" lang="zh-CN">带上你的 Vault，或从演示库开始。</h2>
+        <p class="i18n-en">The demo is fully synthetic. Mount it, or point the container at your own vault at <code>/vault</code>.</p>
+        <p class="i18n-zh" lang="zh-CN">演示库完全合成。可以直接挂载它，或把自己的 Vault 挂到容器 <code>/vault</code>。</p>
+      </div>
+    </div>
+    <div class="start-grid">
+      <div>
+        <h3 class="i18n-en">1 · Run the server</h3>
+        <h3 class="i18n-zh" lang="zh-CN">1 · 启动服务</h3>
+        <div class="paper-code">
+          <div class="code-head"><span>shell</span><span class="lang">docker compose</span><button class="copy" type="button">Copy</button></div>
+<pre><span class="c"># public snapshot</span>
+git clone https://github.com/OhiyoX/obsidian-mcp-server-public.git
+<span class="k">cd</span> obsidian-mcp-server-public
+cp .env.example .env
+
+<span class="c"># mount the synthetic demo (or your own vault)</span>
+<span class="k">export</span> OBSIDIAN_VAULT_PATH=<span class="s">"$PWD/demo/vaults/aurora"</span>
+<span class="k">export</span> OBSIDIAN_VAULTS_ROOT=<span class="s">"$PWD/demo/vaults"</span>
+<span class="k">export</span> WEB_DEFAULT_VAULT=aurora
+<span class="k">export</span> VAULT_WORKSPACE_ROOT=_Workspace
+docker compose up -d --build
+curl http://127.0.0.1:18923/healthz</pre>
+        </div>
+        <h3 class="i18n-en">2 · Point a client at it</h3>
+        <h3 class="i18n-zh" lang="zh-CN">2 · 客户端接上</h3>
+        <div class="paper-code">
+          <div class="code-head"><span>MCP client config</span><span class="lang">streamable HTTP</span><button class="copy" type="button">Copy</button></div>
+<pre>{
+  <span class="s">"mcpServers"</span>: {
+    <span class="s">"obsidian"</span>: {
+      <span class="s">"type"</span>: <span class="s">"http"</span>,
+      <span class="s">"url"</span>: <span class="s">"http://127.0.0.1:18923/mcp"</span>,
+      <span class="s">"headers"</span>: { <span class="s">"X-API-Key"</span>: <span class="s">"&lt;your-key&gt;"</span> }
+    }
+  }
+}</pre>
+        </div>
+        <p class="i18n-en" style="font-size:14px;color:var(--muted);">The browser workspace is at <code>/app</code>; the admin console at <code>/admin/auth</code>. OAuth is optional and off by default.</p>
+        <p class="i18n-zh" lang="zh-CN" style="font-size:14px;color:var(--muted);">浏览器工作区在 <code>/app</code>，管理面板在 <code>/admin/auth</code>。OAuth 可选，默认关闭。</p>
+      </div>
+      <div>
+        <h3 class="i18n-en">The demo vault</h3>
+        <h3 class="i18n-zh" lang="zh-CN">演示 Vault</h3>
+        <p class="i18n-en">A two-vault synthetic workspace in the <code>_Workspace</code> layout: memory, projects, ops, skills, todos, maps and an archive. No production note was copied into it.</p>
+        <p class="i18n-zh" lang="zh-CN">按 <code>_Workspace</code> 规范组织的双库合成工作区：记忆、项目、运维、Skill、待办、导航与归档。没有复制任何生产笔记。</p>
+        <div class="download">
+          <a href="assets/demo-vault.zip" download><b>demo-vault.zip</b></a>
+          <span class="size i18n-en">aurora + atlas · Markdown, Bases, Canvas, assets</span>
+          <span class="size i18n-zh" lang="zh-CN">aurora + atlas · Markdown、Bases、Canvas、附件</span>
+        </div>
+        <table class="mini-table">
+          <tbody>
+            <tr><td>20-Memory</td><td class="i18n-en">1 decision, 1 fact, 1 episode with typed frontmatter</td><td class="i18n-zh" lang="zh-CN">1 条决策、1 条事实、1 条片段，均带类型化 frontmatter</td></tr>
+            <tr><td>40-Projects</td><td class="i18n-en">2 projects with README-as-current-state</td><td class="i18n-zh" lang="zh-CN">2 个项目，README 记录当前状态</td></tr>
+            <tr><td>60-Skills</td><td class="i18n-en">1 validated, trusted skill package + reference</td><td class="i18n-zh" lang="zh-CN">1 个已验证、受信任的 Skill 包 + reference</td></tr>
+            <tr><td>Views</td><td class="i18n-en">3 Bases views over projects, reading and memory</td><td class="i18n-zh" lang="zh-CN">3 个 Bases 视图：项目、阅读、记忆</td></tr>
+            <tr><td>Canvas</td><td class="i18n-en">1 JSON Canvas system map</td><td class="i18n-zh" lang="zh-CN">1 个 JSON Canvas 系统图</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CONTACT SHEET ============ -->
+<section class="contact" id="plates">
+  <div class="shell">
+    <div class="section-head">
+      <span class="roman">¶</span>
+      <div>
+        <h2 class="i18n-en">Plates from one local instance.</h2>
+        <h2 class="i18n-zh" lang="zh-CN">来自同一个本地实例的图版。</h2>
+        <p class="i18n-en">Desktop 1440×900, mobile 390×844, dark and light. The web UI is Chinese-localized in this build; note content is English. All data is synthetic. Click any plate to enlarge.</p>
+        <p class="i18n-zh" lang="zh-CN">桌面 1440×900，移动 390×844，深浅两种主题。当前 Web UI 为中文界面，笔记内容为英文；所有数据均为合成。点击任意图版放大。</p>
+      </div>
+    </div>
+    <div class="contact-grid">
+      <figure class="plate"><img src="screenshots/01-workspace-home.png" alt="Workspace home" loading="lazy" /><figcaption><span class="i18n-en">Workspace home</span><span class="i18n-zh" lang="zh-CN">工作区首页</span><span class="plate-id">01</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/02-memory-note.png" alt="Managed memory note" loading="lazy" /><figcaption><span class="i18n-en">Memory note</span><span class="i18n-zh" lang="zh-CN">记忆笔记</span><span class="plate-id">02</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/03-skill-package.png" alt="Skill package" loading="lazy" /><figcaption><span class="i18n-en">Skill package</span><span class="i18n-zh" lang="zh-CN">Skill 包</span><span class="plate-id">03</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/04-search-results.png" alt="Search results with snippets" loading="lazy" /><figcaption><span class="i18n-en">Lexical search</span><span class="i18n-zh" lang="zh-CN">词法检索</span><span class="plate-id">04</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/05-reader-math.png" alt="Reader with math and footnotes" loading="lazy" /><figcaption><span class="i18n-en">Reader: math</span><span class="i18n-zh" lang="zh-CN">阅读：公式</span><span class="plate-id">05</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/06-editor-live.png" alt="Live preview editor" loading="lazy" /><figcaption><span class="i18n-en">Live editor</span><span class="i18n-zh" lang="zh-CN">实时编辑器</span><span class="plate-id">06</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/07-bases-project.png" alt="Bases project table" loading="lazy" /><figcaption><span class="i18n-en">Bases: projects</span><span class="i18n-zh" lang="zh-CN">Bases：项目</span><span class="plate-id">07</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/08-bases-memory.png" alt="Bases memory table" loading="lazy" /><figcaption><span class="i18n-en">Bases: memory</span><span class="i18n-zh" lang="zh-CN">Bases：记忆</span><span class="plate-id">08</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/09-publish-page.png" alt="Published read-only page" loading="lazy" /><figcaption><span class="i18n-en">Published page</span><span class="i18n-zh" lang="zh-CN">发布页</span><span class="plate-id">09</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/10-vault-switch.png" alt="Vault switcher" loading="lazy" /><figcaption><span class="i18n-en">Vault switch</span><span class="i18n-zh" lang="zh-CN">切换 Vault</span><span class="plate-id">10</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/11-atlas-vault.png" alt="Second vault" loading="lazy" /><figcaption><span class="i18n-en">Second vault</span><span class="i18n-zh" lang="zh-CN">第二个 Vault</span><span class="plate-id">11</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/12-mobile-shell.png" alt="Mobile drawer" loading="lazy" /><figcaption><span class="i18n-en">Mobile shell</span><span class="i18n-zh" lang="zh-CN">移动端</span><span class="plate-id">12</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/13-admin-overview.png" alt="Admin overview" loading="lazy" /><figcaption><span class="i18n-en">Admin overview</span><span class="i18n-zh" lang="zh-CN">Admin 概览</span><span class="plate-id">13</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/14-admin-keys.png" alt="Admin API keys" loading="lazy" /><figcaption><span class="i18n-en">API keys</span><span class="i18n-zh" lang="zh-CN">API Key</span><span class="plate-id">14</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/15-admin-accounts.png" alt="Admin OAuth accounts" loading="lazy" /><figcaption><span class="i18n-en">OAuth accounts</span><span class="i18n-zh" lang="zh-CN">OAuth 账户</span><span class="plate-id">15</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/16-admin-clients.png" alt="Admin OAuth clients" loading="lazy" /><figcaption><span class="i18n-en">OAuth clients</span><span class="i18n-zh" lang="zh-CN">OAuth 客户端</span><span class="plate-id">16</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/17-admin-tokens.png" alt="Admin OAuth tokens" loading="lazy" /><figcaption><span class="i18n-en">OAuth grants</span><span class="i18n-zh" lang="zh-CN">OAuth 授权</span><span class="plate-id">17</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/18-admin-publishes.png" alt="Admin publish catalogue" loading="lazy" /><figcaption><span class="i18n-en">Publish catalogue</span><span class="i18n-zh" lang="zh-CN">发布目录</span><span class="plate-id">18</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/19-admin-audit.png" alt="Admin audit log" loading="lazy" /><figcaption><span class="i18n-en">Audit log</span><span class="i18n-zh" lang="zh-CN">审计日志</span><span class="plate-id">19</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/20-theme-light.png" alt="Light mode workspace" loading="lazy" /><figcaption><span class="i18n-en">Light mode</span><span class="i18n-zh" lang="zh-CN">浅色模式</span><span class="plate-id">20</span></figcaption></figure>
+      <figure class="plate"><img src="screenshots/21-theme-settings.png" alt="Theme settings" loading="lazy" /><figcaption><span class="i18n-en">Theme controls</span><span class="i18n-zh" lang="zh-CN">主题设置</span><span class="plate-id">21</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="shell foot">
+    <p class="i18n-en"><strong>Obsidian MCP Server</strong> · MIT · a source distribution, not a hosted service. Demo data is synthetic; screenshots come from a local instance, and no production vault was read.</p>
+    <p class="i18n-zh" lang="zh-CN"><strong>Obsidian MCP Server</strong> · MIT · 源码分发，不是托管服务。演示数据为合成；截图来自本地实例，没有读取生产 Vault。</p>
+    <div class="foot-links">
+      <a href="https://github.com/OhiyoX/obsidian-mcp-server-public" rel="noopener">GitHub</a>
+      <a href="https://github.com/OhiyoX/obsidian-mcp-server-public/blob/main/README.md" rel="noopener">README</a>
+      <a href="https://github.com/OhiyoX/obsidian-mcp-server-public/tree/main/docs" rel="noopener">Docs</a>
+      <a href="https://github.com/OhiyoX/obsidian-mcp-server-public/blob/main/LICENSE" rel="noopener">MIT</a>
+    </div>
+  </div>
+</footer>
+
+<div class="lb" id="lightbox" role="dialog" aria-modal="true" aria-label="Screenshot">
+  <button type="button" id="lbClose" aria-label="Close">×</button>
+  <img id="lbImg" alt="" />
+</div>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
