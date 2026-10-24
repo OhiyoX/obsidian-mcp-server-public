@@ -23,3 +23,6 @@ id_ed25519
 .tmp*/
 .deploy*/
 runtime-sync*/
+
+# Demo vault download (needed by the public showcase)
+!demo/site/assets/demo-vault.zip
