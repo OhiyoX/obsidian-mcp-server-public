@@ -4,6 +4,8 @@
 
 **让 Obsidian 成为支持 MCP 的 AI Agent 的共享记忆：自托管、可检索、可协作、可追溯。**
 
+![Web workspace over an Obsidian vault](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/01-workspace-home.png)
+
 [English](#english) · [中文](#中文)
 
 ---
@@ -43,6 +45,10 @@ another connected agent can inspect and build on it.
 The point is not another note app. It is a **shared layer between people and
 agents** where the same memory, knowledge, and skills are readable, writable,
 searchable, and auditable in real time.
+
+![A decision stored as a typed Markdown memory note](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/02-memory-note.png)
+
+*A decision, stored as a typed Markdown memory note.*
 
 ### How it works
 
@@ -91,6 +97,10 @@ searchable, and auditable in real time.
   optional per-vault Git integration, and OAuth/API-key authentication.
 - **Anywhere access:** a responsive web workspace and remote MCP over HTTPS.
   An installable PWA is on the roadmap.
+
+| Skills | Search |
+| --- | --- |
+| ![A skill package reviewed before execution](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/03-skill-package.png) | ![Search results with scores and matched lines](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/04-search-results.png) |
 
 ### Quick start
 
@@ -160,6 +170,8 @@ agents, with live updates and revision-safe edits. The admin plane at
 `/admin/auth` manages accounts, API keys, OAuth clients, scopes, vault access,
 audit history, and time-window authorization.
 
+![Live editing in the web workspace](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/06-editor-live.png)
+
 ### Security and data ownership
 
 - **Self-hosted by design.** The vault stays on your server. There is no hosted
@@ -174,6 +186,8 @@ audit history, and time-window authorization.
   trust.
 - **Operational hygiene.** Keep `.env` and data directories out of Git, back up
   the vault and `./data`, and use TLS for every remote connection.
+
+![Admin plane: credentials, scopes, and run state](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/13-admin-overview.png)
 
 ### Operations
 
@@ -259,6 +273,10 @@ Agent 核对与继续使用。
 目标不是再做一个笔记应用，而是做**人与 Agent 之间的共享层**：同一份记忆、知识与
 技能，可以实时读取、写入、搜索与审计。
 
+![一条决策，存成带类型的 Markdown 记忆笔记](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/02-memory-note.png)
+
+*一条决策，存成带类型的 Markdown 记忆笔记。*
+
 ### 如何工作
 
 ```text
@@ -298,6 +316,10 @@ Agent 核对与继续使用。
 - **运维：** Docker Compose、健康检查、持久化数据、审计日志、可选的按库 Git 集成、
   OAuth/API Key 认证。
 - **任何地方访问：** 响应式 Web 与 HTTPS 远程 MCP；可安装 PWA 属于待交付功能。
+
+| 技能 | 检索 |
+| --- | --- |
+| ![执行前先审阅的 Skill 包](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/03-skill-package.png) | ![带得分与命中原文行的搜索结果](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/04-search-results.png) |
 
 ### 快速开始
 
@@ -364,6 +386,8 @@ TRUST_PROXY=127.0.0.1
 `/admin/auth` 管理账户、API Key、OAuth 客户端、Scope、Vault 访问、审计历史与
 定时授权。
 
+![Web 工作区实时编辑](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/06-editor-live.png)
+
 ### 安全与数据归属
 
 - **自托管优先。** Vault 留在你的服务器上，没有托管账户层；普通 Markdown 文件
@@ -376,6 +400,8 @@ TRUST_PROXY=127.0.0.1
   可跑本地模型，也可指向你信任的提供方。
 - **运维卫生。** `.env` 与数据目录不要进 Git；定期备份 Vault 与 `./data`；
   所有远程连接都走 TLS。
+
+![Admin 管理面：凭据、权限与运行状态](https://raw.githubusercontent.com/OhiyoX/obsidian-mcp-server-public/gh-pages/screenshots/13-admin-overview.png)
 
 ### 运维
 
