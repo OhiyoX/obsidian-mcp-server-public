@@ -1,0 +1,1357 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "app/scripts/tool-discovery-production-eval.mjs",
+  "mode": "eager real run (read-only probes)",
+  "target": {
+    "endpoint": {
+      "endpointClass": "http-private-custom-port",
+      "scheme": "http",
+      "network": "private",
+      "port": "custom"
+    },
+    "transport": "streamable-http",
+    "auth": "API key header (value not recorded)",
+    "serverInfo": {
+      "name": "obsidian-mcp-server",
+      "version": "1.0.0"
+    },
+    "protocolVersion": "2025-06-18",
+    "capturedAtUtc": "2026-09-24T20:56:36.167Z"
+  },
+  "provenance": {
+    "kind": "live-capture",
+    "offlineCanProveLiveOrigin": false,
+    "note": "Recorded from a live capture at capture time. Offline verification re-checks artifact shape, internal consistency and the local catalog only; it cannot prove this data came from a live server."
+  },
+  "realCalls": {
+    "discoveryCalls": 6,
+    "probeCalls": 41,
+    "totalCalls": 47
+  },
+  "discovery": {
+    "contextAvailability": {
+      "sampleNotePath": true,
+      "sampleVersionId": true,
+      "sampleBasePath": true,
+      "sampleSkillPath": true,
+      "sampleCanvasPath": false,
+      "sampleArchivePath": false
+    }
+  },
+  "probes": {
+    "readOnlyTools": 50,
+    "readOnlyProbedTools": 41,
+    "readOnlyNotProbedTools": 9,
+    "writeOrDestructiveToolsExcluded": 35,
+    "notProbedReasons": {
+      "file_upload_status:requires_upload_id_stateful": 1,
+      "get_canvas:missing_context:path": 1,
+      "get_note_plan:requires_plan_id_stateful": 1,
+      "inspect_archive:missing_context:path": 1,
+      "plan_delete_note:creates_plan_stateful": 1,
+      "plan_move_note:creates_plan_stateful": 1,
+      "plan_note_changes:creates_plan_stateful": 1,
+      "plan_restore_from_trash:creates_plan_stateful": 1,
+      "plan_restore_version:creates_plan_stateful": 1
+    },
+    "invokedCalls": 41,
+    "outcomes": {
+      "not_probed": 9,
+      "output_contract_violation": 2,
+      "success": 39
+    },
+    "successRate": 0.9512195121951219,
+    "resultBytes": 959438
+  },
+  "probeDetail": [
+    {
+      "tool": "agent_bootstrap",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 11803
+    },
+    {
+      "tool": "compare_note_versions",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 23054
+    },
+    {
+      "tool": "find_related",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 17734
+    },
+    {
+      "tool": "get_backlinks",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 11497
+    },
+    {
+      "tool": "get_base",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 4925
+    },
+    {
+      "tool": "get_deadends",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1444
+    },
+    {
+      "tool": "get_file",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 108920
+    },
+    {
+      "tool": "get_graph",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 7749
+    },
+    {
+      "tool": "get_metadata",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 106595
+    },
+    {
+      "tool": "get_note",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 118491
+    },
+    {
+      "tool": "get_note_version",
+      "outcome": "output_contract_violation",
+      "reason": "output_validation",
+      "resultBytes": 210
+    },
+    {
+      "tool": "get_orphans",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1432
+    },
+    {
+      "tool": "get_publish_status",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1340
+    },
+    {
+      "tool": "get_unresolved_links",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 2413
+    },
+    {
+      "tool": "git_diff",
+      "outcome": "output_contract_violation",
+      "reason": "output_validation",
+      "resultBytes": 201
+    },
+    {
+      "tool": "git_log",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1587
+    },
+    {
+      "tool": "git_status",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 159536
+    },
+    {
+      "tool": "graph_health",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 2343
+    },
+    {
+      "tool": "index_status",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 2273
+    },
+    {
+      "tool": "list_aliases",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 819
+    },
+    {
+      "tool": "list_bases",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1344
+    },
+    {
+      "tool": "list_files",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1535
+    },
+    {
+      "tool": "list_notes",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 956
+    },
+    {
+      "tool": "list_properties",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 7489
+    },
+    {
+      "tool": "list_recent",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 2188
+    },
+    {
+      "tool": "list_tags",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 23334
+    },
+    {
+      "tool": "list_tasks",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 4646
+    },
+    {
+      "tool": "list_templates",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 999
+    },
+    {
+      "tool": "list_trash",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1534
+    },
+    {
+      "tool": "list_versions",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 1914
+    },
+    {
+      "tool": "memory_recall",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 14158
+    },
+    {
+      "tool": "pull_file",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 140592
+    },
+    {
+      "tool": "pull_note_file",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 108295
+    },
+    {
+      "tool": "query_base",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 3786
+    },
+    {
+      "tool": "recall",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 12466
+    },
+    {
+      "tool": "search_notes",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 5508
+    },
+    {
+      "tool": "server_info",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 4552
+    },
+    {
+      "tool": "skill_list",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 7280
+    },
+    {
+      "tool": "skill_match",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 10128
+    },
+    {
+      "tool": "skill_validate",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 2311
+    },
+    {
+      "tool": "suggest_links",
+      "outcome": "success",
+      "reason": null,
+      "resultBytes": 20057
+    }
+  ],
+  "notProbed": [
+    {
+      "tool": "file_upload_status",
+      "reason": "requires_upload_id_stateful"
+    },
+    {
+      "tool": "get_canvas",
+      "reason": "missing_context:path"
+    },
+    {
+      "tool": "get_note_plan",
+      "reason": "requires_plan_id_stateful"
+    },
+    {
+      "tool": "inspect_archive",
+      "reason": "missing_context:path"
+    },
+    {
+      "tool": "plan_delete_note",
+      "reason": "creates_plan_stateful"
+    },
+    {
+      "tool": "plan_move_note",
+      "reason": "creates_plan_stateful"
+    },
+    {
+      "tool": "plan_note_changes",
+      "reason": "creates_plan_stateful"
+    },
+    {
+      "tool": "plan_restore_from_trash",
+      "reason": "creates_plan_stateful"
+    },
+    {
+      "tool": "plan_restore_version",
+      "reason": "creates_plan_stateful"
+    }
+  ],
+  "excludedWriteOrDestructiveTools": [
+    "append_to_note",
+    "apply_note_plan",
+    "cancel_file_upload",
+    "create_archive",
+    "create_from_template",
+    "daily_note",
+    "delete_note",
+    "delete_trash_entry",
+    "delete_version",
+    "extract_archive",
+    "git_commit",
+    "git_pull",
+    "git_push",
+    "manage_folders",
+    "manage_frontmatter",
+    "manage_publish",
+    "manage_tags",
+    "memory_capture",
+    "move_note",
+    "patch_note",
+    "reindex_vault",
+    "rename_property",
+    "replace_in_note",
+    "restore_from_trash",
+    "restore_version",
+    "set_property_type",
+    "skill_export",
+    "skill_import",
+    "start_file_upload",
+    "update_task",
+    "upload_file_chunk",
+    "write_base",
+    "write_canvas",
+    "write_file",
+    "write_note"
+  ],
+  "observedContractViolations": [
+    {
+      "tool": "get_note_version",
+      "defect": "deployed server returned structured content rejected by its own declared outputSchema"
+    },
+    {
+      "tool": "git_diff",
+      "defect": "deployed server returned structured content rejected by its own declared outputSchema"
+    }
+  ],
+  "fixtures": {
+    "count": 50,
+    "statusHistogram": {
+      "blocked_harness": 5,
+      "blocked_safety": 15,
+      "failed": 1,
+      "ready": 29
+    },
+    "readyRate": 0.58,
+    "reachableRate": 1,
+    "failureReasons": {
+      "failed:git_diff:output_validation": 1,
+      "safety_skipped:append_to_note": 1,
+      "safety_skipped:apply_note_plan": 1,
+      "safety_skipped:create_archive": 1,
+      "safety_skipped:create_from_template": 1,
+      "safety_skipped:extract_archive": 1,
+      "safety_skipped:git_commit": 1,
+      "safety_skipped:manage_frontmatter": 1,
+      "safety_skipped:manage_publish": 2,
+      "safety_skipped:manage_tags": 1,
+      "safety_skipped:memory_capture": 1,
+      "safety_skipped:rename_property": 1,
+      "safety_skipped:replace_in_note": 1,
+      "safety_skipped:skill_export": 1,
+      "safety_skipped:update_task": 1,
+      "safety_skipped:write_note": 1,
+      "unprobed:plan_delete_note:creates_plan_stateful": 1,
+      "unprobed:plan_move_note:creates_plan_stateful": 1,
+      "unprobed:plan_note_changes:creates_plan_stateful": 1,
+      "unprobed:plan_restore_from_trash:creates_plan_stateful": 1,
+      "unprobed:plan_restore_version:creates_plan_stateful": 1
+    },
+    "perTask": [
+      {
+        "taskId": "note-read-full-en",
+        "category": "note-read-write-metadata",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "get_note"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_note"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 399
+      },
+      {
+        "taskId": "note-read-metadata-zh",
+        "category": "note-read-write-metadata",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "get_note",
+          "get_metadata"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_note",
+          "get_metadata"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 542
+      },
+      {
+        "taskId": "note-metadata-cache-en",
+        "category": "note-read-write-metadata",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "get_metadata"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_metadata"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 143
+      },
+      {
+        "taskId": "note-create-zh",
+        "category": "note-read-write-metadata",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "write_note"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "write_note"
+        ],
+        "schemaCostBytes": 429
+      },
+      {
+        "taskId": "note-append-en",
+        "category": "note-read-write-metadata",
+        "language": "en",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "append_to_note"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "append_to_note"
+        ],
+        "schemaCostBytes": 296
+      },
+      {
+        "taskId": "note-frontmatter-tags-mixed",
+        "category": "note-read-write-metadata",
+        "language": "mixed",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "manage_frontmatter",
+          "manage_tags"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "manage_frontmatter",
+          "manage_tags"
+        ],
+        "schemaCostBytes": 784
+      },
+      {
+        "taskId": "note-replace-mixed",
+        "category": "note-read-write-metadata",
+        "language": "mixed",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "replace_in_note"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "replace_in_note"
+        ],
+        "schemaCostBytes": 620
+      },
+      {
+        "taskId": "search-relevance-en",
+        "category": "search-recall",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "search_notes"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "search_notes"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 1396
+      },
+      {
+        "taskId": "search-zh",
+        "category": "search-recall",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "search_notes"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "search_notes"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 1396
+      },
+      {
+        "taskId": "recall-semantic-mixed",
+        "category": "search-recall",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "recall"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "recall"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 660
+      },
+      {
+        "taskId": "find-related-en",
+        "category": "search-recall",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "find_related"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "find_related"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 254
+      },
+      {
+        "taskId": "links-backlinks-en",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "get_backlinks"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_backlinks"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 143
+      },
+      {
+        "taskId": "graph-zh",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "get_graph"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_graph"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 184
+      },
+      {
+        "taskId": "links-unresolved-en",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "get_unresolved_links"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_unresolved_links"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 236
+      },
+      {
+        "taskId": "links-orphans-zh",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "get_orphans"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_orphans"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 183
+      },
+      {
+        "taskId": "tasks-list-mixed",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "list_tasks"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "list_tasks"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 295
+      },
+      {
+        "taskId": "tasks-update-en",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "en",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "update_task"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "update_task"
+        ],
+        "schemaCostBytes": 383
+      },
+      {
+        "taskId": "template-create-zh",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "create_from_template"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "create_from_template"
+        ],
+        "schemaCostBytes": 387
+      },
+      {
+        "taskId": "base-query-en",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "query_base"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "query_base"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 222
+      },
+      {
+        "taskId": "properties-rename-mixed",
+        "category": "links-graph-tasks-templates-bases",
+        "language": "mixed",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "rename_property"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "rename_property"
+        ],
+        "schemaCostBytes": 411
+      },
+      {
+        "taskId": "files-list-en",
+        "category": "files",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "list_files"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "list_files"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 506
+      },
+      {
+        "taskId": "files-read-zh",
+        "category": "files",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "get_file"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_file"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 415
+      },
+      {
+        "taskId": "files-archive-mixed",
+        "category": "files",
+        "language": "mixed",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "create_archive"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "create_archive"
+        ],
+        "schemaCostBytes": 368
+      },
+      {
+        "taskId": "files-extract-zh",
+        "category": "files",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "extract_archive"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "extract_archive"
+        ],
+        "schemaCostBytes": 301
+      },
+      {
+        "taskId": "memory-capture-en",
+        "category": "memory-skills",
+        "language": "en",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "memory_capture"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "memory_capture"
+        ],
+        "schemaCostBytes": 789
+      },
+      {
+        "taskId": "memory-recall-zh",
+        "category": "memory-skills",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "memory_recall"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "memory_recall"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 378
+      },
+      {
+        "taskId": "skills-match-mixed",
+        "category": "memory-skills",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "skill_match",
+          "skill_list"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "skill_match",
+          "skill_list"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 519
+      },
+      {
+        "taskId": "skill-validate-en",
+        "category": "memory-skills",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "skill_validate"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "skill_validate"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 143
+      },
+      {
+        "taskId": "skill-export-zh",
+        "category": "memory-skills",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "skill_export"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "skill_export"
+        ],
+        "schemaCostBytes": 224
+      },
+      {
+        "taskId": "git-status-en",
+        "category": "git",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "git_status"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "git_status"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 85
+      },
+      {
+        "taskId": "git-diff-zh",
+        "category": "git",
+        "language": "zh",
+        "status": "failed",
+        "expectedTools": [
+          "git_diff"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [
+          {
+            "tool": "git_diff",
+            "reason": "output_validation",
+            "outcome": "output_contract_violation"
+          }
+        ],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 232
+      },
+      {
+        "taskId": "git-log-mixed",
+        "category": "git",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "git_log"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "git_log"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 150
+      },
+      {
+        "taskId": "git-commit-en",
+        "category": "git",
+        "language": "en",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "git_commit"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "git_commit"
+        ],
+        "schemaCostBytes": 371
+      },
+      {
+        "taskId": "publish-status-en",
+        "category": "publish",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "get_publish_status"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_publish_status"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 185
+      },
+      {
+        "taskId": "publish-zh",
+        "category": "publish",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "manage_publish"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "manage_publish"
+        ],
+        "schemaCostBytes": 249
+      },
+      {
+        "taskId": "publish-revoke-mixed",
+        "category": "publish",
+        "language": "mixed",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "manage_publish"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "manage_publish"
+        ],
+        "schemaCostBytes": 249
+      },
+      {
+        "taskId": "plan-note-changes-en",
+        "category": "plan-apply-recovery",
+        "language": "en",
+        "status": "blocked_harness",
+        "expectedTools": [
+          "plan_note_changes"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [
+          {
+            "tool": "plan_note_changes",
+            "reason": "creates_plan_stateful"
+          }
+        ],
+        "safetySkipped": [],
+        "schemaCostBytes": 1725
+      },
+      {
+        "taskId": "apply-plan-zh",
+        "category": "plan-apply-recovery",
+        "language": "zh",
+        "status": "blocked_safety",
+        "expectedTools": [
+          "apply_note_plan"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [
+          "apply_note_plan"
+        ],
+        "schemaCostBytes": 464
+      },
+      {
+        "taskId": "plan-delete-mixed",
+        "category": "plan-apply-recovery",
+        "language": "mixed",
+        "status": "blocked_harness",
+        "expectedTools": [
+          "plan_delete_note"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [
+          {
+            "tool": "plan_delete_note",
+            "reason": "creates_plan_stateful"
+          }
+        ],
+        "safetySkipped": [],
+        "schemaCostBytes": 371
+      },
+      {
+        "taskId": "restore-trash-preview-en",
+        "category": "plan-apply-recovery",
+        "language": "en",
+        "status": "blocked_harness",
+        "expectedTools": [
+          "plan_restore_from_trash"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [
+          {
+            "tool": "plan_restore_from_trash",
+            "reason": "creates_plan_stateful"
+          }
+        ],
+        "safetySkipped": [],
+        "schemaCostBytes": 469
+      },
+      {
+        "taskId": "plan-move-en",
+        "category": "plan-apply-recovery",
+        "language": "en",
+        "status": "blocked_harness",
+        "expectedTools": [
+          "plan_move_note"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [
+          {
+            "tool": "plan_move_note",
+            "reason": "creates_plan_stateful"
+          }
+        ],
+        "safetySkipped": [],
+        "schemaCostBytes": 465
+      },
+      {
+        "taskId": "plan-version-restore-zh",
+        "category": "plan-apply-recovery",
+        "language": "zh",
+        "status": "blocked_harness",
+        "expectedTools": [
+          "plan_restore_version"
+        ],
+        "expectedPresent": true,
+        "verified": [],
+        "failed": [],
+        "unprobed": [
+          {
+            "tool": "plan_restore_version",
+            "reason": "creates_plan_stateful"
+          }
+        ],
+        "safetySkipped": [],
+        "schemaCostBytes": 417
+      },
+      {
+        "taskId": "compare-versions-zh",
+        "category": "plan-apply-recovery",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "compare_note_versions"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "compare_note_versions"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 1334
+      },
+      {
+        "taskId": "negative-readonly-delete-en",
+        "category": "negative-authorization",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "server_info"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "server_info"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 85
+      },
+      {
+        "taskId": "negative-readonly-frontmatter-zh",
+        "category": "negative-authorization",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "server_info",
+          "get_note"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "server_info",
+          "get_note"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 484
+      },
+      {
+        "taskId": "negative-path-traversal-mixed",
+        "category": "negative-authorization",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "get_file"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "get_file"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 415
+      },
+      {
+        "taskId": "negative-readonly-git-push-zh",
+        "category": "negative-authorization",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "server_info",
+          "git_status"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "server_info",
+          "git_status"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 170
+      },
+      {
+        "taskId": "bootstrap-workflow-en",
+        "category": "bootstrap-context",
+        "language": "en",
+        "status": "ready",
+        "expectedTools": [
+          "agent_bootstrap"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "agent_bootstrap"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 739
+      },
+      {
+        "taskId": "bootstrap-handoff-zh",
+        "category": "bootstrap-context",
+        "language": "zh",
+        "status": "ready",
+        "expectedTools": [
+          "agent_bootstrap",
+          "search_notes",
+          "get_note"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "agent_bootstrap",
+          "search_notes",
+          "get_note"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 2534
+      },
+      {
+        "taskId": "server-info-capability-mixed",
+        "category": "bootstrap-context",
+        "language": "mixed",
+        "status": "ready",
+        "expectedTools": [
+          "server_info",
+          "index_status"
+        ],
+        "expectedPresent": true,
+        "verified": [
+          "server_info",
+          "index_status"
+        ],
+        "failed": [],
+        "unprobed": [],
+        "safetySkipped": [],
+        "schemaCostBytes": 218
+      }
+    ]
+  },
+  "schemaCost": {
+    "catalogInputSchemaBytes": 29032,
+    "catalogOutputSchemaBytes": 62455,
+    "catalogDescriptorBytes": 138997,
+    "fixtureSchemaCostBytesTotal": 24417,
+    "fixtureSchemaCostBytesMax": 2534
+  },
+  "agentTaskSuccess": {
+    "status": "blocked",
+    "reason": "No model/agent harness exists in this slice. Task-level completion, tool-selection precision/recall and discovery rounds are not deterministically measurable here and were not simulated."
+  },
+  "safety": {
+    "policy": "only tools annotated readOnlyHint:true by the deployed server were invoked",
+    "statefulReadToolsSkipped": [
+      "file_upload_status",
+      "get_note_plan",
+      "plan_note_changes",
+      "plan_move_note",
+      "plan_delete_note",
+      "plan_restore_version",
+      "plan_restore_from_trash"
+    ],
+    "writeOrDestructiveToolsInvoked": 0,
+    "payloadBodiesRecorded": false
+  },
+  "measured": [
+    "real tools/call outcomes per read-only deployed tool",
+    "fixture-level readiness against the real eager catalog",
+    "real MCP call counts and per-call result byte sizes",
+    "task-relevant input-schema byte cost per fixture"
+  ],
+  "unmeasured": [
+    "end-to-end agent task success (blocked: no agent harness)",
+    "tool-selection precision/recall and wrong-tool rate",
+    "latency (intentionally not captured)",
+    "write/destructive tool execution (intentionally never invoked)"
+  ]
+}

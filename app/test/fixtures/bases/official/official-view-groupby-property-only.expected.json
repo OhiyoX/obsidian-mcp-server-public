@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Notes/Alpha.md", "Notes/Beta.md", "Archive/Gamma.md", "Notes/Delta.md", "Notes/Nested/Deep.md"],
+  "note": "刀4：缺 direction 时按 ASC（DEFAULT_GROUP_DIRECTION）执行；组序 active/deferred/done",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

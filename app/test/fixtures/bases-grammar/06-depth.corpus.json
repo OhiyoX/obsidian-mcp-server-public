@@ -1,0 +1,107 @@
+{
+  "target": "base-expression",
+  "group": "depth",
+  "title": "嵌套深度：恰好 20 通过、21 失败（括号层、一元操作数层，以及两者相加）",
+  "anchors": [
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§7 公式引擎架构约束",
+      "quote": "现有公式嵌套深度 20 不得在 P1 无依据放宽。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§14.2 Parser / AST",
+      "quote": "depth=20 边界和 >20 fail。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Arithmetic operators（`( )` 行）",
+      "quote": "| `( )`    | parenthesis |",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "design",
+      "source": "SEMANTIC-ORDER-EVIDENCE.md（现场）",
+      "locator": "B1 / §7 确定性保证（项目自定收窄）",
+      "quote": "保持现行「先全量编译所有公式」的确定性保证；不主张 parity。",
+      "url": "file:///D:/Coding/Codex/obsidian%20server%20projects/scratch/bases-p1/SEMANTIC-ORDER-EVIDENCE.md"
+    }
+  ],
+  "note": "本组用 `parenDepth` / `unaryDepth` 描述输入（driver 生成 `\"(\".repeat(parenDepth) + \"!\".repeat(unaryDepth) + \"1\" + \")\".repeat(parenDepth)`），避免手写长括号串数错层数；边界语义在 docs/bases/BASES-GRAMMAR-CORPUS.md §5 冻结。",
+  "cases": [
+    {
+      "id": "depth-parens-01-accept",
+      "parenDepth": 1,
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 1 },
+      "note": "最小可用括号层"
+    },
+    {
+      "id": "depth-parens-19-accept",
+      "parenDepth": 19,
+      "outcome": "accept",
+      "astType": "literal",
+      "note": "上限下一层"
+    },
+    {
+      "id": "depth-parens-20-accept",
+      "parenDepth": 20,
+      "outcome": "accept",
+      "astType": "literal",
+      "note": "边界：恰好 20 层通过（§14.2 要求精确的 20/21 边界，而不是 19 vs 100）"
+    },
+    {
+      "id": "depth-parens-21-reject",
+      "parenDepth": 21,
+      "outcome": "reject",
+      "code": "limit",
+      "messageTemplate": "Expression nesting exceeds the maximum depth of 20 at position {position}",
+      "note": "边界：21 层失败，code 为 limit（语法合法但超出冻结安全上限）"
+    },
+    {
+      "id": "depth-parens-25-reject",
+      "parenDepth": 25,
+      "outcome": "reject",
+      "code": "limit",
+      "messageTemplate": "Expression nesting exceeds the maximum depth of 20 at position {position}",
+      "note": "远超上限同样稳定失败，不递归爆栈"
+    },
+    {
+      "id": "depth-unary-20-accept",
+      "unaryDepth": 20,
+      "outcome": "accept",
+      "astType": "unary",
+      "note": "一元操作数也计层：20 个 `!` 通过"
+    },
+    {
+      "id": "depth-unary-21-reject",
+      "unaryDepth": 21,
+      "outcome": "reject",
+      "code": "limit",
+      "messageTemplate": "Expression nesting exceeds the maximum depth of 20 at position {position}",
+      "note": "21 个 `!` 失败——若一元不计层，这样的输入会把 JS 调用栈打穿（不泄漏反例见测试文件）"
+    },
+    {
+      "id": "depth-combined-20-accept",
+      "parenDepth": 10,
+      "unaryDepth": 10,
+      "outcome": "accept",
+      "astType": "unary",
+      "note": "括号层 + 一元层相加：10 + 10 = 20 通过，证明两种嵌套共用同一个计数器"
+    },
+    {
+      "id": "depth-combined-21-reject",
+      "parenDepth": 10,
+      "unaryDepth": 11,
+      "outcome": "reject",
+      "code": "limit",
+      "messageTemplate": "Expression nesting exceeds the maximum depth of 20 at position {position}",
+      "note": "10 + 11 = 21 失败"
+    }
+  ]
+}

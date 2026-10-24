@@ -1,0 +1,24 @@
+/* Render-parity font-token fixture (issue #361).
+ *
+ * A font FAMILY list is not a colour: one declaration is valid in every colour
+ * mode, so this fixture deliberately carries no `.theme-dark` block. Its job is
+ * to keep the three font tokens the Web document hosts consume apart, so an
+ * assertion can tell "the host consumed --font-text" from "the host inherited
+ * the body/interface font":
+ *
+ *   --font-interface-theme   -> chrome (app.css `body { font: ... var(--font-interface) }`)
+ *   --font-text-theme        -> the document surfaces (.preview, .cm-editor)
+ *   --font-monospace-theme   -> code fences and the CodeMirror gutter
+ *
+ * None of these families is installed anywhere, so the computed value stays
+ * exactly the declared list and cannot be perturbed by the fonts available on
+ * the machine that runs the gate. The two lists used by the text host and the
+ * interface host are intentionally DIFFERENT: with app.css's own defaults
+ * `--font-text-theme` aliases `--font-interface-theme`, so a same-valued
+ * fixture could not fail when a host stops consuming the text token.
+ */
+:root, .theme-light, .theme-dark {
+  --font-interface-theme: "RenderParity UI Alpha", "RenderParity UI Beta", sans-serif;
+  --font-text-theme: "RenderParity Text Alpha", "RenderParity Text Beta", serif;
+  --font-monospace-theme: "RenderParity Mono Alpha", monospace;
+}

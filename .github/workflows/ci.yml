@@ -1,0 +1,379 @@
+name: CI
+run-name: CI ${{ github.ref_type }}:${{ github.ref_name }}
+
+# Jobs run on the repository's self-hosted runner pool.
+#
+# Pool eligibility is determined by live labels, not host names. Check live
+# runner availability/labels when queue time grows.
+#
+# Runner contract: image = playwright:v1.63.0-noble + Node 22 at
+# /opt/node22 + Chromium 1243 at /ms-playwright. Changing PLAYWRIGHT_VERSION here requires
+# rebuilding that image.
+#
+# The `Chromium web regression` job additionally requires the custom `browser` label. Add the
+# label to any runner that can hold the real browser gate
+# (`gh api -X POST repos/<owner>/<repo>/actions/runners/<id>/labels -f 'labels[]=browser'`)
+# instead of pinning the job to one host.
+
+# This workflow is manual-only; public-checks.yml runs on pushes and pull
+# requests. Operators with a self-hosted runner pool can run it via dispatch.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Frozen Web Catalog runtime baseline. `sqlite-store.js` imports the built-in
+# `node:sqlite` (DatabaseSync), whose FTS5 build needs Node >= 22.16; the same
+# version is pinned in app/package.json engines and app/Dockerfile. The runner
+# image bakes exactly this version and every job verifies the runtime against
+# this declaration, so the contract cannot drift silently.
+env:
+  NODE_BASELINE: '22.16'
+
+# Eligible runners serve this repo (see the live-label note above), so jobs are
+# not fully serial -- but a superseded run still must not keep queueing behind the new one.
+# Cancelling a superseded run keeps that queue from growing while a push is still moving.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Documentation-only change sets cannot affect the app, the dependency tree or the browser shell,
+  # so the three heavy gates are skipped for them. A skipped job reports as `SKIPPED`, which the
+  # merge/tag guard accepts (`{SUCCESS, SKIPPED}`); tag pushes always run everything, because the
+  # release gate must see real results.
+  #
+  # The verdict comes from `.github/scripts/classify-change-set.sh`, unit-tested by
+  # `app/test/ci-change-classification.test.js`. Documentation = `docs/**` (nothing under `docs/` is an
+  # app-build input, so its JS/CSS prototypes count too) or a Markdown file at the repository root.
+  # Markdown elsewhere — `app/test/fixtures/*.md`, `app/test/fixtures/**/Notes/*.md` — is a gate input
+  # and therefore runs the heavy gates.
+  #
+  # FAIL-CLOSED DIRECTION: skipping requires an *explicit* `false` from a *successful* classification.
+  # A failed job, an empty/unusable base, an unresolvable object, a failing `git diff`, a failed or
+  # malformed classifier result, an empty output and a tag push all keep the heavy gates RUNNING.
+  changes:
+    name: Classify the change set
+    runs-on: [self-hosted, linux, x64, obsidian-ci]
+    timeout-minutes: 10
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        name: Decide whether the heavy gates are needed
+        shell: bash
+        env:
+          CHANGE_REF: ${{ github.ref }}
+          CHANGE_EVENT: ${{ github.event_name }}
+          CHANGE_PULL_REQUEST_BASE: ${{ github.event.pull_request.base.sha }}
+          CHANGE_PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ "${CHANGE_EVENT}" == pull_request ]]; then
+            base="${CHANGE_PULL_REQUEST_BASE}"
+          else
+            base="${CHANGE_PUSH_BEFORE}"
+          fi
+          if ! code="$(bash .github/scripts/classify-change-set.sh --ref "${CHANGE_REF}" "${base}" "${GITHUB_SHA}")"; then
+            echo "classifier failed: run the heavy gates"
+            code=true
+          fi
+          if [[ "${code}" != true && "${code}" != false ]]; then
+            echo "unexpected classifier output '${code}': run the heavy gates"
+            code=true
+          fi
+          echo "code=${code}" >> "$GITHUB_OUTPUT"
+          echo "change set classified: code=${code}"
+  app:
+    # Only an explicit `false` from a successful classification skips the heavy gates; a failed job,
+    # a cancellation race or an empty output keeps them running. See the `changes` job above.
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false') }}
+    runs-on: [self-hosted, linux, x64, obsidian-ci]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify runner toolchain
+        run: |
+          set -eux
+          node -v
+          npm -v
+          python3 -V
+          git --version
+          node -e '
+            const baseline = process.env.NODE_BASELINE;
+            const [major, minor] = process.versions.node.split(".").map(Number);
+            const [wantMajor, wantMinor] = baseline.split(".").map(Number);
+            if (major !== wantMajor || minor < wantMinor) {
+              throw new Error(
+                `runner Node ${process.versions.node} is below the frozen baseline ${baseline}`,
+              );
+            }
+            console.log(`node ${process.versions.node} satisfies baseline ${baseline}`);
+          '
+      - run: npm ci
+        working-directory: app
+      - run: npm run check
+        working-directory: app
+      - name: Run fail-closed Node test gate
+        run: node scripts/run-node-tests-ci.mjs
+        working-directory: app
+      - run: npm run build:web
+        working-directory: app
+      - run: git diff --exit-code -- app/src/app/assets
+      - name: Run fail-closed Python test gate
+        run: python3 scripts/run-python-tests-ci.py
+
+  dependency-audit:
+    name: Dependency audit
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false') }}
+    runs-on: [self-hosted, linux, x64, obsidian-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: npm ci
+        working-directory: app
+      - name: Audit locked dependencies
+        run: npm audit --audit-level=low
+        working-directory: app
+
+  browser:
+    name: Chromium web regression
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false') }}
+    # U54: the real browser gate needs a runner that can finish the full check suite inside the
+    # harness deadline and hold the editor latency envelope. Measured evidence: on runners that
+    # only met the obsidian-ci label, attempts were killed by the harness deadline (no
+    # `results.json`, so the job reported 0/0 checks); a runner with the `browser` label finished
+    # the same suite green. The custom `browser` label therefore excludes slower runners without
+    # pinning the gate to a single machine: another proven browser-capable runner can join by
+    # taking the label (`gh api -X POST .../runners/<id>/labels -f 'labels[]=browser'`). The
+    # `app` and `Dependency audit` jobs stay on the whole pool. Re-check the evidence before
+    # removing it.
+    runs-on: [self-hosted, linux, x64, obsidian-ci, browser]
+    timeout-minutes: 25
+    env:
+      PLAYWRIGHT_VERSION: '1.63.0'
+      # Chromium 1243 is baked into the runner image; never install it here.
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify runner-provided Chromium
+        run: |
+          set -eux
+          node -v
+          node -e '
+            const baseline = process.env.NODE_BASELINE;
+            const [major, minor] = process.versions.node.split(".").map(Number);
+            const [wantMajor, wantMinor] = baseline.split(".").map(Number);
+            if (major !== wantMajor || minor < wantMinor) {
+              throw new Error(
+                `runner Node ${process.versions.node} is below the frozen baseline ${baseline}`,
+              );
+            }
+          '
+          test -d "${PLAYWRIGHT_BROWSERS_PATH}"
+          ls -d "${PLAYWRIGHT_BROWSERS_PATH}"/chromium-*
+      - run: npm ci
+        working-directory: app
+      - name: Install pinned Playwright runtime
+        # Outside package-lock.json on purpose: CI-only runtime, and the pinned
+        # version is what guarantees the baked-in Chromium revision is used.
+        run: npm install --no-save --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
+        working-directory: app
+      - name: Verify Playwright resolves the baked-in Chromium
+        run: ./node_modules/.bin/playwright --version
+        working-directory: app
+      - name: Assert the harness launches the full Chromium build (#380)
+        # `chromium.launch({headless:true})` without an explicit `executablePath` resolves to
+        # `chrome-headless-shell`, whose gesture/fling timing made the tap-selection checks
+        # non-deterministic (issue #380). Asserting that `${PLAYWRIGHT_BROWSERS_PATH}/chromium-*`
+        # exists does not catch that, so this step resolves the binary through the same module
+        # the harness uses, launches it, and requires Chromium's `Browser.getVersion` product to
+        # be `Chrome/<version>` (the headless shell reports `HeadlessChrome/<version>`). The JSON
+        # report lands in the `browser-regression` artifact. Additive: the regression step below
+        # keeps its own semantics.
+        env:
+          CHROMIUM_BINARY_REPORT: ${{ runner.temp }}/browser-ci/chromium-binary.json
+        run: |
+          set -eux
+          mkdir -p "$(dirname "$CHROMIUM_BINARY_REPORT")"
+          node scripts/verify-chromium-binary.mjs
+        working-directory: app
+      - name: Build Web assets
+        run: npm run build:web
+        working-directory: app
+      - name: Run Chromium web regression
+        id: regression
+        env:
+          # `runner` is not an available context in job-level `env`, so the
+          # artifact directory is scoped per step. Each attempt writes into
+          # <root>/attempt-<n>, so a failing attempt is uploaded too.
+          WEB_BROWSER_OUTPUT: ${{ runner.temp }}/browser-ci
+          BROWSER_TEST_GATE_ATTEMPTS: '1'
+          # The harness hang detector (app/scripts/run-browser-ci.mjs). Not a check: it only
+          # decides when a stuck harness tree is killed, and it never relaxes an assertion.
+          # 600000 is the script default and its documented maximum, chosen so the attempt
+          # plus this job's setup stay inside timeout-minutes: 25 (a kill by GitHub would lose
+          # the artifacts that make a red job readable). A full green run measured 339.6s.
+          WEB_BROWSER_TIMEOUT_MS: '600000'
+          # Checks known to fail because of the self-hosted environment rather
+          # than the product. Keep this list as short as possible and delete an
+          # entry the moment the underlying check is made deterministic.
+          #
+          # Table Surface v2.11 wheels toward a computed blockTop in a fixed
+          # number of turns; on this runner CodeMirror's rendered viewport never
+          # covers the table's character offset during those turns, so the widget
+          # never mounts mid-loop (it mounts as soon as the loop stops). It
+          # passes on ubuntu-latest and fails on the parent commit here too, so it
+          # is an environment difference, not a regression.
+          KNOWN_ENVIRONMENT_FAILURES: >-
+            Table Surface v2.11 primes final geometry before the first observable table frame
+        # app/scripts/run-browser-tests-ci.mjs judges the harness result against
+        # the allow-list above. Unknown failures stay red without repeating the entire
+        # suite; an explicit diagnostic rerun retains the first artifact. U54 removed LP-12 from that
+        # class: it now judges count invariants plus same-run ratios over a control
+        # document (`app/scripts/web-regression/editing-envelope.mjs`), so its verdict no
+        # longer depends on which runner the job lands on.
+        run: node scripts/run-browser-tests-ci.mjs
+        working-directory: app
+      - name: Run Web Publish surface checks (#277/#278)
+        # Markdown-only gate, Publish lifecycle and the Admin/published surfaces. The
+        # runner is standalone (tmp Vault + real server + real Chromium, no shared
+        # harness): it does not consume the `run-browser-ci.mjs` wall-clock budget, the
+        # `timeout` below is this step's own hang detector. Checks and their count are
+        # printed to the job log (`PASS <check name>` / `summary: n/n passed`).
+        env:
+          WEB_PUBLISH_OUTPUT: ${{ runner.temp }}/web-publish
+        run: |
+          set -euo pipefail
+          mkdir -p "$WEB_PUBLISH_OUTPUT"
+          timeout --signal=TERM --kill-after=15s 180s node scripts/run-web-publish-checks.mjs 2>&1 | tee "$WEB_PUBLISH_OUTPUT/run.log"
+        working-directory: app
+      - name: Run render parity Phase 0
+        env:
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-phase0
+        run: timeout --signal=TERM --kill-after=15s 180s node scripts/render-parity-phase0.mjs
+        working-directory: app
+      - name: Run render parity Phase 1 (real theme.css inheritance)
+        env:
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-phase1
+        run: timeout --signal=TERM --kill-after=15s 180s node scripts/render-parity-phase1-theme.mjs
+        working-directory: app
+      - name: Run render parity Phase 1-B (shared geometry token)
+        env:
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-geometry
+        run: timeout --signal=TERM --kill-after=15s 180s node scripts/render-parity-phase1-geometry.mjs
+        working-directory: app
+      - name: Run render parity Phase 1-C (community theme subsets)
+        env:
+          # Derived subsets of Things / Minimal / AnuPpuccin (test/fixtures/*.subset.css).
+          # COMMUNITY_THEMES_PATH is intentionally unset: CI gates the committed
+          # subsets only and never depends on a local Vault path.
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-community
+        run: timeout --signal=TERM --kill-after=15s 300s node scripts/render-parity-phase1-community.mjs
+        working-directory: app
+      - name: Run render parity Phase 1-M (narrow viewport theme inheritance)
+        env:
+          # 375x812 and 720x900 only: 1440 stays owned by the Phase 1 step above.
+          # COMMUNITY_THEMES_PATH is intentionally unset here; the gate's optional
+          # subset pass reads the committed test/fixtures/*.subset.css and is never
+          # wired to a local Vault path.
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-phase1-mobile
+        run: timeout --signal=TERM --kill-after=15s 300s node scripts/render-parity-phase1-mobile.mjs
+        working-directory: app
+      - name: Run render parity Phase 1-F (font token -> document hosts)
+        env:
+          # #361: computed font-family of `.preview` and `.cm-editor` against the
+          # declared --font-text chain, default theme + test/fixtures/
+          # render-parity-font-fixture.css. No local Vault path is read.
+          RENDER_PARITY_OUTPUT: ${{ runner.temp }}/render-parity-font
+        run: timeout --signal=TERM --kill-after=15s 180s node scripts/render-parity-phase1-font.mjs
+        working-directory: app
+      - name: Upload Chromium regression artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-regression
+          path: ${{ runner.temp }}/browser-ci
+          if-no-files-found: warn
+          # Storage quota (issue #602): the repository's Actions storage allowance is limited, and
+          # this one artifact was 544.7 MB of the 553.5 MB held in total (245 artifacts x ~2.2 MB over the
+          # 14-day window the eight upload steps used), so uploads started failing outright —
+          # "Failed to CreateArtifact: Artifact storage quota has been hit. Unable to upload any new
+          # artifacts." (run 39295458378, job 118207256869) — which turned a green browser job red. 5
+          # days keeps the same evidence for a review window (a red run is read long before that) and
+          # holds this artifact near 195 MB, leaving the rest of the repo's artifacts (8.8 MB total)
+          # and the cache inside the allowance. Retention is housekeeping, not a check: this changes
+          # neither which scenarios run nor how their result is judged.
+          retention-days: 5
+      - name: Upload Web Publish check artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: web-publish-checks
+          path: ${{ runner.temp }}/web-publish
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase0
+          path: ${{ runner.temp }}/render-parity-phase0
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity Phase 1 artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase1
+          path: ${{ runner.temp }}/render-parity-phase1
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity Phase 1-B artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase1-geometry
+          path: ${{ runner.temp }}/render-parity-geometry
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity Phase 1-C artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase1-community
+          path: ${{ runner.temp }}/render-parity-community
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity Phase 1-M artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase1-mobile
+          path: ${{ runner.temp }}/render-parity-phase1-mobile
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload render parity Phase 1-F artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: render-parity-phase1-font
+          path: ${{ runner.temp }}/render-parity-font
+          if-no-files-found: warn
+          retention-days: 14
+
+  release-gate:
+    name: Release tag gate
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [app, browser, dependency-audit]
+    runs-on: [self-hosted, linux, x64, obsidian-ci]
+    timeout-minutes: 5
+    steps:
+      - name: Confirm tag CI prerequisites
+        run: echo "app and browser gates passed for ${{ github.ref_name }} @ ${{ github.sha }}"

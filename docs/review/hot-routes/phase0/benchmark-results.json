@@ -1,0 +1,1275 @@
+{
+  "schemaVersion": 2,
+  "artifact": "hot-routes-phase0-benchmark",
+  "status": "candidate",
+  "generatedBy": "app/scripts/hot-routes-phase0-benchmark.mjs",
+  "environment": {
+    "node": "v22.18.0",
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": 32,
+    "totalMemoryMb": 31948
+  },
+  "workload": {
+    "seed": 1592594996,
+    "noteCount": 120,
+    "skillCount": 12,
+    "readmeCount": 1,
+    "toolCount": 40,
+    "noteFolders": [
+      "Projects",
+      "Areas",
+      "Archive",
+      "Notes",
+      "Notes/Deep"
+    ],
+    "syntheticMarkdownFiles": 133,
+    "indexedMarkdownFilesObserved": 133
+  },
+  "equality": {
+    "coldVsWarmRecordPaths": true,
+    "cachedVsFreshRecordPaths": true,
+    "tagsCachedVsFresh": true,
+    "recentCachedVsFresh": true,
+    "projectEntryCachedVsNaive": true,
+    "projectEntryValue": "Projects/README.md",
+    "skillsListFirstVsRepeated": true
+  },
+  "results": {
+    "vaultIndexCold": {
+      "label": "vaultIndex.cold",
+      "samples": 5,
+      "p50Ms": 96.776,
+      "p95Ms": 97.132,
+      "minMs": 94.319,
+      "maxMs": 179.14,
+      "meanMs": 112.75,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 247.455,
+        "systemMsTotal": 282.905,
+        "userMsMeanPerSample": 49.491,
+        "systemMsMeanPerSample": 56.581
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 64913408,
+        "afterLast": 76877824,
+        "deltaFirstToLast": 11964416,
+        "deltaMeanPerSample": 2392883,
+        "deltaMaxPerSample": 5672960
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 1499,
+          "byName": {
+            "stat": 533,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 133,
+            "readFile": 0,
+            "realpath": 800,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 1499,
+        "maxTotal": 1499,
+        "perSampleTotals": [
+          1499,
+          1499,
+          1499,
+          1499,
+          1499
+        ]
+      },
+      "result": {
+        "files": 133,
+        "reparsed": 133,
+        "records": 133
+      }
+    },
+    "vaultIndexWarm": {
+      "label": "vaultIndex.warmUnchanged",
+      "samples": 25,
+      "p50Ms": 11.796,
+      "p95Ms": 13.761,
+      "minMs": 10.545,
+      "maxMs": 15.431,
+      "meanMs": 12.103,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 108.848,
+        "systemMsTotal": 188.187,
+        "userMsMeanPerSample": 4.354,
+        "systemMsMeanPerSample": 7.527
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 76877824,
+        "afterLast": 77697024,
+        "deltaFirstToLast": 819200,
+        "deltaMeanPerSample": 32768,
+        "deltaMaxPerSample": 294912
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 302,
+          "byName": {
+            "stat": 267,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 2,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 302,
+        "maxTotal": 302,
+        "perSampleTotals": [
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302
+        ]
+      },
+      "result": {
+        "files": 133,
+        "reparsed": 0,
+        "reused": 133
+      }
+    },
+    "vaultIndexPathPrefix": {
+      "label": "vaultIndex.pathPrefix",
+      "samples": 25,
+      "p50Ms": 11.143,
+      "p95Ms": 12.652,
+      "minMs": 10.366,
+      "maxMs": 13.28,
+      "meanMs": 11.317,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 112.859,
+        "systemMsTotal": 159.687,
+        "userMsMeanPerSample": 4.514,
+        "systemMsMeanPerSample": 6.387
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 77697024,
+        "afterLast": 77934592,
+        "deltaFirstToLast": 237568,
+        "deltaMeanPerSample": 9503,
+        "deltaMaxPerSample": 3932160
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 302,
+          "byName": {
+            "stat": 267,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 2,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 302,
+        "maxTotal": 302,
+        "perSampleTotals": [
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302
+        ]
+      },
+      "result": {
+        "records": 25
+      }
+    },
+    "cachedSnapshotRead": {
+      "label": "cachedSnapshot.read",
+      "samples": 50,
+      "p50Ms": 0.105,
+      "p95Ms": 0.216,
+      "minMs": 0.095,
+      "maxMs": 0.413,
+      "meanMs": 0.129,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 6.533,
+        "systemMsTotal": 0.533,
+        "userMsMeanPerSample": 0.131,
+        "systemMsMeanPerSample": 0.011
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 77934592,
+        "afterLast": 79245312,
+        "deltaFirstToLast": 1310720,
+        "deltaMeanPerSample": 26214,
+        "deltaMaxPerSample": 262144
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": {
+        "records": 133,
+        "cached": true
+      }
+    },
+    "tagsDeriveCached": {
+      "label": "tags.deriveCached",
+      "samples": 50,
+      "p50Ms": 0.012,
+      "p95Ms": 0.015,
+      "minMs": 0.012,
+      "maxMs": 0.173,
+      "meanMs": 0.016,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 0.852,
+        "systemMsTotal": 0,
+        "userMsMeanPerSample": 0.017,
+        "systemMsMeanPerSample": 0
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79245312,
+        "afterLast": 79245312,
+        "deltaFirstToLast": 0,
+        "deltaMeanPerSample": 0,
+        "deltaMaxPerSample": 0
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": [
+        {
+          "tag": "idea",
+          "count": 12
+        },
+        {
+          "tag": "meeting",
+          "count": 20
+        },
+        {
+          "tag": "project",
+          "count": 27
+        },
+        {
+          "tag": "reference",
+          "count": 24
+        },
+        {
+          "tag": "review",
+          "count": 19
+        },
+        {
+          "tag": "todo",
+          "count": 19
+        }
+      ]
+    },
+    "tagsDeriveFresh": {
+      "label": "tags.deriveFresh",
+      "samples": 15,
+      "p50Ms": 10.654,
+      "p95Ms": 11.852,
+      "minMs": 9.746,
+      "maxMs": 11.926,
+      "meanMs": 10.753,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 49.771,
+        "systemMsTotal": 97.744,
+        "userMsMeanPerSample": 3.318,
+        "systemMsMeanPerSample": 6.516
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79245312,
+        "afterLast": 79507456,
+        "deltaFirstToLast": 262144,
+        "deltaMeanPerSample": 17476,
+        "deltaMaxPerSample": 262144
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 302,
+          "byName": {
+            "stat": 267,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 2,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 302,
+        "maxTotal": 302,
+        "perSampleTotals": [
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302
+        ]
+      },
+      "result": [
+        {
+          "tag": "idea",
+          "count": 12
+        },
+        {
+          "tag": "meeting",
+          "count": 20
+        },
+        {
+          "tag": "project",
+          "count": 27
+        },
+        {
+          "tag": "reference",
+          "count": 24
+        },
+        {
+          "tag": "review",
+          "count": 19
+        },
+        {
+          "tag": "todo",
+          "count": 19
+        }
+      ]
+    },
+    "recentDeriveCached": {
+      "label": "recent.deriveCached",
+      "samples": 50,
+      "p50Ms": 0.019,
+      "p95Ms": 0.075,
+      "minMs": 0.016,
+      "maxMs": 0.17,
+      "meanMs": 0.033,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 1.028,
+        "systemMsTotal": 1.351,
+        "userMsMeanPerSample": 0.021,
+        "systemMsMeanPerSample": 0.027
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79507456,
+        "afterLast": 79507456,
+        "deltaFirstToLast": 0,
+        "deltaMeanPerSample": 0,
+        "deltaMaxPerSample": 0
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": [
+        {
+          "path": "60-Skills/engineering/skill-11/SKILL.md",
+          "modified": "2026-10-03T02:33:24.541Z",
+          "revision": "sha256:4395d91babbc92d8c2f2983d759eb9a55bae21af17cec6df6d6767ddf8d5f726"
+        },
+        {
+          "path": "60-Skills/engineering/skill-10/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:7961a7a77de52ab70aa239b526f7553605794bbe8be772ddfc302dc28f0bc3d0"
+        },
+        {
+          "path": "60-Skills/engineering/skill-4/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:4fa92b20e4e643283e45735cd30a748c2236890205727b3cd48d29b62c83315f"
+        },
+        {
+          "path": "60-Skills/engineering/skill-5/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:042db8a1b8a12b2bd8ce44fc41226166f390a7561622f06fc16445a729a2cbfa"
+        },
+        {
+          "path": "60-Skills/engineering/skill-6/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:b73ae49f8f4733262b6434b1ae8315203d64e9916688006e6b33b40cfc550cea"
+        },
+        {
+          "path": "60-Skills/engineering/skill-7/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:397ded92ff8dce153e85cd9e4d763f865c98750d0f4c44f18a1ac34139034847"
+        },
+        {
+          "path": "60-Skills/engineering/skill-8/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:cc76b5f8787e29705fdd183b3b8a975a358d75ab77b6151097e24791cffd1197"
+        },
+        {
+          "path": "60-Skills/engineering/skill-9/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:e34e12f8d1efd4a48d45f5b8615d967815d1f6ee049c981cce65510480593718"
+        },
+        {
+          "path": "60-Skills/engineering/skill-0/SKILL.md",
+          "modified": "2026-10-03T02:33:24.535Z",
+          "revision": "sha256:f7bc81963268e33ab40758261d30757332e0fdb9a4ae40ae2063d0a2cfac9b5a"
+        },
+        {
+          "path": "60-Skills/engineering/skill-1/SKILL.md",
+          "modified": "2026-10-03T02:33:24.535Z",
+          "revision": "sha256:be14a85381bbdf23da5a8f26e22b65edd9ff806bd48bd139fa313a0a94a835f6"
+        }
+      ]
+    },
+    "recentDeriveFresh": {
+      "label": "recent.deriveFresh",
+      "samples": 15,
+      "p50Ms": 10.911,
+      "p95Ms": 11.692,
+      "minMs": 9.882,
+      "maxMs": 11.696,
+      "meanMs": 10.814,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 53.438,
+        "systemMsTotal": 91.173,
+        "userMsMeanPerSample": 3.563,
+        "systemMsMeanPerSample": 6.078
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79507456,
+        "afterLast": 79769600,
+        "deltaFirstToLast": 262144,
+        "deltaMeanPerSample": 17476,
+        "deltaMaxPerSample": 262144
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 302,
+          "byName": {
+            "stat": 267,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 2,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 302,
+        "maxTotal": 302,
+        "perSampleTotals": [
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302
+        ]
+      },
+      "result": [
+        {
+          "path": "60-Skills/engineering/skill-11/SKILL.md",
+          "modified": "2026-10-03T02:33:24.541Z",
+          "revision": "sha256:4395d91babbc92d8c2f2983d759eb9a55bae21af17cec6df6d6767ddf8d5f726"
+        },
+        {
+          "path": "60-Skills/engineering/skill-10/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:7961a7a77de52ab70aa239b526f7553605794bbe8be772ddfc302dc28f0bc3d0"
+        },
+        {
+          "path": "60-Skills/engineering/skill-4/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:4fa92b20e4e643283e45735cd30a748c2236890205727b3cd48d29b62c83315f"
+        },
+        {
+          "path": "60-Skills/engineering/skill-5/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:042db8a1b8a12b2bd8ce44fc41226166f390a7561622f06fc16445a729a2cbfa"
+        },
+        {
+          "path": "60-Skills/engineering/skill-6/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:b73ae49f8f4733262b6434b1ae8315203d64e9916688006e6b33b40cfc550cea"
+        },
+        {
+          "path": "60-Skills/engineering/skill-7/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:397ded92ff8dce153e85cd9e4d763f865c98750d0f4c44f18a1ac34139034847"
+        },
+        {
+          "path": "60-Skills/engineering/skill-8/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:cc76b5f8787e29705fdd183b3b8a975a358d75ab77b6151097e24791cffd1197"
+        },
+        {
+          "path": "60-Skills/engineering/skill-9/SKILL.md",
+          "modified": "2026-10-03T02:33:24.537Z",
+          "revision": "sha256:e34e12f8d1efd4a48d45f5b8615d967815d1f6ee049c981cce65510480593718"
+        },
+        {
+          "path": "60-Skills/engineering/skill-0/SKILL.md",
+          "modified": "2026-10-03T02:33:24.535Z",
+          "revision": "sha256:f7bc81963268e33ab40758261d30757332e0fdb9a4ae40ae2063d0a2cfac9b5a"
+        },
+        {
+          "path": "60-Skills/engineering/skill-1/SKILL.md",
+          "modified": "2026-10-03T02:33:24.535Z",
+          "revision": "sha256:be14a85381bbdf23da5a8f26e22b65edd9ff806bd48bd139fa313a0a94a835f6"
+        }
+      ]
+    },
+    "projectEntryCached": {
+      "label": "projectEntry.resolveCached",
+      "samples": 100,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "minMs": 0,
+      "maxMs": 0.011,
+      "meanMs": 0,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 0.039,
+        "systemMsTotal": 0.049,
+        "userMsMeanPerSample": 0,
+        "systemMsMeanPerSample": 0
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79769600,
+        "afterLast": 79769600,
+        "deltaFirstToLast": 0,
+        "deltaMeanPerSample": 0,
+        "deltaMaxPerSample": 0
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": "Projects/README.md"
+    },
+    "projectEntryNaive": {
+      "label": "projectEntry.resolveNaive",
+      "samples": 15,
+      "p50Ms": 10.373,
+      "p95Ms": 11.661,
+      "minMs": 9.804,
+      "maxMs": 11.913,
+      "meanMs": 10.542,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 80.157,
+        "systemMsTotal": 74.98,
+        "userMsMeanPerSample": 5.344,
+        "systemMsMeanPerSample": 4.999
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79769600,
+        "afterLast": 79675392,
+        "deltaFirstToLast": -94208,
+        "deltaMeanPerSample": -6281,
+        "deltaMaxPerSample": 1048576
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 302,
+          "byName": {
+            "stat": 267,
+            "lstat": 0,
+            "readdir": 33,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 2,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 302,
+        "maxTotal": 302,
+        "perSampleTotals": [
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302,
+          302
+        ]
+      },
+      "result": "Projects/README.md"
+    },
+    "skillsListFirstObservation": {
+      "label": "skills.listFirstObservation",
+      "samples": 10,
+      "p50Ms": 8.606,
+      "p95Ms": 9.573,
+      "minMs": 8.108,
+      "maxMs": 10.089,
+      "meanMs": 8.904,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 36.731,
+        "systemMsTotal": 48.911,
+        "userMsMeanPerSample": 3.673,
+        "systemMsMeanPerSample": 4.891
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79675392,
+        "afterLast": 79335424,
+        "deltaFirstToLast": -339968,
+        "deltaMeanPerSample": -33997,
+        "deltaMaxPerSample": 0
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 198,
+          "byName": {
+            "stat": 48,
+            "lstat": 0,
+            "readdir": 26,
+            "open": 12,
+            "readFile": 0,
+            "realpath": 74,
+            "access": 38,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 198,
+        "maxTotal": 198,
+        "perSampleTotals": [
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198
+        ]
+      },
+      "result": 12
+    },
+    "skillsListRepeated": {
+      "label": "skills.listRepeated",
+      "samples": 25,
+      "p50Ms": 8.962,
+      "p95Ms": 10.382,
+      "minMs": 8.37,
+      "maxMs": 10.796,
+      "meanMs": 9.218,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 92.563,
+        "systemMsTotal": 116.696,
+        "userMsMeanPerSample": 3.703,
+        "systemMsMeanPerSample": 4.668
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 79335424,
+        "afterLast": 79597568,
+        "deltaFirstToLast": 262144,
+        "deltaMeanPerSample": 10486,
+        "deltaMaxPerSample": 262144
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 198,
+          "byName": {
+            "stat": 48,
+            "lstat": 0,
+            "readdir": 26,
+            "open": 12,
+            "readFile": 0,
+            "realpath": 74,
+            "access": 38,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 198,
+        "maxTotal": 198,
+        "perSampleTotals": [
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198,
+          198
+        ]
+      },
+      "result": 12
+    },
+    "toolsListInMemory": {
+      "label": "toolsList.inMemory",
+      "samples": 20,
+      "p50Ms": 0.935,
+      "p95Ms": 1.66,
+      "minMs": 0.694,
+      "maxMs": 2.11,
+      "meanMs": 1.018,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 24.563,
+        "systemMsTotal": 13.241,
+        "userMsMeanPerSample": 1.228,
+        "systemMsMeanPerSample": 0.662
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 104648704,
+        "afterLast": 117579776,
+        "deltaFirstToLast": 12931072,
+        "deltaMeanPerSample": 646554,
+        "deltaMaxPerSample": 2883584
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": 40,
+      "descriptorBytes": 15291,
+      "toolCount": 40
+    },
+    "toolsListLoopback": {
+      "label": "toolsList.loopback",
+      "samples": 20,
+      "p50Ms": 1.653,
+      "p95Ms": 2.969,
+      "minMs": 1.212,
+      "maxMs": 3.43,
+      "meanMs": 1.891,
+      "cpu": {
+        "source": "process.cpuUsage",
+        "userMsTotal": 74.681,
+        "systemMsTotal": 7.777,
+        "userMsMeanPerSample": 3.734,
+        "systemMsMeanPerSample": 0.389
+      },
+      "rssBytes": {
+        "source": "process.memoryUsage().rss",
+        "beforeFirst": 118116352,
+        "afterLast": 120414208,
+        "deltaFirstToLast": 2297856,
+        "deltaMeanPerSample": 114893,
+        "deltaMaxPerSample": 3407872
+      },
+      "fsCalls": {
+        "proxy": "node:fs/promises module-method calls (FileHandle methods, streams, and OS syscalls excluded)",
+        "lastSample": {
+          "total": 0,
+          "byName": {
+            "stat": 0,
+            "lstat": 0,
+            "readdir": 0,
+            "open": 0,
+            "readFile": 0,
+            "realpath": 0,
+            "access": 0,
+            "mkdir": 0
+          }
+        },
+        "minTotal": 0,
+        "maxTotal": 0,
+        "perSampleTotals": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      "result": 40,
+      "descriptorBytes": 15291,
+      "toolCount": 40
+    }
+  },
+  "caveats": [
+    "Synthetic scratch vault only; no live Vault content.",
+    "fs-call counts are a proxy: node:fs/promises module-method calls only; FileHandle methods, streams, and OS syscalls are not captured.",
+    "fs-call totals are reported as last sample plus min/max range and per-sample totals, never as one canonical count.",
+    "CPU deltas are process.cpuUsage() user/system microseconds; RSS is process.memoryUsage().rss before/after per sample.",
+    "projectEntry.* is a proposed L1 route-resolution proxy; no project-entry API exists yet.",
+    "skills.list* has no cache/reset; first vs repeated are observations, not a cold/warm reset.",
+    "tools/list timeout causation cannot be inferred from a loopback benchmark.",
+    "Hot cache hit metrics are N/A until a Hot Route cache is implemented.",
+    "TTL/capacity numbers are proposals, not measurements, and are not frozen policy."
+  ]
+}

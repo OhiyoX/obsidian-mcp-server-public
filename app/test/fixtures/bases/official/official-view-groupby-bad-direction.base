@@ -1,0 +1,8 @@
+views:
+  - type: table
+    name: Main
+    groupBy:
+      property: status
+      direction: SIDEWAYS
+    order:
+      - file.name

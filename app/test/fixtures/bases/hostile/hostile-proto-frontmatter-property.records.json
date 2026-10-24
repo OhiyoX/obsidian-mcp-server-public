@@ -1,0 +1,131 @@
+[
+  {
+    "path": "Notes/Alpha.md",
+    "basename": "Alpha",
+    "frontmatter": {
+      "title": "Alpha",
+      "status": "active",
+      "priority": "P1",
+      "price": 3,
+      "age": 4,
+      "score": 5,
+      "updated": "2026-09-01"
+    },
+    "tags": [
+      "work",
+      "alpha"
+    ],
+    "links": [
+      {
+        "target": "Beta"
+      }
+    ],
+    "stat": {
+      "size": 111,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Notes/Beta.md",
+    "basename": "Beta",
+    "frontmatter": {
+      "title": "",
+      "status": "active",
+      "priority": "P2",
+      "price": 9,
+      "age": 3,
+      "score": 9,
+      "updated": "2026-09-03"
+    },
+    "tags": [
+      "work"
+    ],
+    "links": [],
+    "stat": {
+      "size": 222,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Archive/Gamma.md",
+    "basename": "Gamma",
+    "frontmatter": {
+      "status": "deferred",
+      "priority": "P1",
+      "price": 2,
+      "age": 8,
+      "updated": "2026-09-02"
+    },
+    "tags": [
+      "beta"
+    ],
+    "links": [
+      {
+        "target": "Alpha"
+      }
+    ],
+    "stat": {
+      "size": 333,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Notes/Delta.md",
+    "basename": "Delta",
+    "frontmatter": {
+      "title": "Delta",
+      "status": "done",
+      "priority": "P3",
+      "price": 1,
+      "age": 1,
+      "score": 2,
+      "updated": "2026-09-04"
+    },
+    "tags": [
+      "work"
+    ],
+    "links": [],
+    "stat": {
+      "size": 444,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Notes/Nested/Deep.md",
+    "basename": "Deep",
+    "frontmatter": {
+      "title": "Deep",
+      "status": "active",
+      "priority": "P1",
+      "updated": "2026-09-05"
+    },
+    "tags": [
+      "work/nested"
+    ],
+    "links": [],
+    "stat": {
+      "size": 555,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Hostile/Shadow.md",
+    "basename": "Shadow",
+    "frontmatter": {
+      "__proto__": "shadow",
+      "status": "active"
+    },
+    "tags": [],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  }
+]

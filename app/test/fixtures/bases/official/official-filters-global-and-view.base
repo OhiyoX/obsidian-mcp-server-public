@@ -1,0 +1,15 @@
+filters:
+  and:
+    - file.hasTag("work")
+    - not:
+        - status == "done"
+views:
+  - type: table
+    name: Main
+    filters:
+      and:
+        - file.inFolder("Notes")
+        - priority == "P1"
+    order:
+      - file.name
+      - priority

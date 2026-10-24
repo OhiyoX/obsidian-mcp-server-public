@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Aurora Studio mark">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="0.55" stop-color="#4c9dff"/>
+      <stop offset="1" stop-color="#39d3a8"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="52" fill="#0f1220"/>
+  <path d="M48 168c26-58 52-88 72-88s32 22 44 44c9 17 18 30 28 44" fill="none" stroke="url(#g)" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="72" cy="168" r="9" fill="#39d3a8"/>
+  <circle cx="168" cy="168" r="9" fill="#7c5cff"/>
+</svg>

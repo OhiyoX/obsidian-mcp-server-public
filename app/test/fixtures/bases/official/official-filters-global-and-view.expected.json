@@ -1,0 +1,10 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md"
+  ],
+  "note": "全局 filters 与 view.filters 以 AND 合并（官方 syntax 页明示 concatenated with an AND）",
+  "flipIn": null
+}

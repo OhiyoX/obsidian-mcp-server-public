@@ -1,0 +1,15 @@
+filters:
+  and:
+    - type == "memory"
+views:
+  - type: table
+    name: Memory
+    order:
+      - file.name
+      - memory_kind
+      - status
+      - confidence
+      - updated
+    sort:
+      - property: updated
+        direction: DESC

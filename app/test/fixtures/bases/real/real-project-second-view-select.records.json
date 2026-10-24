@@ -1,0 +1,106 @@
+[
+  {
+    "path": "Work/Project One.md",
+    "basename": "Project One",
+    "frontmatter": {
+      "title": "Project One",
+      "status": "in-progress",
+      "priority": "P1",
+      "updated": "2026-09-01",
+      "progress": 40,
+      "kind": "project"
+    },
+    "tags": [
+      "project"
+    ],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Work/Project Two.md",
+    "basename": "Project Two",
+    "frontmatter": {
+      "title": "Project Two",
+      "status": "in-progress",
+      "priority": "P2",
+      "updated": "2026-09-05",
+      "progress": 70,
+      "kind": "project"
+    },
+    "tags": [
+      "project",
+      "pinned"
+    ],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Work/Project Three.md",
+    "basename": "Project Three",
+    "frontmatter": {
+      "title": "Project Three",
+      "status": "done",
+      "priority": "P1",
+      "updated": "2026-08-20",
+      "progress": 100,
+      "kind": "project"
+    },
+    "tags": [
+      "project"
+    ],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Work/Project Four.md",
+    "basename": "Project Four",
+    "frontmatter": {
+      "name": "Project Four",
+      "status": "deferred",
+      "priority": "P3",
+      "updated": "2026-09-09",
+      "progress": 10,
+      "kind": "project"
+    },
+    "tags": [
+      "project"
+    ],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  },
+  {
+    "path": "Work/Notes/Idea.md",
+    "basename": "Idea",
+    "frontmatter": {
+      "title": "Idea",
+      "status": "in-progress",
+      "updated": "2026-09-10",
+      "kind": "note"
+    },
+    "tags": [
+      "idea"
+    ],
+    "links": [],
+    "stat": {
+      "size": 1024,
+      "created": "2026-01-01T00:00:00Z",
+      "modified": "2026-02-01T00:00:00Z"
+    }
+  }
+]

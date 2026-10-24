@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "order 引用未声明的 formula.<name> → fail closed（unsupported）",
+  "flipIn": null
+}

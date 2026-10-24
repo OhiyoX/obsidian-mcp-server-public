@@ -1,0 +1,7 @@
+summaries:
+  customAverage: 'values.mean().round(3)'
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

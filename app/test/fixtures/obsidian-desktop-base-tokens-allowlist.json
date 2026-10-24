@@ -1,0 +1,47 @@
+{
+  "kind": "obsidian-desktop-base-tokens-allowlist",
+  "version": 1,
+  "note": "Every entry is a KNOWN divergence between the Web fallback layer and desktop Obsidian 1.13.7. The gate fails when a divergence is not listed here, when a listed divergence no longer matches the recorded values, or when a listed token starts matching (stale entry). Classes: notation (same intent, different CSS), value-drift (stale copy of a desktop value), structural (needs a Web feature, not a value edit), web-invention (no desktop counterpart), web-only (not a desktop token).",
+  "entries": [
+    {
+      "token": "--font-interface-theme",
+      "modes": [
+        "dark",
+        "light"
+      ],
+      "class": "structural",
+      "status": "drift",
+      "reason": "Desktop declares the `-theme` font slots as the `'??'` placeholder and composes the real stack through `--font-interface: override, theme, var(--default-font, '??'), var(--font-default)`. The Web fallback writes its stack directly into the theme slot. Same effective families, different composition — adopted deliberately so a community theme can still override the slot."
+    },
+    {
+      "token": "--font-monospace-theme",
+      "modes": [
+        "dark",
+        "light"
+      ],
+      "class": "structural",
+      "status": "drift",
+      "reason": "Same placeholder composition as `--font-interface-theme`; desktop composes through `--font-monospace`."
+    },
+    {
+      "token": "--font-text-theme",
+      "modes": [
+        "dark",
+        "light"
+      ],
+      "class": "structural",
+      "status": "drift",
+      "reason": "Same placeholder composition as `--font-interface-theme`; desktop composes through `--font-text`."
+    },
+    {
+      "token": "--line-width",
+      "modes": [
+        "dark",
+        "light"
+      ],
+      "class": "web-only",
+      "status": "desktop-undeclared",
+      "reason": "Not an Obsidian core token. Desktop core reads `--file-line-width`; `--line-width` is a community-theme convention (Things and Minimal both declare `--line-width: 40rem`). The Web app consumes only the theme convention, so the core knob — and any theme that sets it — has no effect on Web reading width."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md"
+  ],
+  "note": "INT-C：公式属性可参与 view.filters（typed 比较）；label=file.asLink(file.name) 的原始值 \"Alpha\" == \"Alpha\" 命中 1 行（reject→accept 于 INT-C 翻转）",
+  "flipIn": null,
+  "flippedIn": "INT-C"
+}

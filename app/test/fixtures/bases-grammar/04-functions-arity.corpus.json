@@ -1,0 +1,294 @@
+{
+  "target": "base-expression",
+  "group": "functions-arity",
+  "title": "函数调用：`if()` 参数个数（2..3 合法）、未知函数、方法/高阶函数一律 unsupported",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Global → ### if()",
+      "quote": "`if(condition: any, trueResult: any, falseResult?: any): any` … `falseResult` is the optional output if `condition` is false. If omitted, defaults to `null`. … Example: `if(isModified, \"Modified\", \"Unmodified\")`",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Global",
+      "quote": "Global functions are used without a type. ### `escapeHTML()` … ### `date()` … ### `duration()` … ### `file()` … ### `html()` … ### `if()` … ### `link()` … ### `list()` … ### `max()` … ### `min()` … ### `now()` … ### `number()` … ### `today()` … ### `random()`",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## List type → ### map()",
+      "quote": "`list.map(value: Any): list` … Example: `[1,2,3,4].map(value + 1)` returns `[2,3,4,5]`.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Formulas.md",
+      "locator": "## Write a formula → ### Use functions",
+      "quote": "Functions perform operations on values. The available functions depend on the type of value you're working with.",
+      "url": "https://obsidian.md/help/formulas"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§7 公式引擎架构约束 + §8 函数与类型策略",
+      "quote": "不要以“官方有这个函数”为理由一次性全实现。P1-C 采用 deterministic allowlist。… plugin functions 永久不自动执行。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    }
+  ],
+  "cases": [
+    {
+      "id": "function-if-three-arguments",
+      "input": "if(a, b, c)",
+      "outcome": "accept",
+      "ast": {
+        "type": "call",
+        "name": "if",
+        "args": [
+          { "type": "reference", "namespace": "note", "name": "a", "explicit": false },
+          { "type": "reference", "namespace": "note", "name": "b", "explicit": false },
+          { "type": "reference", "namespace": "note", "name": "c", "explicit": false }
+        ]
+      },
+      "note": "官方 if() 签名三参形态"
+    },
+    {
+      "id": "function-if-documented-example",
+      "input": "if(isModified, \"Modified\", \"Unmodified\")",
+      "outcome": "accept",
+      "ast": {
+        "type": "call",
+        "name": "if",
+        "args": [
+          { "type": "reference", "namespace": "note", "name": "isModified", "explicit": false },
+          { "type": "literal", "valueType": "string", "value": "Modified" },
+          { "type": "literal", "valueType": "string", "value": "Unmodified" }
+        ]
+      },
+      "note": "官方 Functions.md if() 示例逐字"
+    },
+    {
+      "id": "function-if-two-arguments",
+      "input": "if(a, b)",
+      "outcome": "accept",
+      "ast": {
+        "type": "call",
+        "name": "if",
+        "args": [
+          { "type": "reference", "namespace": "note", "name": "a", "explicit": false },
+          { "type": "reference", "namespace": "note", "name": "b", "explicit": false }
+        ]
+      },
+      "note": "falseResult 在官方签名里是可选的（optional）→ 2 个参数合法，缺失分支默认 null"
+    },
+    {
+      "id": "function-if-nested",
+      "input": "if(a, if(b, c, d), e)",
+      "outcome": "accept",
+      "ast": {
+        "type": "call",
+        "name": "if",
+        "args": [
+          { "type": "reference", "namespace": "note", "name": "a", "explicit": false },
+          {
+            "type": "call",
+            "name": "if",
+            "args": [
+              { "type": "reference", "namespace": "note", "name": "b", "explicit": false },
+              { "type": "reference", "namespace": "note", "name": "c", "explicit": false },
+              { "type": "reference", "namespace": "note", "name": "d", "explicit": false }
+            ]
+          },
+          { "type": "reference", "namespace": "note", "name": "e", "explicit": false }
+        ]
+      },
+      "note": "嵌套 if（P0 子集已支持的多层 if 形状）；参数分别计一层深度"
+    },
+    {
+      "id": "function-if-with-expressions",
+      "input": "if(file.size > 0, \"yes\", \"no\")",
+      "outcome": "accept",
+      "ast": {
+        "type": "call",
+        "name": "if",
+        "args": [
+          {
+            "type": "comparison",
+            "operator": ">",
+            "left": { "type": "reference", "namespace": "file", "name": "size", "explicit": true },
+            "right": { "type": "literal", "valueType": "number", "value": 0 }
+          },
+          { "type": "literal", "valueType": "string", "value": "yes" },
+          { "type": "literal", "valueType": "string", "value": "no" }
+        ]
+      },
+      "note": "参数可以是任意子表达式（比较 + 字符串字面量）"
+    },
+    {
+      "id": "function-if-bare-reference-without-call",
+      "input": "if",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "note", "name": "if", "explicit": false },
+      "note": "不带括号的 `if` 是一个名为 if 的裸 property（官方裸 property 规则），不是函数调用"
+    },
+    {
+      "id": "function-reject-if-one-argument",
+      "input": "if(a)",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Function \"if\" expects 2 to 3 arguments but found 1 at position {position}",
+      "note": "参数个数违反官方签名 → syntax（调用形态本身可判，且不求值）"
+    },
+    {
+      "id": "function-reject-if-zero-arguments",
+      "input": "if()",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Function \"if\" expects 2 to 3 arguments but found 0 at position {position}",
+      "note": "同上；空参数列表也走 arity 检查，而不是让 if 静默变 missing"
+    },
+    {
+      "id": "function-reject-if-four-arguments",
+      "input": "if(a, b, c, d)",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Function \"if\" expects 2 to 3 arguments but found 4 at position {position}",
+      "note": "官方最多 3 个参数"
+    },
+    {
+      "id": "function-reject-trailing-comma",
+      "input": "if(a, b, )",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 9,
+      "messageTemplate": "Expected an expression but found {token} at position {position}",
+      "note": "尾随逗号缺参数"
+    },
+    {
+      "id": "function-reject-unknown-function",
+      "input": "frobnicate(1)",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "permanent",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "未知函数名 fail closed（不得当作属性读取）"
+    },
+    {
+      "id": "function-reject-official-now-call",
+      "input": "now()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 Global 函数；时变函数需要 injected clock 契约（契约 §4/§8）→ 留 P1-C/后续"
+    },
+    {
+      "id": "function-reject-official-today-call",
+      "input": "today()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "同上（官方 Global today()）"
+    },
+    {
+      "id": "function-reject-official-date-call",
+      "input": "date(\"2025-01-01\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 Global date()；日期函数须等 injected timezone/clock 契约（§8 优先级 3）→ P1-C"
+    },
+    {
+      "id": "function-reject-official-number-call",
+      "input": "number(\"3.4\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 Global number()（示例 `number(\"3.4\")` 返回 3.4）→ P1-C allowlist；本刀只解析调用形态"
+    },
+    {
+      "id": "function-reject-official-link-call",
+      "input": "link(\"filename\", \"display\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 Global link()（Link 类型构造）→ P1-C"
+    },
+    {
+      "id": "function-reject-method-file-aslink",
+      "input": "file.asLink()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 file.asLink()；P0 子集的老实现暂留在 base-formulas.js，本刀不接线"
+    },
+    {
+      "id": "function-reject-method-string-lower",
+      "input": "file.name.lower()",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 String 方法 lower() → P1-C"
+    },
+    {
+      "id": "function-reject-list-higher-order-map",
+      "input": "tags.map(value + 1)",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "官方 List 高阶函数（Functions.md map()）；契约 §8 把 list map/filter/sort 排最后 → 后续阶段"
+    },
+    {
+      "id": "function-reject-list-higher-order-filter",
+      "input": "tags.filter(value > 2)",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "同上（filter()）"
+    },
+    {
+      "id": "function-reject-nested-unknown-call",
+      "input": "1 + number(\"3\")",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 4,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "位置指向被拒的调用起点，而不是整条表达式"
+    },
+    {
+      "id": "function-reject-plugin-function",
+      "input": "plugin.customFn(1)",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "permanent",
+      "position": 0,
+      "messageTemplate": "Unsupported function \"{token}\" at position {position}",
+      "note": "plugin 函数永久 unsupported（契约 §4：不执行 community plugin 提供的 Base functions）"
+    }
+  ]
+}

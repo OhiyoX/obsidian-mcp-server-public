@@ -1,0 +1,56 @@
+{
+  "name": "obsidian-mcp-server",
+  "version": "1.0.0",
+  "description": "Streamable HTTP MCP server for a persistent Obsidian vault.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "build:web": "esbuild frontend/app/core/app.js frontend/app/features/editor/editor.js frontend/app/features/reader/reader.js frontend/app/publish.js --bundle --minify --format=iife --platform=browser --target=es2020 --outdir=src/app/assets --entry-names=[name] --asset-names=fonts/[name]-[hash] --loader:.woff=file --loader:.woff2=file --loader:.ttf=file && esbuild frontend/app/features/reader/mermaid-runtime.js --bundle --minify --format=esm --platform=browser --target=es2020 --outfile=src/app/assets/mermaid.js && esbuild frontend/app/features/canvas/canvas.js --bundle --minify --format=esm --platform=browser --target=es2020 --outfile=src/app/assets/canvas.js && esbuild frontend/app/features/bases/kanban-runtime.js --bundle --minify --format=esm --platform=browser --target=es2020 --outfile=src/app/assets/kanban.js",
+    "check": "npm run check:syntax && npm run check:architecture",
+    "check:syntax": "node scripts/check-js.mjs",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "chokidar": "^4.0.3",
+    "express": "^4.21.2",
+    "fflate": "^0.8.2",
+    "js-yaml": "^4.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.0",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/legacy-modes": "^6.5.5",
+    "@codemirror/state": "^6.7.4",
+    "@codemirror/view": "^6.43.11",
+    "@lezer/css": "^1.3.6",
+    "@lezer/highlight": "^1.2.3",
+    "@lezer/html": "^1.3.13",
+    "@lezer/javascript": "^1.5.4",
+    "@lezer/markdown": "^1.7.2",
+    "dompurify": "^3.4.16",
+    "esbuild": "^0.25.12",
+    "katex": "^0.19.0",
+    "markdown-it": "^14.3.3",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-mark": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "markdown-it-texmath": "^1.0.0",
+    "mermaid": "^12.2.0"
+  },
+  "overrides": {
+    "qs": "^6.16.0",
+    "hono": "^4.13.11"
+  },
+  "license": "MIT"
+}

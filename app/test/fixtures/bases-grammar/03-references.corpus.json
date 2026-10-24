@@ -1,0 +1,191 @@
+{
+  "target": "base-expression",
+  "group": "references",
+  "title": "属性引用：裸 property / note.* / file.* / formula.* / 未知 namespace / 嵌套成员访问",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Properties → ### Note properties",
+      "quote": "These properties can be accessed using the format `note.author` or simply `author` as a shorthand.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Properties → ### File properties",
+      "quote": "For example, a filter `file.ext == \"md\"` will be true for all Markdown files and false otherwise.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Formulas.md",
+      "locator": "## Write a formula → ### Reference properties",
+      "quote": "**Formula properties** — Other formulas using `formula.formula_name`.",
+      "url": "https://obsidian.md/help/formulas"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Access properties with `this`",
+      "quote": "Use the `this` object to access file properties. What `this` refers to, will depend on where the base is displayed.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Types → ### Objects and lists",
+      "quote": "Access list elements using square brackets, and a 0-based index. For example, `property[0]` returns the first element from the list.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Formulas.md",
+      "locator": "## Formula examples → ### Combine text fields（正文一句 + 下方的 ```js 代码块 `first_name + \" \" + last_name`）",
+      "quote": "Create a full name from first and last name:",
+      "url": "https://obsidian.md/help/formulas"
+    }
+  ],
+  "cases": [
+    {
+      "id": "reference-bare-property",
+      "input": "price",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "note", "name": "price", "explicit": false },
+      "note": "裸 property 是 note 的简写（官方 Note properties 段）"
+    },
+    {
+      "id": "reference-note-explicit",
+      "input": "note.price",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "note", "name": "price", "explicit": true },
+      "note": "显式 `note.` 前缀（官方 `note.author`）"
+    },
+    {
+      "id": "reference-bare-with-underscore-and-digit",
+      "input": "my_prop_2",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "note", "name": "my_prop_2", "explicit": false },
+      "note": "标识符形状 `[A-Za-z_][A-Za-z0-9_]*`"
+    },
+    {
+      "id": "reference-file-name",
+      "input": "file.name",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "file", "name": "name", "explicit": true },
+      "note": "官方 File properties 表 `file.name`（解析层只标记命名空间；取值的 name/basename 分歧见 unsupported 清单 DEFERRED）"
+    },
+    {
+      "id": "reference-file-mtime",
+      "input": "file.mtime",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "file", "name": "mtime", "explicit": true },
+      "note": "官方 FILE 字段表 `file.mtime`"
+    },
+    {
+      "id": "reference-formula-property",
+      "input": "formula.price_per_unit",
+      "outcome": "accept",
+      "ast": { "type": "reference", "namespace": "formula", "name": "price_per_unit", "explicit": true },
+      "note": "官方 Formulas.md `formula.formula_name`"
+    },
+    {
+      "id": "reference-formula-documented-example",
+      "input": "formula.price_per_unit * 1.1",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "*",
+        "left": { "type": "reference", "namespace": "formula", "name": "price_per_unit", "explicit": true },
+        "right": { "type": "literal", "valueType": "number", "value": 1.1 }
+      },
+      "note": "官方 Formulas.md 逐字示例 `formula.price_per_unit * 1.1`"
+    },
+    {
+      "id": "reference-bare-multiplication-example",
+      "input": "price * quantity",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "*",
+        "left": { "type": "reference", "namespace": "note", "name": "price", "explicit": false },
+        "right": { "type": "reference", "namespace": "note", "name": "quantity", "explicit": false }
+      },
+      "note": "官方 Formulas.md 示例 `price * quantity — multiply two note properties`"
+    },
+    {
+      "id": "reference-file-size-comparison",
+      "input": "file.size > 300",
+      "outcome": "accept",
+      "ast": {
+        "type": "comparison",
+        "operator": ">",
+        "left": { "type": "reference", "namespace": "file", "name": "size", "explicit": true },
+        "right": { "type": "literal", "valueType": "number", "value": 300 }
+      },
+      "note": "官方 Filters 段示例形态 `price > 2.1`，换成 file 字段"
+    },
+    {
+      "id": "reference-dashed-name-is-subtraction",
+      "input": "my-prop",
+      "outcome": "accept",
+      "ast": {
+        "type": "binary",
+        "operator": "-",
+        "left": { "type": "reference", "namespace": "note", "name": "my", "explicit": false },
+        "right": { "type": "reference", "namespace": "note", "name": "prop", "explicit": false }
+      },
+      "note": "带连字符的 frontmatter 键不是标识符：这里必须读成减法。官方对这类键给的是方括号写法 `note[\"my-prop\"]`，本刀不支持（见 07 组）"
+    },
+    {
+      "id": "reference-reject-unknown-namespace",
+      "input": "bogus.prop",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported expression namespace \"{token}\" at position {position}",
+      "note": "官方只有 note / file / formula 三种命名空间 + 裸 property 简写"
+    },
+    {
+      "id": "reference-reject-this-namespace",
+      "input": "this.name",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "permanent",
+      "position": 0,
+      "messageTemplate": "Unsupported expression namespace \"{token}\" at position {position}",
+      "note": "`this` 是官方对象，但其取值依赖 base 的展示位置（主区/嵌入/侧栏），本项目无法在注入式记录模型里确定 → 明确 unsupported（契约 §4 非目标）"
+    },
+    {
+      "id": "reference-reject-this-nested",
+      "input": "this.file.folder",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "permanent",
+      "position": 0,
+      "messageTemplate": "Unsupported expression namespace \"{token}\" at position {position}",
+      "note": "官方原文示例 `this.file.folder`；命名空间检查先于嵌套检查，报错才指向真正的根因"
+    },
+    {
+      "id": "reference-reject-nested-member-access",
+      "input": "note.author.name",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported nested member access \"{token}\" at position {position}",
+      "note": "官方 Objects 段允许 `property.subprop`；对象取值属后续阶段 → 现在 fail closed"
+    },
+    {
+      "id": "reference-reject-file-nested-member-access",
+      "input": "file.mtime.year",
+      "outcome": "reject",
+      "code": "unsupported",
+      "disposition": "P1-C",
+      "position": 0,
+      "messageTemplate": "Unsupported nested member access \"{token}\" at position {position}",
+      "note": "日期字段（Functions.md date.year）同样属后续阶段"
+    }
+  ]
+}

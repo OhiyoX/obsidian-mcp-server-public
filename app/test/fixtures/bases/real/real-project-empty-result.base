@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: 'status == "archived"'
+    order:
+      - file.name

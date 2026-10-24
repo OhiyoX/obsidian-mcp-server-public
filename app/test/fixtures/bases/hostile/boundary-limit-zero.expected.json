@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "invalid-schema",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "view.limit: 0 → invalid-schema（limit 只接受正整数）",
+  "flipIn": null
+}

@@ -1,0 +1,1575 @@
+/* RENDER-PARITY-THEME-SUBSET v1
+ * Community theme subset for render-parity Phase 1-C: Minimal
+ * Source: D:/Obsidian/vault/.obsidian/themes/Minimal/theme.css
+ * Source sha256: e1065b7ef38bb835c3a2e2700c2760e2253c896485f8d26167f5ad0744aefab3 (250464 bytes, 1087 rules)
+ * Source theme: Minimal 7.5.2 by @kepano -- license MIT License
+ * Extracted 2026-10-05T22:02:38.949Z by app/scripts/extract-theme-subset.mjs v1.0.0
+ * ---------------------------------------------------------------------------
+ * 
+ * Minimal Theme by @kepano
+ * 
+ * User interface replacement for Obsidian.
+ * 
+ * Designed to be used with the Minimal Theme Settings 
+ * plugin and the Hider plugin.
+ * 
+ * Sponsor my work:
+ * https://www.buymeacoffee.com/kepano
+ * 
+ * Readme:
+ * https://github.com/kepano/obsidian-minimal
+ * 
+ * -----------------------------------------------------------------------------
+ * 
+ * MIT License
+ * 
+ * Copyright (c) 2020-2023 Stephan Ango (@kepano)
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in 
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * Kept 162 of 1087 rules: the canonical selector surface for the 24 Markdown
+ * kinds the render-parity gate asserts, plus the transitive chain of custom-property
+ * definitions they reference (323 tokens, 339 definitions). Light mode only:
+ * `.theme-dark`-scoped rules and selectors needing a class this host never renders are
+ * excluded, so this is NOT the complete theme. Re-extract with:
+ *   node scripts/extract-theme-subset.mjs <theme.css> --out <this file>
+ * The manifest pins provenance + the body hash: the gate fails when this body, the
+ * manifest and the app's computed paint disagree.
+ * MANIFEST-JSON-BEGIN
+ * {
+ *  "tool": "app/scripts/extract-theme-subset.mjs",
+ *  "toolVersion": "1.0.0",
+ *  "extractedAt": "2026-10-05T22:02:38.949Z",
+ *  "source": {
+ *   "path": "D:/Obsidian/vault/.obsidian/themes/Minimal/theme.css",
+ *   "sha256": "e1065b7ef38bb835c3a2e2700c2760e2253c896485f8d26167f5ad0744aefab3",
+ *   "bytes": 250464,
+ *   "name": "Minimal",
+ *   "version": "7.5.2",
+ *   "author": "@kepano",
+ *   "license": "MIT License",
+ *   "licenseSource": "minimal-atom",
+ *   "licenseNotice": "---------------------------------------------------------------------------\n\nMinimal Theme by @kepano\n\nUser interface replacement for Obsidian.\n\nDesigned to be used with the Minimal Theme Settings \nplugin and the Hider plugin.\n\nSponsor my work:\nhttps://www.buymeacoffee.com/kepano\n\nReadme:\nhttps://github.com/kepano/obsidian-minimal\n\n-----------------------------------------------------------------------------\n\nMIT License\n\nCopyright (c) 2020-2023 Stephan Ango (@kepano)\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in \nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+ *  },
+ *  "subset": {
+ *   "sha256": "48484d1e87c7ab988b1e9873064f0fdca6f0961527b0ff49ff56cb78e885ef18",
+ *   "bytes": 18479,
+ *   "rules": 162,
+ *   "sourceRules": 1087,
+ *   "droppedRules": 927,
+ *   "tokens": 323,
+ *   "rootTokens": 314,
+ *   "tokenDefinitions": 339,
+ *   "byReason": {
+ *    "base-tokens": 44,
+ *    "token-closure": 2,
+ *    "canonical": 116
+ *   }
+ *  },
+ *  "sentinel": {
+ *   "--font-editor-theme": "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Inter,Ubuntu,sans-serif",
+ *   "--font-editor": "var(--font-editor-override),var(--font-text-override),var(--font-editor-theme)",
+ *   "--blockquote-style": "normal",
+ *   "--blockquote-color": "var(--text-muted)",
+ *   "--blockquote-border-thickness": "1px",
+ *   "--blockquote-border-color": "var(--quote-opening-modifier)"
+ *  },
+ *  "droppedSample": [
+ *   {
+ *    "selector": ".cards table.dataview>tbody>tr",
+ *    "props": [
+ *     "background-color",
+ *     "border",
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview>tbody>tr:hover",
+ *    "props": [
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td:first-child",
+ *    "props": [
+ *     "font-weight",
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td:last-child",
+ *    "props": [
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td:not(:first-child)",
+ *    "props": [
+ *     "font-size",
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td a",
+ *    "props": [
+ *     "text-decoration"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td:has(img)",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td img",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".links-int-on .cards table",
+ *    "props": [
+ *     "--link-decoration"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead:hover:after",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead:hover:before",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead:after,.cards table.dataview thead:before",
+ *    "props": [
+ *     "border-radius",
+ *     "font-weight",
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead:before",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead>tr",
+ *    "props": [
+ *     "border",
+ *     "background-color",
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead>tr>th",
+ *    "props": [
+ *     "border-radius",
+ *     "font-weight",
+ *     "color",
+ *     "border",
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead>tr>th[sortable-style=sortable-asc],.cards table.dataview thead>tr>th[sortable-style=sortable-desc]",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview thead>tr>th:hover",
+ *    "props": [
+ *     "color",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".list-cards.markdown-preview-view div>ul>li",
+ *    "props": [
+ *     "background-color",
+ *     "border-radius",
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".list-cards.markdown-preview-view div>ul .image-embed img",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".list-cards.markdown-preview-view div>ul>li>a",
+ *    "props": [
+ *     "--link-decoration",
+ *     "--link-external-decoration",
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".list-cards.markdown-preview-view div ul>li:hover",
+ *    "props": [
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".list-cards.markdown-preview-view div ul ul",
+ *    "props": [
+ *     "color",
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".cards table.dataview tbody>tr>td:not(:first-child)",
+ *    "props": [
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"!\"]:checked,input[data-task=\"*\"]:checked,input[data-task=\"-\"]:checked,input[data-task=\"<\"]:checked,input[data-task=\">\"]:checked,input[data-task=I]:checked,input[data-task=b]:checked,input[data-task=c]:checked,input[data-tas…",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "border",
+ *     "border-radius",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\">\"]:checked,li[data-task=\">\"]>input:checked,li[data-task=\">\"]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"<\"]:checked,li[data-task=\"<\"]>input:checked,li[data-task=\"<\"]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"?\"]:checked,li[data-task=\"?\"]>input:checked,li[data-task=\"?\"]>p>input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"/\"]:checked,li[data-task=\"/\"]>input:checked,li[data-task=\"/\"]>p>input:checked",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"/\"]:checked:after,li[data-task=\"/\"]>input:checked:after,li[data-task=\"/\"]>p>input:checked:after",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"!\"]:checked,li[data-task=\"!\"]>input:checked,li[data-task=\"!\"]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='\"']:checked,input[data-task=“]:checked,li[data-task='\"']>input:checked,li[data-task='\"']>p>input:checked,li[data-task=“]>input:checked,li[data-task=“]>p>input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"-\"]:checked,li[data-task=\"-\"]>input:checked,li[data-task=\"-\"]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=\"*\"]:checked,li[data-task=\"*\"]>input:checked,li[data-task=\"*\"]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=l]:checked,li[data-task=l]>input:checked,li[data-task=l]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=i]:checked,li[data-task=i]>input:checked,li[data-task=i]>p>input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=S]:checked,li[data-task=S]>input:checked,li[data-task=S]>p>input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "border-color",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=I]:checked,li[data-task=I]>input:checked,li[data-task=I]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=f]:checked,li[data-task=f]>input:checked,li[data-task=f]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=k]:checked,li[data-task=k]>input:checked,li[data-task=k]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=u]:checked,li[data-task=u]>input:checked,li[data-task=u]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=d]:checked,li[data-task=d]>input:checked,li[data-task=d]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=w]:checked,li[data-task=w]>input:checked,li[data-task=w]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=p]:checked,li[data-task=p]>input:checked,li[data-task=p]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=c]:checked,li[data-task=c]>input:checked,li[data-task=c]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task=b]:checked,li[data-task=b]>input:checked,li[data-task=b]>p>input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".col-lines .table-view-table thead>tr>th:not(:last-child),.col-lines .table-view-table>tbody>tr>td:not(:last-child),.col-lines table:not(.calendar) tbody>tr>td:not(:last-child)",
+ *    "props": [
+ *     "border-right"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "div[src$=\"#invert\"],div[src$=\"#multiply\"]",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".img-grid .image-embed.is-loaded img",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".img-grid .image-embed.is-loaded img:active",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "#calendar-container",
+ *    "props": [
+ *     "--color-background-day-empty",
+ *     "--color-background-day-active",
+ *     "--color-background-day-hover",
+ *     "--color-dot",
+ *     "--calendar-text-active",
+ *     "--color-text-title",
+ *     "--color-text-heading",
+ *     "--color-text-day",
+ *     "--color-text-today",
+ *     "--color-arrow",
+ *     "--color-background-day-empty"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "#calendar-container .arrow svg",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "#calendar-container .arrow:hover svg",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".markdown-preview-view .table-view-table>thead>tr>th,body .table-view-table>thead>tr>th",
+ *    "props": [
+ *     "font-weight",
+ *     "font-size",
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.row-hover) .dataview.task-list-basic-item:hover,body:not(.row-hover) .dataview.task-list-item:hover,body:not(.row-hover) .table-view-table>tbody>tr:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.row-hover .dataview.task-list-basic-item:hover,body.row-hover .dataview.task-list-item:hover,body.row-hover .table-view-table>tbody>tr:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body div.dataview-error-box p",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".markdown-preview-view .block-language-dataview table.calendar th",
+ *    "props": [
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "div[data-type=dictionary-view] .results>.container h3",
+ *    "props": [
+ *     "color",
+ *     "font-size",
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".git-view-body .file-view main:hover",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".git-view-body main",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-default-light",
+ *    "props": [
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body .excalidraw",
+ *    "props": [
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".excalidraw.theme--dark",
+ *    "props": [
+ *     "--accent-l",
+ *     "--base-l",
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-dark.minimal-default-dark",
+ *    "props": [
+ *     "--accent-l",
+ *     "--base-l",
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-light-contrast .titlebar",
+ *    "props": [
+ *     "--accent-l",
+ *     "--base-l",
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-light-contrast.minimal-status-off .status-bar",
+ *    "props": [
+ *     "--accent-l",
+ *     "--base-l",
+ *     "--bg1",
+ *     "--bg2",
+ *     "--bg3",
+ *     "--ui1",
+ *     "--ui2",
+ *     "--ui3",
+ *     "--tx1",
+ *     "--tx2",
+ *     "--tx3",
+ *     "--tx4",
+ *     "--ax1",
+ *     "--ax2",
+ *     "--ax3",
+ *     "--hl1",
+ *     "--hl2",
+ *     "--sp1"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-light-contrast .titlebar",
+ *    "props": [
+ *     "--background-modifier-accent",
+ *     "--background-modifier-border-focus",
+ *     "--background-modifier-border-hover",
+ *     "--background-modifier-border",
+ *     "--background-modifier-form-field-highlighted",
+ *     "--background-modifier-form-field",
+ *     "--background-modifier-success",
+ *     "--background-modifier-hover",
+ *     "--background-modifier-active-hover",
+ *     "--background-primary",
+ *     "--background-primary-alt",
+ *     "--background-secondary",
+ *     "--background-secondary-alt",
+ *     "--background-table-rows",
+ *     "--checkbox-color",
+ *     "--code-normal",
+ *     "--divider-color",
+ *     "--frame-divider-color",
+ *     "--icon-color-active",
+ *     "--icon-color-focused",
+ *     "--icon-color-hover",
+ *     "--icon-color",
+ *     "--icon-hex",
+ *     "--interactive-accent-hover",
+ *     "--interactive-accent",
+ *     "--interactive-hover",
+ *     "--list-marker-color",
+ *     "--modal-border-color",
+ *     "--nav-item-background-active",
+ *     "--nav-item-background-hover",
+ *     "--nav-item-color",
+ *     "--nav-item-color-active",
+ *     "--nav-item-color-hover",
+ *     "--nav-collapse-icon-color",
+ *     "--nav-collapse-icon-color-collapsed",
+ *     "--nav-indentation-guide-color",
+ *     "--prompt-border-color",
+ *     "--quote-opening-modifier",
+ *     "--ribbon-background",
+ *     "--scrollbar-active-thumb-bg",
+ *     "--scrollbar-bg",
+ *     "--scrollbar-thumb-bg",
+ *     "--search-result-background",
+ *     "--tab-text-color-focused-active",
+ *     "--tab-outline-color",
+ *     "--text-accent-hover",
+ *     "--text-accent",
+ *     "--text-blockquote",
+ *     "--text-bold",
+ *     "--text-code",
+ *     "--text-error",
+ *     "--text-faint",
+ *     "--text-highlight-bg",
+ *     "--text-italic",
+ *     "--text-muted",
+ *     "--text-normal",
+ *     "--text-on-accent",
+ *     "--text-selection",
+ *     "--text-formatting",
+ *     "--title-color-inactive",
+ *     "--title-color",
+ *     "--titlebar-background",
+ *     "--titlebar-background-focused",
+ *     "--titlebar-text-color-focused",
+ *     "--workspace-background-translucent"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-light-contrast.is-mobile .workspace-drawer.mod-left",
+ *    "props": [
+ *     "--background-modifier-accent",
+ *     "--background-modifier-border-focus",
+ *     "--background-modifier-border-hover",
+ *     "--background-modifier-border",
+ *     "--background-modifier-form-field-highlighted",
+ *     "--background-modifier-form-field",
+ *     "--background-modifier-success",
+ *     "--background-modifier-hover",
+ *     "--background-modifier-active-hover",
+ *     "--background-primary",
+ *     "--background-primary-alt",
+ *     "--background-secondary",
+ *     "--background-secondary-alt",
+ *     "--background-table-rows",
+ *     "--checkbox-color",
+ *     "--code-normal",
+ *     "--divider-color",
+ *     "--frame-divider-color",
+ *     "--icon-color-active",
+ *     "--icon-color-focused",
+ *     "--icon-color-hover",
+ *     "--icon-color",
+ *     "--icon-hex",
+ *     "--interactive-accent-hover",
+ *     "--interactive-accent",
+ *     "--interactive-hover",
+ *     "--list-marker-color",
+ *     "--modal-border-color",
+ *     "--nav-item-background-active",
+ *     "--nav-item-background-hover",
+ *     "--nav-item-color",
+ *     "--nav-item-color-active",
+ *     "--nav-item-color-hover",
+ *     "--nav-collapse-icon-color",
+ *     "--nav-collapse-icon-color-collapsed",
+ *     "--nav-indentation-guide-color",
+ *     "--prompt-border-color",
+ *     "--quote-opening-modifier",
+ *     "--ribbon-background",
+ *     "--scrollbar-active-thumb-bg",
+ *     "--scrollbar-bg",
+ *     "--scrollbar-thumb-bg",
+ *     "--search-result-background",
+ *     "--tab-text-color-focused-active",
+ *     "--tab-outline-color",
+ *     "--text-accent-hover",
+ *     "--text-accent",
+ *     "--text-blockquote",
+ *     "--text-bold",
+ *     "--text-code",
+ *     "--text-error",
+ *     "--text-faint",
+ *     "--text-highlight-bg",
+ *     "--text-italic",
+ *     "--text-muted",
+ *     "--text-normal",
+ *     "--text-on-accent",
+ *     "--text-selection",
+ *     "--text-formatting",
+ *     "--title-color-inactive",
+ *     "--title-color",
+ *     "--titlebar-background",
+ *     "--titlebar-background-focused",
+ *     "--titlebar-text-color-focused",
+ *     "--workspace-background-translucent"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-light.minimal-light-contrast.minimal-status-off .status-bar",
+ *    "props": [
+ *     "--background-modifier-accent",
+ *     "--background-modifier-border-focus",
+ *     "--background-modifier-border-hover",
+ *     "--background-modifier-border",
+ *     "--background-modifier-form-field-highlighted",
+ *     "--background-modifier-form-field",
+ *     "--background-modifier-success",
+ *     "--background-modifier-hover",
+ *     "--background-modifier-active-hover",
+ *     "--background-primary",
+ *     "--background-primary-alt",
+ *     "--background-secondary",
+ *     "--background-secondary-alt",
+ *     "--background-table-rows",
+ *     "--checkbox-color",
+ *     "--code-normal",
+ *     "--divider-color",
+ *     "--frame-divider-color",
+ *     "--icon-color-active",
+ *     "--icon-color-focused",
+ *     "--icon-color-hover",
+ *     "--icon-color",
+ *     "--icon-hex",
+ *     "--interactive-accent-hover",
+ *     "--interactive-accent",
+ *     "--interactive-hover",
+ *     "--list-marker-color",
+ *     "--modal-border-color",
+ *     "--nav-item-background-active",
+ *     "--nav-item-background-hover",
+ *     "--nav-item-color",
+ *     "--nav-item-color-active",
+ *     "--nav-item-color-hover",
+ *     "--nav-collapse-icon-color",
+ *     "--nav-collapse-icon-color-collapsed",
+ *     "--nav-indentation-guide-color",
+ *     "--prompt-border-color",
+ *     "--quote-opening-modifier",
+ *     "--ribbon-background",
+ *     "--scrollbar-active-thumb-bg",
+ *     "--scrollbar-bg",
+ *     "--scrollbar-thumb-bg",
+ *     "--search-result-background",
+ *     "--tab-text-color-focused-active",
+ *     "--tab-outline-color",
+ *     "--text-accent-hover",
+ *     "--text-accent",
+ *     "--text-blockquote",
+ *     "--text-bold",
+ *     "--text-code",
+ *     "--text-error",
+ *     "--text-faint",
+ *     "--text-highlight-bg",
+ *     "--text-italic",
+ *     "--text-muted",
+ *     "--text-normal",
+ *     "--text-on-accent",
+ *     "--text-selection",
+ *     "--text-formatting",
+ *     "--title-color-inactive",
+ *     "--title-color",
+ *     "--titlebar-background",
+ *     "--titlebar-background-focused",
+ *     "--titlebar-text-color-focused",
+ *     "--workspace-background-translucent"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".markdown-embed .file-embed-link:hover:hover",
+ *    "props": [
+ *     "background-color",
+ *     "--icon-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".file-embed-link:hover",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".markdown-rendered video",
+ *    "props": [
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".markdown-source-view video",
+ *    "props": [
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.zoom-off) .workspace-leaf-content[data-type=markdown] .view-content .image-embed:not(.canvas-node-content):active",
+ *    "props": [
+ *     "--container-img-width",
+ *     "--container-img-max-width"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.minimal-dark-black.theme-dark",
+ *    "props": [
+ *     "--kanban-border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.minimal-dark-tonal.theme-dark",
+ *    "props": [
+ *     "--kanban-border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.minimal-light-tonal.theme-light",
+ *    "props": [
+ *     "--kanban-border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.minimal-light-white.theme-light",
+ *    "props": [
+ *     "--kanban-border"
+ *    ]
+ *   }
+ *  ],
+ *  "excludedMarkers": [
+ *   "minimal-ayu",
+ *   "excalidraw"
+ *  ]
+ * }
+ * MANIFEST-JSON-END
+ */
+
+body {
+  --font-editor-theme: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Ubuntu,sans-serif;
+  --font-editor: var(--font-editor-override),var(--font-text-override),var(--font-editor-theme);
+}
+
+body {
+  --blockquote-style: normal;
+  --blockquote-color: var(--text-muted);
+  --blockquote-border-thickness: 1px;
+  --blockquote-border-color: var(--quote-opening-modifier);
+  --embed-block-shadow-hover: none;
+  --font-ui-smaller: 11px;
+  --normal-weight: 400;
+  --bold-weight: 600;
+  --link-weight: inherit;
+  --inline-title-margin-bottom: 1rem;
+  --h1-size: 1.125em;
+  --h2-size: 1.05em;
+  --h3-size: 1em;
+  --h4-size: 0.90em;
+  --h5-size: 0.85em;
+  --h6-size: 0.85em;
+  --h1-weight: 600;
+  --h2-weight: 600;
+  --h3-weight: 500;
+  --h4-weight: 500;
+  --h5-weight: 500;
+  --h6-weight: 400;
+  --h1-variant: normal;
+  --h2-variant: normal;
+  --h3-variant: normal;
+  --h4-variant: normal;
+  --h5-variant: small-caps;
+  --h6-variant: small-caps;
+  --h1-style: normal;
+  --h2-style: normal;
+  --h3-style: normal;
+  --h4-style: normal;
+  --h5-style: normal;
+  --h6-style: normal;
+  --line-width: 40rem;
+  --line-height: 1.5;
+  --line-height-normal: var(--line-height);
+  --max-width: 88%;
+  --max-col-width: 18em;
+  --icon-muted: 0.5;
+  --nested-padding: 1.1em;
+  --folding-offset: 32px;
+  --list-edit-offset: 0.5em;
+  --list-indent: 2em;
+  --list-spacing: 0.075em;
+  --input-height: 32px;
+  --header-height: 40px;
+  --metadata-label-width: 9rem;
+  --metadata-label-font-size: var(--font-adaptive-small);
+  --metadata-input-font-size: var(--font-adaptive-small);
+  --mobile-left-sidebar-width: 280pt;
+  --mobile-right-sidebar-width: 240pt;
+  --top-left-padding-y: 0px;
+  --image-muted: 0.7;
+  --image-radius: 4px;
+  --heading-spacing: 2em;
+  --p-spacing: 1.75rem;
+  --border-width: 1px;
+  --table-border-width: var(--border-width);
+  --table-selection: var(--text-selection);
+  --table-selection-border-color: var(--text-accent);
+  --table-selection-border-width: 0px;
+  --table-selection-border-radius: 0px;
+  --table-drag-handle-background-active: var(--text-selection);
+  --table-drag-handle-color-active: var(--text-accent);
+  --table-add-button-border-width: 0px;
+  --file-margins: var(--size-4-2) var(--size-4-12);
+}
+
+@media only screen and (-webkit-min-device-pixel-ratio:2),only screen and (min-device-pixel-ratio:2) {
+  .is-phone {
+    --border-width: 0.75px;
+  }
+}
+
+body {
+  --base-h: 0;
+  --base-s: 0%;
+  --base-l: 96%;
+  --accent-h: 201;
+  --accent-s: 17%;
+  --accent-l: 50%;
+}
+
+.theme-light {
+  --color-red-rgb: 208,66,85;
+  --color-orange-rgb: 213,118,63;
+  --color-yellow-rgb: 229,181,103;
+  --color-green-rgb: 168,195,115;
+  --color-cyan-rgb: 115,187,178;
+  --color-blue-rgb: 108,153,187;
+  --color-purple-rgb: 158,134,200;
+  --color-pink-rgb: 176,82,121;
+  --color-red: #d04255;
+  --color-orange: #d5763f;
+  --color-yellow: #e5b567;
+  --color-green: #a8c373;
+  --color-cyan: #73bbb2;
+  --color-blue: #6c99bb;
+  --color-purple: #9e86c8;
+  --color-pink: #b05279;
+}
+
+.theme-light {
+  --bg1: white;
+  --bg2: hsl( var(--base-h), var(--base-s), var(--base-l) );
+  --bg3: hsla( var(--base-h), var(--base-s), calc(var(--base-l) - 50%), 0.12 );
+  --ui1: hsl( var(--base-h), var(--base-s), calc(var(--base-l) - 6%) );
+  --ui2: hsl( var(--base-h), var(--base-s), calc(var(--base-l) - 12%) );
+  --ui3: hsl( var(--base-h), var(--base-s), calc(var(--base-l) - 20%) );
+  --tx1: hsl( var(--base-h), var(--base-s), calc(var(--base-l) - 90%) );
+  --tx2: hsl( var(--base-h), calc(var(--base-s) - 20%), calc(var(--base-l) - 50%) );
+  --tx3: hsl( var(--base-h), calc(var(--base-s) - 10%), calc(var(--base-l) - 25%) );
+  --tx4: hsl( var(--base-h), calc(var(--base-s) - 10%), calc(var(--base-l) - 60%) );
+  --ax1: hsl( var(--accent-h), var(--accent-s), var(--accent-l) );
+  --ax2: hsl( var(--accent-h), var(--accent-s), calc(var(--accent-l) - 8%) );
+  --ax3: hsl( var(--accent-h), var(--accent-s), calc(var(--accent-l) + 6%) );
+  --hl1: hsla( var(--accent-h), 50%, calc(var(--base-l) - 20%), 30% );
+  --hl2: rgba(255, 225, 0, 0.5);
+  --sp1: white;
+}
+
+.theme-light {
+  --mono100: black;
+  --mono0: white;
+}
+
+.theme-light {
+  --background-modifier-accent: var(--ax3);
+  --background-modifier-border-focus: var(--ui3);
+  --background-modifier-border-hover: var(--ui2);
+  --background-modifier-border: var(--ui1);
+  --background-modifier-form-field-highlighted: var(--bg1);
+  --background-modifier-form-field: var(--bg1);
+  --background-modifier-success: var(--color-green);
+  --background-modifier-hover: var(--bg3);
+  --background-modifier-active-hover: var(--bg3);
+  --background-primary: var(--bg1);
+  --background-primary-alt: var(--bg2);
+  --background-secondary: var(--bg2);
+  --background-secondary-alt: var(--bg1);
+  --background-table-rows: var(--bg2);
+  --checkbox-color: var(--ax3);
+  --code-normal: var(--tx1);
+  --divider-color: var(--ui1);
+  --frame-divider-color: var(--ui1);
+  --icon-color-active: var(--tx1);
+  --icon-color-focused: var(--tx1);
+  --icon-color-hover: var(--tx2);
+  --icon-color: var(--tx2);
+  --icon-hex: var(--mono0);
+  --interactive-accent-hover: var(--ax1);
+  --interactive-accent: var(--ax3);
+  --interactive-hover: var(--ui1);
+  --list-marker-color: var(--tx3);
+  --modal-border-color: var(--ui2);
+  --nav-item-background-active: var(--bg3);
+  --nav-item-background-hover: var(--bg3);
+  --nav-item-color: var(--tx2);
+  --nav-item-color-active: var(--tx1);
+  --nav-item-color-hover: var(--tx1);
+  --nav-collapse-icon-color: var(--tx2);
+  --nav-collapse-icon-color-collapsed: var(--tx2);
+  --nav-indentation-guide-color: var(--ui1);
+  --prompt-border-color: var(--ui3);
+  --quote-opening-modifier: var(--ui2);
+  --ribbon-background: var(--bg2);
+  --scrollbar-active-thumb-bg: var(--ui3);
+  --scrollbar-bg: transparent;
+  --scrollbar-thumb-bg: var(--ui1);
+  --search-result-background: var(--bg1);
+  --tab-text-color-focused-active: var(--tx1);
+  --tab-outline-color: var(--ui1);
+  --text-accent-hover: var(--ax2);
+  --text-accent: var(--ax1);
+  --text-blockquote: var(--tx2);
+  --text-bold: var(--tx1);
+  --text-code: var(--tx4);
+  --text-error: var(--color-red);
+  --text-faint: var(--tx3);
+  --text-highlight-bg: var(--hl2);
+  --text-italic: var(--tx1);
+  --text-muted: var(--tx2);
+  --text-normal: var(--tx1);
+  --text-on-accent: var(--sp1);
+  --text-selection: var(--hl1);
+  --text-formatting: var(--tx3);
+  --title-color-inactive: var(--tx2);
+  --title-color: var(--tx1);
+  --titlebar-background: var(--bg2);
+  --titlebar-background-focused: var(--bg2);
+  --titlebar-text-color-focused: var(--tx1);
+  --workspace-background-translucent: hsla(var(--base-h),var(--base-s), var(--base-l), 0.7);
+}
+
+.theme-light {
+  --interactive-normal: var(--bg1);
+  --interactive-accent-rgb: 220,220,220;
+  --active-line-bg: rgba(0,0,0,0.035);
+  --background-modifier-cover: hsla(var(--base-h),calc(var(--base-s) - 70%),calc(var(--base-l) - 20%),0.5);
+  --text-highlight-bg-active: rgba(0, 0, 0, 0.1);
+  --background-modifier-error: rgba(255,0,0,0.14);
+  --background-modifier-error-hover: rgba(255,0,0,0.08);
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --btn-shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+body {
+  --font-adaptive-normal: var(--font-text-size,var(--editor-font-size));
+  --font-adaptive-small: calc(var(--font-ui-small) * 1.07);
+  --font-adaptive-smaller: var(--font-ui-small);
+  --font-adaptive-smallest: var(--font-ui-smaller);
+  --line-width-wide: calc(var(--line-width) + 12.5%);
+  --font-code: calc(var(--font-adaptive-normal) * 0.9);
+  --table-text-size: calc(var(--font-adaptive-normal) * 0.875);
+}
+
+.markdown-source-view.mod-cm6 hr {
+  border-width: 2px;
+}
+
+.markdown-source-view {
+  color: var(--text-normal);
+}
+
+body {
+  --line-number-color: var(--text-faint);
+  --line-number-color-active: var(--text-muted);
+}
+
+.markdown-source-view.mod-cm6 .cm-gutters {
+  color: var(--line-number-color) !important;
+}
+
+.markdown-source-view.mod-cm6 .cm-editor .cm-gutterElement.cm-active .cm-heading-marker,
+.markdown-source-view.mod-cm6 .cm-editor .cm-lineNumbers .cm-gutterElement.cm-active {
+  color: var(--line-number-color-active);
+}
+
+.cm-editor .cm-lineNumbers {
+  background-color: var(--gutter-background);
+}
+
+.cm-editor .cm-gutterElement.cm-active .cm-heading-marker,
+.cm-editor .cm-lineNumbers .cm-gutterElement.cm-active {
+  color: var(--text-muted);
+}
+
+.markdown-source-view.mod-cm6 .cm-embed-block {
+  border: 0;
+  border-radius: 0;
+}
+
+.markdown-source-view.mod-cm6 .cm-embed-block:hover {
+  border: 0;
+}
+
+.metadata-container {
+  --input-height: 2rem;
+}
+
+.metadata-dividers {
+  --metadata-divider-width: 1px;
+  --metadata-gap: 0px;
+}
+
+body {
+  --progress-outline: var(--background-modifier-border);
+  --progress-complete: var(--text-accent);
+}
+
+.markdown-preview-view blockquote {
+  font-size: var(--blockquote-size);
+}
+
+.markdown-source-view.mod-cm6 .HyperMD-quote,
+.markdown-source-view.mod-cm6.is-live-preview .HyperMD-quote {
+  font-size: var(--blockquote-size);
+}
+
+.is-live-preview .cm-hmd-indent-in-quote {
+  color: var(--text-faint);
+}
+
+.callouts-outlined .callout .callout-title {
+  background-color: var(--background-primary);
+}
+
+.callouts-outlined .callout {
+  --callout-border-width: 1px;
+  --callout-border-opacity: 0.5;
+  --callout-title-size: 0.8em;
+  --callout-blend-mode: normal;
+  background-color: rgba(0,0,0,0);
+}
+
+body {
+  --checkbox-radius: 50%;
+  --checkbox-top: 2px;
+  --checkbox-left: 0px;
+  --checkbox-margin: 0px 6px 0px -2em;
+}
+
+body:not(.minimal-strike-lists) {
+  --checklist-done-decoration: none;
+  --checklist-done-color: var(--text-normal);
+}
+
+body {
+  --embed-max-height: none;
+  --embed-decoration-style: solid;
+  --embed-decoration-color: var(--background-modifier-border-hover);
+}
+
+.embed-strict {
+  --embed-background: transparent;
+  --embed-border-left: 0;
+  --embed-padding: 0;
+}
+
+.embed-strict .markdown-embed-content {
+  --folding-offset: 0px;
+}
+
+.embed-underline .internal-embed:not(.pdf-embed) {
+  text-decoration-line: underline;
+}
+
+.markdown-embed .markdown-embed-link:hover:hover {
+  background-color: rgba(0,0,0,0);
+  --icon-color: var(--text-accent);
+}
+
+.markdown-embed-link:hover {
+  color: var(--text-muted);
+}
+
+.internal-embed .markdown-embed {
+  border: 0;
+  border-radius: 0;
+}
+
+body {
+  --adaptive-list-edit-offset: var(--list-edit-offset);
+}
+
+.is-mobile ul>li:not(.task-list-item)::marker {
+  font-size: .8em;
+}
+
+body {
+  --pdf-dark-opacity: 1;
+}
+
+.theme-light:not(.pdf-shadows-on) {
+  --pdf-shadow: none;
+  --pdf-thumbnail-shadow: none;
+}
+
+body {
+  --table-header-border-width: 0;
+  --table-column-first-border-width: 0;
+  --table-column-last-border-width: 0;
+  --table-row-last-border-width: 0;
+  --table-edge-cell-padding-first: 0;
+  --table-edge-cell-padding-last: 0;
+  --table-cell-padding: 4px 10px;
+  --table-header-size: var(--table-text-size);
+}
+
+.markdown-rendered th {
+  --table-header-size: var(--table-text-size);
+}
+
+.markdown-preview-view table,
+.markdown-source-view.mod-cm6 table {
+  border: var(--border-width) solid var(--border-color);
+}
+
+.cm-hmd-table-sep-dummy,
+.cm-s-obsidian .HyperMD-table-row span.cm-hmd-table-sep {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+body.minimal-unstyled-tags {
+  --tag-background: transparent;
+  --tag-background-hover: transparent;
+  --tag-border-width: 0px;
+  --tag-padding-x: 0;
+  --tag-padding-y: 0;
+  --tag-size: inherit;
+  --tag-color-hover: var(--text-accent-hover);
+}
+
+body:not(.minimal-unstyled-tags) {
+  --tag-size: 0.8em;
+  --tag-padding-y: 0.2em;
+  --tag-background: transparent;
+  --tag-background-hover: transparent;
+  --tag-color: var(--text-muted);
+  --tag-border-width: 1px;
+  --tag-border-color: var(--background-modifier-border);
+  --tag-border-color-hover: var(--background-modifier-border-hover);
+  --tag-color-hover: var(--text-normal);
+}
+
+.cm-s-obsidian span.cm-error {
+  color: var(--color-red);
+}
+
+.markdown-preview-view,
+.view-content>.cm-s-obsidian,
+.view-content>.markdown-source-view.mod-cm6.is-live-preview>.cm-scroller,
+body {
+  font-size: var(--font-adaptive-normal);
+  font-weight: var(--normal-weight);
+}
+
+.cm-formatting:not(.cm-formatting-code-block):not(.cm-formatting-hashtag) {
+  color: var(--text-formatting);
+}
+
+body {
+  --content-margin: auto;
+  --content-margin-start: max( calc(50% - var(--line-width)/2), calc(50% - var(--max-width)/2) );
+  --content-line-width: min(var(--line-width), var(--max-width));
+}
+
+.is-mobile .markdown-preview-view {
+  --folding-offset: 0;
+}
+
+.markdown-preview-view .inline-embed {
+  --max-width: 100%;
+}
+
+body {
+  --container-table-max-width: var(--max-width);
+  --table-max-width: none;
+  --table-width: auto;
+  --table-margin: inherit;
+  --table-wrapper-width: fit-content;
+  --container-dataview-table-width: var(--line-width);
+  --container-img-width: var(--line-width);
+  --container-img-max-width: var(--max-width);
+  --img-max-width: 100%;
+  --img-width: auto;
+  --img-margin-start: var(--content-margin-start);
+  --img-line-width: var(--content-line-width);
+  --container-chart-width: var(--line-width);
+  --container-chart-max-width: var(--max-width);
+  --chart-max-width: none;
+  --chart-width: auto;
+  --container-map-width: var(--line-width);
+  --container-map-max-width: var(--max-width);
+  --map-max-width: none;
+  --map-width: auto;
+  --container-iframe-width: var(--line-width);
+  --container-iframe-max-width: var(--max-width);
+  --iframe-max-width: none;
+  --iframe-width: auto;
+}
+
+body {
+  --table-drag-space: 16px;
+  --container-table-margin: calc(var(--content-margin-start) - var(--table-drag-space));
+  --container-table-width: calc(var(--line-width) + var(--table-drag-space)*2);
+  --table-drag-padding: var(--table-drag-space);
+}
+
+body:not(.table-100):not(.table-max):not(.table-wide) .markdown-preview-view {
+  --container-table-margin: var(--content-margin-start);
+}
+
+body {
+  --cards-min-width: 180px;
+  --cards-max-width: 1fr;
+  --cards-mobile-width: 120px;
+  --cards-image-height: 400px;
+  --cards-padding: 1.2em;
+  --cards-image-fit: contain;
+  --cards-background: transparent;
+  --cards-border-width: 1px;
+  --cards-aspect-ratio: auto;
+  --cards-columns: repeat(auto-fit, minmax(var(--cards-min-width), var(--cards-max-width)));
+}
+
+@media(max-width:400pt) {
+  body {
+    --cards-min-width: var(--cards-mobile-width);
+  }
+}
+
+.cm-formatting.cm-formatting-task.cm-property {
+  font-size: 90%;
+}
+
+body:not(.tasks) .markdown-preview-view ul li[data-task="-"].task-list-item.is-checked,
+body:not(.tasks) .markdown-source-view.mod-cm6 .HyperMD-task-line[data-task]:is([data-task="-"]),
+body:not(.tasks) li[data-task="-"].task-list-item.is-checked {
+  color: var(--text-faint);
+  text-decoration: line-through solid var(--text-faint) 1px;
+}
+
+body {
+  --frame-background: hsl( var(--frame-background-h), var(--frame-background-s), var(--frame-background-l));
+  --frame-icon-color: var(--frame-muted-color);
+}
+
+.theme-light {
+  --frame-background-h: var(--accent-h);
+  --frame-background-s: var(--accent-s);
+  --frame-background-l: calc(var(--accent-l) + 30%);
+  --frame-outline-color: hsla( var(--frame-background-h), var(--frame-background-s), calc(var(--frame-background-l) - 6.5%), 1 );
+  --frame-muted-color: hsl( var(--frame-background-h), calc(var(--frame-background-s) - 10%), calc(var(--frame-background-l) - 35%));
+}
+
+.markdown-rendered img:not(.emoji),
+.markdown-source-view img:not(.emoji) {
+  border-radius: var(--image-radius);
+}
+
+:root {
+  --image-mix: normal;
+}
+
+img[src$="#circle"],
+span[src$="#circle"] img,
+span[src$="#round"] img {
+  border-radius: 50%;
+}
+
+img[src$="#outline"],
+span[src$="#outline"] img {
+  border: 1px solid var(--ui1);
+}
+
+img[src$="#interface"],
+span[src$="#interface"] img {
+  border: 1px solid var(--ui1);
+  border-radius: var(--radius-m);
+}
+
+body {
+  --image-grid-fit: cover;
+  --image-grid-background: transparent;
+  --img-grid-gap: 0.5rem;
+}
+
+@media(max-width:400pt) {
+  body {
+    --img-grid-gap: 0.25rem;
+  }
+}
+
+body:not(.zoom-off) .workspace-leaf-content[data-type=markdown] .view-content .markdown-preview-view img[referrerpolicy=no-referrer]:active {
+  background-color: var(--background-primary);
+}
+
+body:not(.zoom-off) .workspace-leaf-content[data-type=markdown] .view-content .markdown-preview-view img[referrerpolicy=no-referrer]:active {
+  --container-img-width: 100%;
+  --container-img-max-width: 100%;
+}
+
+body:not(.links-int-on) {
+  --link-decoration: none;
+}
+
+body:not(.links-ext-on) {
+  --link-external-decoration: none;
+}
+
+body {
+  --minimal-tab-text-color: var(--text-muted);
+  --minimal-tab-text-color-active: var(--text-normal);
+}
+
+body:not(.full-file-names) {
+  --nav-item-white-space: nowrap;
+}
+
+.theme-light {
+  --h1l: var(--ui1);
+  --h2l: var(--ui1);
+  --h3l: var(--ui1);
+  --h4l: var(--ui1);
+  --h5l: var(--ui1);
+  --h6l: var(--ui1);
+}
+
+body {
+  --canvas-dot-pattern: var(--background-modifier-border-hover);
+}
+
+body {
+  --calendar-dot-active: var(--text-faint);
+  --calendar-dot-today: var(--text-accent);
+}
+
+#calendar-container h2 {
+  font-weight: 400;
+  font-size: var(--h2);
+}
+
+#calendar-container tr th {
+  font-weight: 500;
+  font-size: var(--font-adaptive-smallest);
+}
+
+#calendar-container tr td {
+  border-radius: var(--radius-m);
+  border: 1px solid transparent;
+}
+
+.theme-light {
+  --chart-color-1: var(--color-blue);
+  --chart-color-2: var(--color-red);
+  --chart-color-3: var(--color-yellow);
+  --chart-color-4: var(--color-green);
+  --chart-color-5: var(--color-orange);
+  --chart-color-6: var(--color-purple);
+  --chart-color-7: var(--color-cyan);
+  --chart-color-8: var(--color-pink);
+}
+
+:root {
+  --hider-ribbon-display: none;
+}
+
+.theme-light {
+  --he-title-bar-inactive-bg: var(--background-secondary);
+  --he-title-bar-inactive-pinned-bg: var(--background-secondary);
+  --he-title-bar-active-pinned-bg: var(--background-secondary);
+  --he-title-bar-active-bg: var(--background-secondary);
+  --he-title-bar-inactive-fg: var(--text-muted);
+  --he-title-bar-active-fg: var(--text-normal);
+  --he-title-bar-font-size: 14px;
+}
+
+.theme-light {
+  --popover-shadow: 0px 2.7px 3.1px rgba(0, 0, 0, 0.032),0px 5.9px 8.7px rgba(0, 0, 0, 0.052),0px 10.4px 18.1px rgba(0, 0, 0, 0.071),0px 20px 40px rgba(0, 0, 0, 0.11);
+}
+
+.theme-light {
+  --leaflet-buttons: var(--bg1);
+  --leaflet-borders: rgba(0,0,0,0.1);
+}
+
+.contains-task-list.todoist-task-list .task-metadata {
+  font-size: var(--font-adaptive-small);
+  color: var(--text-muted);
+}
+
+.todoist-task-list .task-date.task-overdue {
+  color: var(--color-orange);
+}
+
+body.theme-light {
+  --color-axis-label: var(--tx1);
+  --color-tick-label: var(--tx2);
+  --color-dot-fill: var(--ax1);
+  --color-line: var(--ui1);
+}

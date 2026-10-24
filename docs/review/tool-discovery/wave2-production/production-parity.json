@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "app/scripts/tool-discovery-production-eval.mjs",
+  "mode": "production tools/list parity",
+  "baseline": {
+    "commit": "fc926a5d853888072c60454a2fffaa86cbe78b33",
+    "inventoryPath": "docs/review/tool-discovery/inventory.json",
+    "inventoryToolCount": 85
+  },
+  "target": {
+    "endpoint": {
+      "endpointClass": "http-private-custom-port",
+      "scheme": "http",
+      "network": "private",
+      "port": "custom"
+    },
+    "transport": "streamable-http",
+    "auth": "API key header (value not recorded)",
+    "serverInfo": {
+      "name": "obsidian-mcp-server",
+      "version": "1.0.0"
+    },
+    "protocolVersion": "2025-06-18"
+  },
+  "provenance": {
+    "kind": "live-capture",
+    "offlineCanProveLiveOrigin": false,
+    "note": "Recorded from a live capture at capture time. Offline verification re-checks artifact shape, internal consistency and the local catalog only; it cannot prove this data came from a live server."
+  },
+  "status": "match",
+  "parity": {
+    "wireToolCount": 85,
+    "expectedToolCount": 85,
+    "inventoryToolCount": 85,
+    "nameSetMatchesExpected": true,
+    "nameSetMatchesInventory": true,
+    "missingFromProduction": [],
+    "extraInProduction": [],
+    "missingFromInventory": [],
+    "compared": 85,
+    "inputSchemaMismatches": [],
+    "outputSchemaMismatches": [],
+    "annotationMismatches": [],
+    "titleMismatches": [],
+    "allSchemasMatch": true,
+    "annotations": {
+      "destructiveHint": 28,
+      "idempotentHint": 52,
+      "openWorldHint": 10,
+      "readOnlyHint": 50
+    },
+    "annotationCensus": {
+      "readOnlyHint": 50,
+      "destructiveHint": 28,
+      "idempotentHint": 52,
+      "openWorldHint": 10
+    },
+    "risk": {
+      "readOnly": 50,
+      "destructive": 28,
+      "mutating": 7
+    },
+    "scopeHistogram": {
+      "obsidian.read": 47,
+      "obsidian.read+obsidian.files": 5,
+      "obsidian.read+obsidian.write": 26,
+      "obsidian.read+obsidian.write+obsidian.files": 7
+    },
+    "meta": {
+      "toolsWithMeta": 85,
+      "distinctMetaValues": 85
+    },
+    "totals": {
+      "production": {
+        "inputSchemaBytes": 29032,
+        "outputSchemaBytes": 62455,
+        "descriptorBytes": 138997
+      },
+      "inventory": {
+        "inputSchemaBytes": 29032,
+        "outputSchemaBytes": 62455
+      },
+      "inputSchemaBytesMatch": true,
+      "outputSchemaBytesMatch": true
+    }
+  },
+  "scope": {
+    "status": "not_wire_observable",
+    "source": "app/src/scopes.js MCP_TOOL_SCOPE_REQUIREMENTS",
+    "sourceToolCount": 85,
+    "deployedScopeEnforcement": "unknown",
+    "note": "`tools/list` never carries Scope. Scope is enforced per `tools/call`; this slice did not acquire a second, scope-limited production credential, so deployed enforcement was not behaviourally probed."
+  },
+  "measured": [
+    "deployed tools/list name set versus TOOL_NAMES and the Wave 1 inventory",
+    "deployed inputSchema canonical sha256 + utf8 bytes versus the Wave 1 inventory",
+    "deployed outputSchema (output contract) canonical sha256 + utf8 bytes versus the Wave 1 inventory",
+    "deployed annotations versus the Wave 1 inventory",
+    "deployed title versus the Wave 1 inventory",
+    "annotation/risk/scope histograms computed from the deployed catalog"
+  ],
+  "unmeasured": [
+    "deployed Scope enforcement (not observable over tools/list; no scope-limited credential used)",
+    "client/host tool filtering — this is a raw HTTP capture, not a specific host's filtered view",
+    "token cost (byte sizes are not tokens)"
+  ]
+}

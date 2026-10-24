@@ -1,0 +1,8 @@
+filters:
+  nand:
+    - 'status == "active"'
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

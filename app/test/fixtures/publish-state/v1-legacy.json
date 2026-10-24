@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "legacy-md-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Legacy-Markdown.md",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z",
+      "createdBy": "v1-legacy-fixture"
+    },
+    {
+      "id": "legacy-missing-xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Legacy-Missing.md",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "legacy-canvas-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Legacy-NonMarkdown.canvas",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "publicUrl": "https://example.invalid/legacy",
+      "retrievalHint": {
+        "unknownKey": true
+      }
+    }
+  ]
+}

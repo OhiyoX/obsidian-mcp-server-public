@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Notes/Alpha.md", "Notes/Beta.md", "Archive/Gamma.md", "Notes/Delta.md", "Notes/Nested/Deep.md"],
+  "note": "刀4：view.summaries 已被执行；无 groupBy ⇒ 整表一个无键组（P8）；非列属性与不可算的组值显式带 reason，不静默丢",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

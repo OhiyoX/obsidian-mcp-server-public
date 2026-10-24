@@ -1,0 +1,11 @@
+interface:
+  display_name: "Connect Obsidian MCP"
+  short_description: "Connect agents to this Obsidian MCP server"
+  default_prompt: "Use $connect-obsidian-mcp to connect to the project Obsidian MCP server and verify available tools."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "obsidian"
+      description: "Project Obsidian MCP server"
+      transport: "streamable_http"
+      url: "http://127.0.0.1:18923/mcp"

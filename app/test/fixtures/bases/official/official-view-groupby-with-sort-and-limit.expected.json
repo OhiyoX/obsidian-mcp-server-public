@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Archive/Gamma.md", "Notes/Delta.md"],
+  "note": "刀4：limit 先于分组（只保留 file.name DESC 的前 2 行），分组只对这些留存行分区：deferred/done 各 1 行",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

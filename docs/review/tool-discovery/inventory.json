@@ -1,0 +1,2883 @@
+{
+  "counts": {
+    "byIndividualScope": [
+      {
+        "count": 86,
+        "key": "obsidian.read"
+      },
+      {
+        "count": 34,
+        "key": "obsidian.write"
+      },
+      {
+        "count": 13,
+        "key": "obsidian.files"
+      }
+    ],
+    "byModule": [
+      {
+        "count": 16,
+        "key": "tools/files.js"
+      },
+      {
+        "count": 13,
+        "key": "tools/intelligence.js"
+      },
+      {
+        "count": 13,
+        "key": "tools/links.js"
+      },
+      {
+        "count": 13,
+        "key": "tools/workflows.js"
+      },
+      {
+        "count": 9,
+        "key": "tools/plans.js"
+      },
+      {
+        "count": 8,
+        "key": "tools/notes.js"
+      },
+      {
+        "count": 6,
+        "key": "tools/git.js"
+      },
+      {
+        "count": 4,
+        "key": "tools/search.js"
+      },
+      {
+        "count": 2,
+        "key": "tools/info.js"
+      },
+      {
+        "count": 2,
+        "key": "tools/publish.js"
+      }
+    ],
+    "byOpenWorld": [
+      {
+        "count": 76,
+        "key": "closed-world"
+      },
+      {
+        "count": 10,
+        "key": "open-world"
+      }
+    ],
+    "byRisk": [
+      {
+        "count": 51,
+        "key": "read-only"
+      },
+      {
+        "count": 28,
+        "key": "destructive"
+      },
+      {
+        "count": 7,
+        "key": "mutating"
+      }
+    ],
+    "byScopeSet": [
+      {
+        "count": 46,
+        "key": "obsidian.read"
+      },
+      {
+        "count": 27,
+        "key": "obsidian.read+obsidian.write"
+      },
+      {
+        "count": 7,
+        "key": "obsidian.read+obsidian.write+obsidian.files"
+      },
+      {
+        "count": 6,
+        "key": "obsidian.read+obsidian.files"
+      }
+    ]
+  },
+  "derived": [
+    {
+      "field": "risk",
+      "reason": "MCP has no `risk` field. Risk is derived deterministically from the four standard annotation hints (read-only / destructive / mutating); it is not an independent runtime claim."
+    }
+  ],
+  "evidence": {
+    "annotations": "runtime `tools/list` response: annotations completed by `app/src/tool-contracts.js` `completeToolAnnotations`",
+    "domain": "unknown: no canonical catalog/toolset taxonomy is implemented yet (Progressive Tool Discovery Phase 1); source module is reported instead",
+    "inputSchema": "runtime `tools/list` response: the SDK-computed JSON Schema (draft-07 via zod v4, strictUnions, pipeStrategy=input); canonicalized for byte measurement",
+    "module": "source evidence: which `app/src/tools/*.js` `register*Tools` function calls `server.registerTool(name, ...)`",
+    "name": "runtime `tools/list` response captured from the production registration path over an in-process MCP transport",
+    "outputContract": "runtime `tools/list` response `outputSchema`: derived from `app/src/tool-contracts.js` `outputSchemaForTool`",
+    "scope": "source evidence: `app/src/scopes.js` `MCP_TOOL_SCOPE_REQUIREMENTS` (authorization truth; not carried in `tools/list`)"
+  },
+  "generator": "scripts/tool-inventory.mjs",
+  "method": {
+    "digest": "sha256 hex over the canonical JSON text",
+    "inputSchemaBytes": {
+      "canonicalization": "recursive lexicographic object-key sort; JSON.stringify with no insignificant whitespace",
+      "encoding": "UTF-8",
+      "measurement": "Buffer.byteLength(canonicalJson, 'utf8')",
+      "state": "canonical JSON text of the `tools/list` inputSchema"
+    },
+    "outputSchemaBytes": {
+      "canonicalization": "same as inputSchemaBytes",
+      "encoding": "UTF-8",
+      "measurement": "Buffer.byteLength(canonicalJson, 'utf8')",
+      "state": "canonical JSON text of the `tools/list` outputSchema"
+    }
+  },
+  "mutability": "read-only; generated from current source without changing registration, authorization, or runtime behavior",
+  "parity": {
+    "duplicateNames": [],
+    "extraVersusToolNames": [],
+    "missingVersusToolNames": [],
+    "registrationOrderMatchesToolNames": false,
+    "toolNamesFromConfig": 86,
+    "toolsListed": 86,
+    "uniqueToolNames": 86
+  },
+  "phase": "phase-0-characterization",
+  "schemaVersion": 1,
+  "toolchain": {
+    "jsonSchemaDialect": "http://json-schema.org/draft-07/schema#",
+    "mcpSdk": "1.30.0",
+    "node": "excluded from deterministic payload",
+    "zod": "4.5.2"
+  },
+  "tools": [
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 739,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "639ccef613df8e3807ea5e32b42242b8e5efd29d2b726e2082253617a0737b80"
+      },
+      "module": "tools/info.js",
+      "name": "agent_bootstrap",
+      "outputContract": {
+        "bytes": 1856,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 14,
+        "requiredCount": 13,
+        "sha256": "9cdaf9d1f7aa20fb14990816c1201cf0424809772101cf8760b53111d9b71a3e"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Obsidian Agent Memory Bootstrap"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 85,
+        "optionalCount": 0,
+        "propertyCount": 0,
+        "requiredCount": 0,
+        "sha256": "7a014b717a77aac971ea0ab5c0ff47bb13e6cae7ef9442d9dedb15ce36381b15"
+      },
+      "module": "tools/info.js",
+      "name": "server_info",
+      "outputContract": {
+        "bytes": 1436,
+        "optionalCount": 8,
+        "present": true,
+        "propertyCount": 13,
+        "requiredCount": 5,
+        "sha256": "9a2564596ea9a14a2cdb42448410ec42d0eed81e9ba22bd44cadb86e6d4a263d"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Obsidian Server Info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 399,
+        "optionalCount": 4,
+        "propertyCount": 5,
+        "requiredCount": 1,
+        "sha256": "a2b4cf4f9aefee76922f8f7f4fb3ceacb6de93e971a88bbb342940225b150602"
+      },
+      "module": "tools/notes.js",
+      "name": "get_note",
+      "outputContract": {
+        "bytes": 1666,
+        "optionalCount": 14,
+        "present": true,
+        "propertyCount": 15,
+        "requiredCount": 1,
+        "sha256": "e352031dd519233499646d46ebd45ffcd481067f8bfbc175395295789da6e084"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 296,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "0dc131937b0c618e7cca87c4cff2417da7301a956c68b2bf8cac97ef67e43160"
+      },
+      "module": "tools/files.js",
+      "name": "pull_note_file",
+      "outputContract": {
+        "bytes": 1033,
+        "optionalCount": 7,
+        "present": true,
+        "propertyCount": 10,
+        "requiredCount": 3,
+        "sha256": "8dab928567d9999bd0277b97a8b1385a9a868d8a89b77863c7e3863eb4247669"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Pull Complete Obsidian Note File"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/notes.js",
+      "name": "get_metadata",
+      "outputContract": {
+        "bytes": 451,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "eb7a364a976f12d6f12f839d27bae68ebd12f3ed7dbaca29eda44a2333957861"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Metadata"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 604,
+        "optionalCount": 8,
+        "propertyCount": 8,
+        "requiredCount": 0,
+        "sha256": "09175d6b6bffb64c7df3f99415628236d8bf264566f62e56beccb6eeff2153f9"
+      },
+      "module": "tools/search.js",
+      "name": "list_notes",
+      "outputContract": {
+        "bytes": 502,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 3,
+        "sha256": "e22322adeb96caeee60dd25a82d815731a3aa1e559311387db61456b63117eab"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 506,
+        "optionalCount": 9,
+        "propertyCount": 9,
+        "requiredCount": 0,
+        "sha256": "c1b9f3efdd5e77ad6dccbe058b5f0c58841708c2469efbba1b5c58042f5718d9"
+      },
+      "module": "tools/files.js",
+      "name": "list_files",
+      "outputContract": {
+        "bytes": 636,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 4,
+        "sha256": "783e77c140d462e4e929ccec3fbf4a9006a4c5f30604b2a83a374bd3bae98d6d"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Files"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 181,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "727ffb5b54926f1426ebc7a8ff628057101290f451c0c67fa2fbc5ae16a3c327"
+      },
+      "module": "tools/search.js",
+      "name": "list_recent",
+      "outputContract": {
+        "bytes": 476,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "4441f5b1953417c9c45631413069f6432e287ff80b36a5dd4e2887c6bdbd6437"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Recent Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 1547,
+        "optionalCount": 22,
+        "propertyCount": 22,
+        "requiredCount": 0,
+        "sha256": "f6144e33dc304f8d6623e84537a0811d4a0fa9a2e3177e068b60d44987185a0e"
+      },
+      "module": "tools/search.js",
+      "name": "search_notes",
+      "outputContract": {
+        "bytes": 2226,
+        "optionalCount": 2,
+        "present": true,
+        "propertyCount": 12,
+        "requiredCount": 10,
+        "sha256": "26d0094d9af6fa938fbea3f4a4acc9f13545bce97da0ea618ad84989e7299b17"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Search Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 415,
+        "optionalCount": 4,
+        "propertyCount": 5,
+        "requiredCount": 1,
+        "sha256": "d02afa6bd9e5e8259313d0cba7c4425e48bcea1fd8be6be2786fe3f5d745adbe"
+      },
+      "module": "tools/files.js",
+      "name": "get_file",
+      "outputContract": {
+        "bytes": 832,
+        "optionalCount": 2,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 5,
+        "sha256": "cf5e64f70df01bcdde9f1eb05b9f3e0ae66851892f952ca3b839d09c14934fe8"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Get Obsidian File"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 205,
+        "optionalCount": 1,
+        "propertyCount": 2,
+        "requiredCount": 1,
+        "sha256": "3f9623d17be19d7d9e47c04ac7ea61d28c353129497fc2bd0f15e583a8b2eabc"
+      },
+      "module": "tools/files.js",
+      "name": "pull_file",
+      "outputContract": {
+        "bytes": 1115,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 10,
+        "requiredCount": 10,
+        "sha256": "b5ae0f474660b424995aac0a4335480ed0968d7af92af2015a55d1df72238424"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Pull Complete Vault File"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 434,
+        "optionalCount": 7,
+        "propertyCount": 8,
+        "requiredCount": 1,
+        "sha256": "a62d5e0238b38db45f95e62a663f16b91b75c833dd1db1361b58fa8788e22ac1"
+      },
+      "module": "tools/files.js",
+      "name": "write_file",
+      "outputContract": {
+        "bytes": 1162,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "42e32e999c7b6a7082f9f2ac286689567b98dd0e50f0ae45a8953cf981129c94"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Write Obsidian File"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 378,
+        "optionalCount": 3,
+        "propertyCount": 5,
+        "requiredCount": 2,
+        "sha256": "613d82c91f1ae9f4a9efced2d8841fbf8336d051588958c0614f36020ef8439d"
+      },
+      "module": "tools/files.js",
+      "name": "start_file_upload",
+      "outputContract": {
+        "bytes": 1276,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 11,
+        "requiredCount": 10,
+        "sha256": "dd467a79a94e116126baf68ea44d2f7957ce08d83be323d9f05caa532539cf65"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Start Chunked Vault File Upload"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 332,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "800147c7a6180c02e1d27bb6bc206ffd1e14564cafa81bb0be25861980b73fdc"
+      },
+      "module": "tools/files.js",
+      "name": "file_upload_status",
+      "outputContract": {
+        "bytes": 1219,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 10,
+        "requiredCount": 10,
+        "sha256": "cbbdb80f7a7f13904fe9fe7c5fa859dac2170b4ac33fc25de85cad16aa0b0ab2"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Get Vault File Upload Status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 490,
+        "optionalCount": 1,
+        "propertyCount": 4,
+        "requiredCount": 3,
+        "sha256": "e077294a7ba9f4984487b470d1b14625d530d629982602daa0e1157718fc1413"
+      },
+      "module": "tools/files.js",
+      "name": "upload_file_chunk",
+      "outputContract": {
+        "bytes": 1044,
+        "optionalCount": 8,
+        "present": true,
+        "propertyCount": 10,
+        "requiredCount": 2,
+        "sha256": "c603e650c14e8b53e5070aafe629a30b711b2c61d0b29bd3d13f526f9853390d"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Upload Vault File Chunk"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 332,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "800147c7a6180c02e1d27bb6bc206ffd1e14564cafa81bb0be25861980b73fdc"
+      },
+      "module": "tools/files.js",
+      "name": "cancel_file_upload",
+      "outputContract": {
+        "bytes": 532,
+        "optionalCount": 2,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 2,
+        "sha256": "f15b4ba4dbc5cf3f94d4fac12d9d76d404bb87d2f1bb57c9d5f102213c01ff93"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Cancel Vault File Upload"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 368,
+        "optionalCount": 2,
+        "propertyCount": 4,
+        "requiredCount": 2,
+        "sha256": "0e6c8262bda1d53a8104848640e8ea89db3b50d6ccc426fe2e43ee7c5d4f1cc4"
+      },
+      "module": "tools/files.js",
+      "name": "create_archive",
+      "outputContract": {
+        "bytes": 1066,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "41dfe460fc09fad51c6a8a7176b489f57f761a30a2097b927260e3cab97688e3"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Create Vault ZIP Archive"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/files.js",
+      "name": "inspect_archive",
+      "outputContract": {
+        "bytes": 1066,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "41dfe460fc09fad51c6a8a7176b489f57f761a30a2097b927260e3cab97688e3"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Inspect Vault ZIP Archive"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 281,
+        "optionalCount": 1,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "7288d7314ce67211bc933983efa73dd1571b2b0a77c15db1e038957f3a2a7ecb"
+      },
+      "module": "tools/files.js",
+      "name": "read_archive_entry",
+      "outputContract": {
+        "bytes": 1369,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 13,
+        "requiredCount": 12,
+        "sha256": "261d38dffc268208db02addc49a319ab4605c806ca36a1e2d3487b0a46ee0d00"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read",
+        "obsidian.files"
+      ],
+      "title": "Read Vault ZIP Entry"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 301,
+        "optionalCount": 3,
+        "propertyCount": 4,
+        "requiredCount": 1,
+        "sha256": "9056e35ba7a6ee7c6d6dd036d53b81d1ddd840b54c06acaf414706c1c8c1df03"
+      },
+      "module": "tools/files.js",
+      "name": "extract_archive",
+      "outputContract": {
+        "bytes": 1341,
+        "optionalCount": 7,
+        "present": true,
+        "propertyCount": 12,
+        "requiredCount": 5,
+        "sha256": "beb777a9baf037da35f42de74d577cd9e3f97da5e3a052c6d291a167048c5075"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Safely Extract Vault ZIP Archive"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/files.js",
+      "name": "get_canvas",
+      "outputContract": {
+        "bytes": 605,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "e25b5334d17bebf9df2cb1ac175f20bb14a984a152653034192a91ae1019c439"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Canvas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 546,
+        "optionalCount": 2,
+        "propertyCount": 4,
+        "requiredCount": 2,
+        "sha256": "289d0e51f11952faee41cc3d012cc6d30970e49ddaa571531912792d4e93f422"
+      },
+      "module": "tools/files.js",
+      "name": "write_canvas",
+      "outputContract": {
+        "bytes": 673,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "13b4d35f360b70a76e00c89a5d1304f10f7ff75cf90b29b001409113196120c2"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Write Obsidian Canvas"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 480,
+        "optionalCount": 5,
+        "propertyCount": 6,
+        "requiredCount": 1,
+        "sha256": "e6ba56e299f831a26ee56580df9896377d0ad7d53f8c5ae1be16643aab67b57d"
+      },
+      "module": "tools/notes.js",
+      "name": "write_note",
+      "outputContract": {
+        "bytes": 1162,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "42e32e999c7b6a7082f9f2ac286689567b98dd0e50f0ae45a8953cf981129c94"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Write Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 296,
+        "optionalCount": 3,
+        "propertyCount": 5,
+        "requiredCount": 2,
+        "sha256": "2f9958e561cea1b9570729c65b31244a023d67302a4452ff6829581a62aba96f"
+      },
+      "module": "tools/notes.js",
+      "name": "append_to_note",
+      "outputContract": {
+        "bytes": 802,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 6,
+        "requiredCount": 6,
+        "sha256": "d6d97b00cf86759a04fe045484b6f390b22af2195518bd1091c405799c04e6ce"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Append To Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 541,
+        "optionalCount": 4,
+        "propertyCount": 8,
+        "requiredCount": 4,
+        "sha256": "0dca1be38708582a6eb83700fbdab59a8ec3aba7eea0a1f7bc6c8ebf042dddae"
+      },
+      "module": "tools/notes.js",
+      "name": "patch_note",
+      "outputContract": {
+        "bytes": 1354,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 11,
+        "requiredCount": 11,
+        "sha256": "bd1c037feb2a8d7094ca8a4ae1e670be60a04036e74227a0aad50c0f7f8c360d"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Patch Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 671,
+        "optionalCount": 2,
+        "propertyCount": 4,
+        "requiredCount": 2,
+        "sha256": "b340b1a18d45673bdf7d9db0dbbdb6535afdbb4a0eb02b75a4bac5bfc7ed7d61"
+      },
+      "module": "tools/notes.js",
+      "name": "replace_in_note",
+      "outputContract": {
+        "bytes": 1188,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "05ca1a88c63bb1e3f8ead89daefbd718f0e946ed2ae2ee7d50140a8cb3dbb42e"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Replace In Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 377,
+        "optionalCount": 5,
+        "propertyCount": 6,
+        "requiredCount": 1,
+        "sha256": "0f52067908a47fbef7ef0cbce86b23add3c6b212848bc5283f07a5d2f7541805"
+      },
+      "module": "tools/notes.js",
+      "name": "manage_frontmatter",
+      "outputContract": {
+        "bytes": 469,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "2f2504f2ebe5b982985307d1a4bfcdb481c3171eadedb877d55b5ef2c15785a2"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Manage Obsidian Frontmatter"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 195,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "848e88d1b22d6aaf4a2f0838cdf43d6d5b18c468039c6cc08dfcf826faeac2b1"
+      },
+      "module": "tools/search.js",
+      "name": "list_tags",
+      "outputContract": {
+        "bytes": 447,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "0f07bf0e71259ee2b837bbad72436d6ac16ca0bdff29b9124b00921f22cb7bd0"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Tags"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 407,
+        "optionalCount": 4,
+        "propertyCount": 5,
+        "requiredCount": 1,
+        "sha256": "bebaa32c78857017a0cf76f4547dada1efc56fffb136982a68e69a23e8f923b4"
+      },
+      "module": "tools/notes.js",
+      "name": "manage_tags",
+      "outputContract": {
+        "bytes": 620,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "76b845040a4d13fd70d60a4afa41816a999c295971b919aa33e187a36d6658b8"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Manage Obsidian Tags"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 308,
+        "optionalCount": 3,
+        "propertyCount": 5,
+        "requiredCount": 2,
+        "sha256": "ec2414c80a1666ec125335f46370b2a6a4af1772337c223924f70efaaa45e857"
+      },
+      "module": "tools/links.js",
+      "name": "move_note",
+      "outputContract": {
+        "bytes": 390,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 2,
+        "requiredCount": 2,
+        "sha256": "578284beb4cf810300ada29bf035d1bf38f80de99159fe7f83cfceeafdebd980"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Move Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 214,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "708554a8efb1a522e8ee52a7ccc5e134092c3e481a3b69196aaea1b1084a7470"
+      },
+      "module": "tools/links.js",
+      "name": "delete_note",
+      "outputContract": {
+        "bytes": 449,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "45028e1799202c007513d50e109c71cab65f892d11cb3a70cc18e614e9f9eef3"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Delete Obsidian Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 183,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "b411b94c95e90141938c6a6c6fdfd6b946379d5b6e8acca5fc3707635ac5b46f"
+      },
+      "module": "tools/links.js",
+      "name": "list_trash",
+      "outputContract": {
+        "bytes": 320,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 2,
+        "requiredCount": 2,
+        "sha256": "fb4aa57502ee0b05e9bc22a7cd4b06367819421204be42208a6e55044f9cb60d"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian MCP Trash"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 284,
+        "optionalCount": 3,
+        "propertyCount": 4,
+        "requiredCount": 1,
+        "sha256": "62b5b4d8f70c2ab594d2dea549f6f38398cbf081a3069436b95f9b31d284cc70"
+      },
+      "module": "tools/links.js",
+      "name": "restore_from_trash",
+      "outputContract": {
+        "bytes": 623,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "d78e6e2050ffe2d98e4908acb6b467efa5144573193297151c80fa554f26d173"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Restore Obsidian MCP Trash Entry"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 155,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "bd42b228ddb96bdabcb7b2ad3fb9b2eefc653dd9a9e6498e8339ba59db101f6b"
+      },
+      "module": "tools/links.js",
+      "name": "delete_trash_entry",
+      "outputContract": {
+        "bytes": 231,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "3ba8a346f89254cb3007c680a694e31b5aa2a233255e064519c684454e296a62"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Delete Obsidian MCP Trash Entry"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 209,
+        "optionalCount": 1,
+        "propertyCount": 2,
+        "requiredCount": 1,
+        "sha256": "e6d5bb761c3678e8513901ed8905f9c1cf153dc602109c7c97dffe370ac6e43e"
+      },
+      "module": "tools/links.js",
+      "name": "list_versions",
+      "outputContract": {
+        "bytes": 317,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 2,
+        "requiredCount": 2,
+        "sha256": "6e81418ec0294794e6e3bd667054d87c2c4f8411b2cfdd07dca0a91bcf282e2b"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian MCP File Versions"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 260,
+        "optionalCount": 3,
+        "propertyCount": 4,
+        "requiredCount": 1,
+        "sha256": "3b5c7a51509e9acd05543d9f42a6e10ae8f5b1d20c865569fa6b51c8ac8e0766"
+      },
+      "module": "tools/links.js",
+      "name": "restore_version",
+      "outputContract": {
+        "bytes": 512,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "78344af574dde0a17cdbc7a35c7c059bc99c91cd0c67b8e503715e4e1df6663d"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Restore Obsidian MCP File Version"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 153,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "9c96c79b5803b0379009ed9d8316d77eb6932990e2aaae46332c3fe09b49e75b"
+      },
+      "module": "tools/links.js",
+      "name": "delete_version",
+      "outputContract": {
+        "bytes": 234,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "a7ee4185acfdf77af9ffb031220e937c3c9800768f710444c3e3d03adf3e715b"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Delete Obsidian MCP File Version"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 255,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "60c16c6901a1bee240ed5e25851466d06bbc398251595d4c82f03dcf362c0c8a"
+      },
+      "module": "tools/files.js",
+      "name": "manage_folders",
+      "outputContract": {
+        "bytes": 523,
+        "optionalCount": 5,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 0,
+        "sha256": "93a7f71300d9a58fbe6ab2241cdb3d17b442f730b04334f31cd1fcf66c9b59a6"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Manage Obsidian Folders"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/links.js",
+      "name": "get_backlinks",
+      "outputContract": {
+        "bytes": 317,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 2,
+        "requiredCount": 2,
+        "sha256": "e5da258c3bf064d3924f54684e1ca145c547984c1a310ce4321e52c9a3b4f9d8"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Backlinks"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 184,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "f93758bd612f89d81e5904557b8693d6d61cc66c886276f8825b35874c600d71"
+      },
+      "module": "tools/links.js",
+      "name": "get_graph",
+      "outputContract": {
+        "bytes": 554,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "3232ba0c164bf444c6e80dc0856f4120d9f3147ba305d8bdfcba19a53f306b64"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Link Graph"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 236,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "b5c246dd49f0bfb2f26a9b8a87de238d7b7106ca64d78be44281b02526262926"
+      },
+      "module": "tools/links.js",
+      "name": "get_unresolved_links",
+      "outputContract": {
+        "bytes": 459,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "dd4facd6bf8f44397ae5c58d790776369f3d9e4b62f89f863b9e3d9c600bc495"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Unresolved Obsidian Links"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 183,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "82f203bd04999bfa0e75fddbb3def011b5de91fb6defc27f8a708108ae3d32c4"
+      },
+      "module": "tools/links.js",
+      "name": "get_orphans",
+      "outputContract": {
+        "bytes": 459,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "81e4b286881f947a19e9a5c5d303e7c427500daa97667a282beda807c70ede4a"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Orphan Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 183,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "82f203bd04999bfa0e75fddbb3def011b5de91fb6defc27f8a708108ae3d32c4"
+      },
+      "module": "tools/links.js",
+      "name": "get_deadends",
+      "outputContract": {
+        "bytes": 459,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "81e4b286881f947a19e9a5c5d303e7c427500daa97667a282beda807c70ede4a"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Dead-end Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 295,
+        "optionalCount": 5,
+        "propertyCount": 5,
+        "requiredCount": 0,
+        "sha256": "e12fa93b8c5790e293a221de4bc226aa0f4c06637eba70b1941b919ddf5cc4a5"
+      },
+      "module": "tools/workflows.js",
+      "name": "list_tasks",
+      "outputContract": {
+        "bytes": 459,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "e5f768c47727be52e66c45b427a421080d68097b9516c9ce789a625571bdadfc"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Tasks"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 383,
+        "optionalCount": 6,
+        "propertyCount": 6,
+        "requiredCount": 0,
+        "sha256": "3d5cbb5c17205bced2b4e3a2c74bca08d20e00aaf32415876e1c9784360b9e1e"
+      },
+      "module": "tools/workflows.js",
+      "name": "update_task",
+      "outputContract": {
+        "bytes": 758,
+        "optionalCount": 2,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 5,
+        "sha256": "8c23110c2fd4f3d86bbe0d8f5ea3c9775b09155837bd068d224bf7832ceacefd"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Update Obsidian Task"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 320,
+        "optionalCount": 5,
+        "propertyCount": 5,
+        "requiredCount": 0,
+        "sha256": "7ce8b1ba0e91adb974e15e14d03386d20492e725ed1bde812c69fab36ee465ae"
+      },
+      "module": "tools/workflows.js",
+      "name": "daily_note",
+      "outputContract": {
+        "bytes": 1120,
+        "optionalCount": 9,
+        "present": true,
+        "propertyCount": 11,
+        "requiredCount": 2,
+        "sha256": "b48ba75e39a2dce8108f5cdfef614d0529eb1e0012e2210df620369fc8c6386e"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Manage Obsidian Daily Note"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 204,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "6a1199f7ad22732902ac5a4b3db780cd900076ca7e075d59e860d38fc6f8ed66"
+      },
+      "module": "tools/workflows.js",
+      "name": "list_templates",
+      "outputContract": {
+        "bytes": 401,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "c4480a28d88ef1bf59f58af1aebecd21e57b7635536950fa2d16ce9fc8c81fd4"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Templates"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 387,
+        "optionalCount": 4,
+        "propertyCount": 6,
+        "requiredCount": 2,
+        "sha256": "c66341cb815c9d0d9c114999cf1c022348397498e737e1ed5069d7e3bc6c85f9"
+      },
+      "module": "tools/workflows.js",
+      "name": "create_from_template",
+      "outputContract": {
+        "bytes": 584,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "31f3a4c7197182516fd1fb90b0640173a28c40589396c5443da1fa98712c8d13"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Create Obsidian Note From Template"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 195,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "1473c826a761d122ef03c598230c76d50e46e4205ea0d8d132e684ac6d195a21"
+      },
+      "module": "tools/workflows.js",
+      "name": "list_properties",
+      "outputContract": {
+        "bytes": 553,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "c6e9059133250401fba34f34288c8b43ce5d3fd5a5ecb55889d30b3e2c4d66a4"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Properties"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 213,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "b4fa96e68ccc50afad28ad1ca33637e14f7be2fed6950fa3cce913cbf339a5d8"
+      },
+      "module": "tools/workflows.js",
+      "name": "list_aliases",
+      "outputContract": {
+        "bytes": 465,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "51b81d4ec26497f3f818431afc435b996645ca7987df560b1427f2ea100f87dc"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Aliases"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 411,
+        "optionalCount": 4,
+        "propertyCount": 6,
+        "requiredCount": 2,
+        "sha256": "9d25826dc9df02541ef5061e697a96b6075c07d015a806dc7c79c6a177c82812"
+      },
+      "module": "tools/workflows.js",
+      "name": "rename_property",
+      "outputContract": {
+        "bytes": 664,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 6,
+        "requiredCount": 6,
+        "sha256": "a770032a71aaf1bd0033141c9e7f367827ad6f37aee0ee198c6d1d3716e98a1f"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Rename Obsidian Property"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 302,
+        "optionalCount": 1,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "e82979e9fbd53b4a9593b66c7f14bfb63b38fc6535e23f253a612c8306bd72ea"
+      },
+      "module": "tools/workflows.js",
+      "name": "set_property_type",
+      "outputContract": {
+        "bytes": 470,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 3,
+        "sha256": "7fc7b6571d3c791f4900e5041e01e2557edfe40f4e8f84333afbc7fbc1b52496"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Set Obsidian Property Type"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 183,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "3729ea7297cbd4585cef7bfb763bdf53722f7e90787dfaa2fd986b99a533dd40"
+      },
+      "module": "tools/workflows.js",
+      "name": "list_bases",
+      "outputContract": {
+        "bytes": 314,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 2,
+        "requiredCount": 2,
+        "sha256": "42b6c01fa79da8d39710b4fdadaaf2f13987f939279b90588755c90928c83b3b"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Obsidian Bases"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/workflows.js",
+      "name": "get_base",
+      "outputContract": {
+        "bytes": 615,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "4f9605487732fedb7b2e1d2df6a2530362c15d41c6841f1c49e20893b221b7a3"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Base"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 310,
+        "optionalCount": 2,
+        "propertyCount": 4,
+        "requiredCount": 2,
+        "sha256": "481ba72a259cb6c2d902f75f752cbd806b75448e253231ec26292a0da780cca6"
+      },
+      "module": "tools/workflows.js",
+      "name": "write_base",
+      "outputContract": {
+        "bytes": 491,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "c8af1931272994eabb56f55308cafb134ea3baf92b4453c6667d46a2f278e97e"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Write Obsidian Base"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 222,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "4c3c3ceb1ee14b6d8b3073fdc1095e87ad81f99fdc7779a7f6e24ccd6569b165"
+      },
+      "module": "tools/workflows.js",
+      "name": "query_base",
+      "outputContract": {
+        "bytes": 1508,
+        "optionalCount": 3,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 6,
+        "sha256": "fafffa357f188640614ab9635b4d0b58ee25139d1c91ef2b52f2423436ade61e"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Query Obsidian Base (Portable Subset)"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 85,
+        "optionalCount": 0,
+        "propertyCount": 0,
+        "requiredCount": 0,
+        "sha256": "7a014b717a77aac971ea0ab5c0ff47bb13e6cae7ef9442d9dedb15ce36381b15"
+      },
+      "module": "tools/git.js",
+      "name": "git_status",
+      "outputContract": {
+        "bytes": 719,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "0bdf64abe95eca85a3cc577d008502a3f32ad9fb4d27163b7b618457c80dcbec"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Vault Git Status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 232,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "421b65f65f1edccc85784f1da5c2f60889a1a146690cb67e4edb82238f29a9e7"
+      },
+      "module": "tools/git.js",
+      "name": "git_diff",
+      "outputContract": {
+        "bytes": 478,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "06857537535cb752a8f111e72ebbe6555d0dbeb0fb19773907f2a3360b7828df"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Vault Git Diff"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 150,
+        "optionalCount": 1,
+        "propertyCount": 1,
+        "requiredCount": 0,
+        "sha256": "34948c62143276bcb44b3782eaab560b0d38a88ad6d729426726c0d0c0bbb6f7"
+      },
+      "module": "tools/git.js",
+      "name": "git_log",
+      "outputContract": {
+        "bytes": 224,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "ffc92d98022d4909d673f54694d475516b98355932002aa32ce064b15ed686b5"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Vault Git Log"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 371,
+        "optionalCount": 5,
+        "propertyCount": 6,
+        "requiredCount": 1,
+        "sha256": "e06ebd1f18ec3cc8016a15a477bdeb7f19402c21bdd88ae5887a9c33673b949e"
+      },
+      "module": "tools/git.js",
+      "name": "git_commit",
+      "outputContract": {
+        "bytes": 920,
+        "optionalCount": 6,
+        "present": true,
+        "propertyCount": 8,
+        "requiredCount": 2,
+        "sha256": "22554fb61a47943d85831dc91e97408e98b538fbcb197c800fc0e9da03bd9641"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Commit Vault Changes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 138,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "6ee367e79dae6f3b1dc133e1c49c09c069063843c75bde8d5143910cff8eb8d5"
+      },
+      "module": "tools/git.js",
+      "name": "git_pull",
+      "outputContract": {
+        "bytes": 561,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "ac466c4f7c697615ce6514ccbba0e8518601109a005d53e96b7afbac9119163a"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Pull Vault Repository"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 138,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "6ee367e79dae6f3b1dc133e1c49c09c069063843c75bde8d5143910cff8eb8d5"
+      },
+      "module": "tools/git.js",
+      "name": "git_push",
+      "outputContract": {
+        "bytes": 561,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "ab8239f9d0c921e9b222ac6ca20dba19f192e2028de173f99354c9cd18527f61"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Push Vault Repository"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 133,
+        "optionalCount": 1,
+        "propertyCount": 1,
+        "requiredCount": 0,
+        "sha256": "a1d84516d27cad14d60f1c6d26010a8f66eed46b3ed37d925cca2699981b0c73"
+      },
+      "module": "tools/intelligence.js",
+      "name": "index_status",
+      "outputContract": {
+        "bytes": 1283,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 10,
+        "requiredCount": 9,
+        "sha256": "1eedfc1750831adb65355ab57780ce324467617d284d595cc1682ba669e98402"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Retrieval Index Status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 174,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "af93e28e4ace551a5a4dbe8900a48cea52099449f2b7020336eebe2dcd672b6c"
+      },
+      "module": "tools/intelligence.js",
+      "name": "reindex_vault",
+      "outputContract": {
+        "bytes": 871,
+        "optionalCount": 6,
+        "present": true,
+        "propertyCount": 8,
+        "requiredCount": 2,
+        "sha256": "9a1fe07b12c36ef08fe751e845b393d58b1f902fe2c7f8c6c16f1c0a93e3e5f6"
+      },
+      "risk": "mutating",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Reindex Obsidian Vault"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 660,
+        "optionalCount": 9,
+        "propertyCount": 10,
+        "requiredCount": 1,
+        "sha256": "e76ed4205513f686fce7ed5da52444bfbc1c308c112f48313382876bf1a35d8c"
+      },
+      "module": "tools/intelligence.js",
+      "name": "recall",
+      "outputContract": {
+        "bytes": 803,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 6,
+        "requiredCount": 6,
+        "sha256": "854aa372317e0add2779593c27784535310668b0349de408de15f90905c7fd92"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Recall Obsidian Knowledge"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 254,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "ba054a844a348182395b47e8920d196d3938a23273606f3708a608e4b80cae57"
+      },
+      "module": "tools/intelligence.js",
+      "name": "find_related",
+      "outputContract": {
+        "bytes": 536,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "4859704932849f5a61f2d908d77729053e52dc0452b7fb0437ec4b75a45f190f"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Find Related Obsidian Notes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 235,
+        "optionalCount": 3,
+        "propertyCount": 3,
+        "requiredCount": 0,
+        "sha256": "4e7dd1299c3efa8ca3e3a5e6228948fa5e2ab2f7545659522ef2f9f71103c3c1"
+      },
+      "module": "tools/intelligence.js",
+      "name": "graph_health",
+      "outputContract": {
+        "bytes": 1187,
+        "optionalCount": 1,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 6,
+        "sha256": "0a2af62ae3ca9c84a7282f2844a77e7575f8f4f7094777e4a6b8864563acdacc"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Audit Obsidian Graph Health"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 253,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "c47776d42fa22b5d181d3aa2e8fe88547fe2aec01955844dec897fffef1f96e4"
+      },
+      "module": "tools/intelligence.js",
+      "name": "suggest_links",
+      "outputContract": {
+        "bytes": 548,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 4,
+        "requiredCount": 4,
+        "sha256": "910d473ba6f174ee788faa96da0d1f30b5fc0280b8cc3cad0d49fd32295172dd"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Suggest Obsidian Links"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 789,
+        "optionalCount": 9,
+        "propertyCount": 11,
+        "requiredCount": 2,
+        "sha256": "ca0a0fdc6c0acbeac67f907c853d5ab6d3f7f01453a2cee40b3006971dd63b0e"
+      },
+      "module": "tools/intelligence.js",
+      "name": "memory_capture",
+      "outputContract": {
+        "bytes": 408,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "a13b10c99276b4dbb2651302292737848081245d5c80b6c1c7362f13d13911ad"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Capture Managed Obsidian Memory"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 378,
+        "optionalCount": 4,
+        "propertyCount": 5,
+        "requiredCount": 1,
+        "sha256": "f2096d5df78b8575114785061df70765e7f3cbd6dc855743bee5615220a3997f"
+      },
+      "module": "tools/intelligence.js",
+      "name": "memory_recall",
+      "outputContract": {
+        "bytes": 803,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 6,
+        "requiredCount": 6,
+        "sha256": "854aa372317e0add2779593c27784535310668b0349de408de15f90905c7fd92"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Recall Managed Obsidian Memory"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 199,
+        "optionalCount": 2,
+        "propertyCount": 2,
+        "requiredCount": 0,
+        "sha256": "f73c5038947df2b817bbae9db26b8b45e1ae872614a5778d614ff73c7a05b2d7"
+      },
+      "module": "tools/intelligence.js",
+      "name": "skill_list",
+      "outputContract": {
+        "bytes": 419,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "5596bae8caade7564f4dfb0574117bde4fcbf931ecb858ca309c26e281b02fdf"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "List Managed Obsidian Skills"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 320,
+        "optionalCount": 3,
+        "propertyCount": 4,
+        "requiredCount": 1,
+        "sha256": "e0b4976bcb1d08a1c9b195a141cb6086123f040425b7ea6fef033b9c48a61201"
+      },
+      "module": "tools/intelligence.js",
+      "name": "skill_match",
+      "outputContract": {
+        "bytes": 656,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 5,
+        "requiredCount": 5,
+        "sha256": "8ccf152df69649c4d1ba871328d929e7faec0d9f1b3090aa464215cb7eebf90d"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Match Managed Obsidian Skills"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 143,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "d91c13652b840923c0542eea721aede6812946d7c0f9218bad4cfd66875f2e49"
+      },
+      "module": "tools/intelligence.js",
+      "name": "skill_validate",
+      "outputContract": {
+        "bytes": 895,
+        "optionalCount": 6,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 3,
+        "sha256": "5dbeca32d3633798ce550c12ef296acea30ee64272b5dfe45709c8bc73ee729b"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Validate Obsidian Skill"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 224,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "1086111b7a97a0f417b7e1f57d7144a355cdc52b1f42f819ac6a818027b536b0"
+      },
+      "module": "tools/intelligence.js",
+      "name": "skill_export",
+      "outputContract": {
+        "bytes": 1363,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 12,
+        "requiredCount": 12,
+        "sha256": "5511633bb780c8ef8319bf9a0fb081ddf454accdabd576f9b633ede16085f647"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Export Portable Skill ZIP"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 200,
+        "optionalCount": 1,
+        "propertyCount": 2,
+        "requiredCount": 1,
+        "sha256": "f106ae5c8490d139f23cafe6e66b1abba8fe168a8b720cbc57c01714b17d6e24"
+      },
+      "module": "tools/intelligence.js",
+      "name": "skill_import",
+      "outputContract": {
+        "bytes": 1235,
+        "optionalCount": 3,
+        "present": true,
+        "propertyCount": 11,
+        "requiredCount": 8,
+        "sha256": "77616970f866548c20ea8248d6ff8d4be71331242b1f4785852b8c9b0226a488"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write",
+        "obsidian.files"
+      ],
+      "title": "Import Portable Skill ZIP"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 185,
+        "optionalCount": 1,
+        "propertyCount": 2,
+        "requiredCount": 1,
+        "sha256": "d8c0f2848f6af108b58584691ae48f2289cfff3733db1677c924d05873ea5815"
+      },
+      "module": "tools/publish.js",
+      "name": "get_publish_status",
+      "outputContract": {
+        "bytes": 885,
+        "optionalCount": 3,
+        "present": true,
+        "propertyCount": 8,
+        "requiredCount": 5,
+        "sha256": "e287b2b4677f369335ae5158b20e19e22d75ebb657d1eefc79713deb139236ea"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get note publish status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 249,
+        "optionalCount": 1,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "e9a7623f86e8df775cb087aefee5356aefa7e41474cd62ea3df5c788584d6e9c"
+      },
+      "module": "tools/publish.js",
+      "name": "manage_publish",
+      "outputContract": {
+        "bytes": 976,
+        "optionalCount": 3,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 6,
+        "sha256": "7f5e8509d4ecdef9760ec244ca8a2d1e0be922910c9609abb4c23d23a29b910e"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Manage note Publish"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 1725,
+        "optionalCount": 2,
+        "propertyCount": 3,
+        "requiredCount": 1,
+        "sha256": "024075778de689c41ca9fb9e0a5609c3f207178b7322cd805ceb83b1bc76803c"
+      },
+      "module": "tools/plans.js",
+      "name": "plan_note_changes",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Plan Obsidian Note Changes"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 465,
+        "optionalCount": 5,
+        "propertyCount": 7,
+        "requiredCount": 2,
+        "sha256": "339694bce0483c947a24922fdbbba6bd0bb745b2ca98211ca22603c518fa0345"
+      },
+      "module": "tools/plans.js",
+      "name": "plan_move_note",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Plan Obsidian Note Move"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 371,
+        "optionalCount": 4,
+        "propertyCount": 5,
+        "requiredCount": 1,
+        "sha256": "20e9488399ee4ba2ffff553f86c4520dfe319da20fe45b46b35523ba87f24d64"
+      },
+      "module": "tools/plans.js",
+      "name": "plan_delete_note",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Plan Obsidian Note Deletion"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 417,
+        "optionalCount": 5,
+        "propertyCount": 6,
+        "requiredCount": 1,
+        "sha256": "3a7932bac88351bbe708478d41ead1510d9130d78ada436dd8d725caf77b3bf8"
+      },
+      "module": "tools/plans.js",
+      "name": "plan_restore_version",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Plan Obsidian Version Restore"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 469,
+        "optionalCount": 6,
+        "propertyCount": 7,
+        "requiredCount": 1,
+        "sha256": "522a1d0ce3b711599dcf3404d47ea7e93e9a2dd0aa29450a340ff46fae475de3"
+      },
+      "module": "tools/plans.js",
+      "name": "plan_restore_from_trash",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Plan Obsidian Trash Restore"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 328,
+        "optionalCount": 0,
+        "propertyCount": 1,
+        "requiredCount": 1,
+        "sha256": "17d56ae42c30a861df93d705f76b9329a17b5a5baad0e615effc83270cc19e67"
+      },
+      "module": "tools/plans.js",
+      "name": "get_note_plan",
+      "outputContract": {
+        "bytes": 791,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "c5b09910db83862876f9875fb96d094917d2a24203b99ea2fa814d7b54957b57"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Note Plan"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 464,
+        "optionalCount": 0,
+        "propertyCount": 3,
+        "requiredCount": 3,
+        "sha256": "2e0e531506cdd4a209f631c9fc9b0f879b1bc4a44e4eea0f82e661580d8772ca"
+      },
+      "module": "tools/plans.js",
+      "name": "apply_note_plan",
+      "outputContract": {
+        "bytes": 814,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 7,
+        "requiredCount": 7,
+        "sha256": "62689a1556b58b5fbd4555ce83f0527d3d3a489f22f9fa7d9e3d8d0d4c188583"
+      },
+      "risk": "destructive",
+      "scope": [
+        "obsidian.read",
+        "obsidian.write"
+      ],
+      "title": "Apply Obsidian Note Plan"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 232,
+        "optionalCount": 1,
+        "propertyCount": 2,
+        "requiredCount": 1,
+        "sha256": "98ddd7c1ef4c55bbad3f2e290d50611f25e0cfad473d563401a3533c5521e9d5"
+      },
+      "module": "tools/plans.js",
+      "name": "get_note_version",
+      "outputContract": {
+        "bytes": 844,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 8,
+        "requiredCount": 8,
+        "sha256": "e1883c8ad80c64051bfc570c20f4870cf7af116479ef9215d59bb0eb0532962c"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Get Obsidian Note Version"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "domain": "unknown",
+      "inputSchema": {
+        "bytes": 1334,
+        "optionalCount": 1,
+        "propertyCount": 3,
+        "requiredCount": 2,
+        "sha256": "52327d50c08fba1554c0bab608d6a08081f427a9a7aa830b0c2af9649f673d3a"
+      },
+      "module": "tools/plans.js",
+      "name": "compare_note_versions",
+      "outputContract": {
+        "bytes": 1136,
+        "optionalCount": 0,
+        "present": true,
+        "propertyCount": 9,
+        "requiredCount": 9,
+        "sha256": "fa4361e1e336bdd6864a19a03f1fd29afa0afffe8f2c2dd0eb27c2b133d3dbed"
+      },
+      "risk": "read-only",
+      "scope": [
+        "obsidian.read"
+      ],
+      "title": "Compare Obsidian Note Versions"
+    }
+  ],
+  "totals": {
+    "inputSchemaBytes": 29668,
+    "outputSchemaBytes": 67744,
+    "tools": 86
+  },
+  "unknowns": [
+    {
+      "field": "domain / toolset",
+      "reason": "No canonical capability-catalog taxonomy exists in the runtime (planned Phase 1). The source registration module is reported as a proxy.",
+      "value": "unknown"
+    },
+    {
+      "field": "production deployment tools/list",
+      "reason": "This baseline is a real in-process `tools/list` from current main. It is not a response captured from the deployed NAS process, so deployment drift, host tool filtering, and client-specific visibility are not proven here.",
+      "value": "unknown"
+    }
+  ]
+}

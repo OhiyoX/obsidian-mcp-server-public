@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: 'this.file.folder == ""'
+    order:
+      - file.name
