@@ -433,6 +433,12 @@ test("success DTO matches the frozen §8 contract", async () => {
         "capabilities",
         "catalog",
         "columns",
+        // U12: additive read-only projection of the two declared filter layers
+        // (`所有视图` / `当前视图`). Shape pinned in web-bases-all-views-section.test.js.
+        "filters",
+        // lane desktop-re/panel-properties: additive property catalog (the desktop
+        // Properties menu's full row set). Shape pinned in base-property-catalog.test.js.
+        "propertyCatalog",
         "nextCursor",
         "path",
         "revision",
@@ -443,6 +449,15 @@ test("success DTO matches the frozen §8 contract", async () => {
         "truncated",
         "view",
         "views",
+        // lane desktop-re/panel-sort: additive projection of the SELECTED view's declared
+        // `sort:` in the frozen override shape (`[{key, dir}]`), so the sort menu opens on
+        // the document's own row. Shape pinned in web-bases-sort-seed.test.js.
+        // lane desktop-re/bases-grouping: additive projection of the SELECTED view's
+        // declared `groupBy` (`{property, direction} | null`), so the `分组依据` menu opens
+        // on the document's own rule. Shape pinned in web-bases-grouping.test.js /
+        // web-bases-grouping-seed assertions below.
+        "viewGroupBy",
+        "viewSort",
         "vaultId",
       ].sort(),
     );
@@ -462,7 +477,10 @@ test("success DTO matches the frozen §8 contract", async () => {
     assert.equal(body.truncated, false);
     assert.equal(body.nextCursor, null);
     assert.equal(body.supportedSubset, true);
-    assert.deepEqual(body.capabilities, { editable: false, grouping: false, aggregation: false });
+    assert.deepEqual(body.capabilities, { editable: false, grouping: true, aggregation: false });
+    // The mocked evaluator returns no summary: the route still emits the key with two
+    // null layers, so a client never has to tell "absent" from "not supported".
+    assert.deepEqual(body.filters, { base: null, view: null });
     assert.deepEqual(body.catalog, { catalogId: "cat-1", generation: 3, stale: false });
   } finally {
     await server.close();

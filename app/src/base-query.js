@@ -242,20 +242,23 @@ export function compileBaseView(base, viewName) {
 }
 
 function columnLabel(base, key) {
-  // The desktop's own three-step priority (`getDisplayName()`, asar app.js@2352471),
-  // with no branch on the property kind:
-  //   1. `properties.<key>.displayName` — the AUTHOR'S decision. A `.base` that
-  //      declares `file.mtime: {displayName: 编辑时间}` asked for that name, so the
-  //      surface must not print the key tail (`mtime`) at it.
-  //   2. the desktop built-in name table — 14 `file.*` names, in
-  //      `src/base-builtin-names.js` (U5 closure). Declaring the name in a `.base`
-  //      is optional; when it is silent the reader must still see 修改时间, not `mtime`.
-  //   3. the formula fallback / the key tail. A custom property stays untouched:
-  //      `status` is `status`, never a translated name.
+  // ONE rule for every surface (table header, cards, list, MCP csv/tsv/md header row):
+  //   formula → `properties.<key>.displayName` → the formula key;
+  //   anything else → built-in name table (`src/base-builtin-names.js`, 14 `file.*`, U5)
+  //   → the key tail. So `file.mtime` reads 修改时间 and a note property stays its raw key
+  //   (`status` is `status`) — the author's displayName is consumed for a FORMULA column
+  //   only (`项目`). Matrix §14.10: owner screenshots read `status` (01 header x~862,y~162)
+  //   and `updated` (04 header y~168) although Projects.base declares 状态 / 更新.
+  //
+  // Two equivalent implementations must not fork this (pinned together by
+  // `app/test/web-bases-builtin-names.test.js` ③d): `panel-chrome.js`
+  // `propertyPickerLabel()` — the client copy, needed only for a stale URL-override key
+  // that the server never labelled — and `base-property-catalog.js` `label()` for the
+  // properties menu.
   const declared = base?.properties?.[key];
   const displayName = declared && typeof declared === "object" ? declared.displayName : undefined;
   if (isFormulaProperty(key)) return formulaDisplayName(displayName, key);
-  return formulaDisplayName(displayName, null) ?? builtinPropertyName(key) ?? tailKey(key);
+  return builtinPropertyName(key) ?? tailKey(key);
 }
 
 function tailKey(key) {
@@ -635,8 +638,10 @@ const SUMMARY_SCOPE_VISIBLE_ROWS = "visible-rows";
 // — the per-group summary values (P15). The top-level `summaries` object is the
 // SAME computation over every retained row, i.e. the single ungrouped group
 // (P8); `scope: "visible-rows"` records that the domain is post-limit (E14/B5).
-function buildGroupingDto({ view, order, formulas, retained, rows }) {
-  const groupBy = readGroupByDeclaration(view);
+function buildGroupingDto({ view, order, formulas, retained, rows, groupOverride = null }) {
+  // `groupOverride` is the Web `?group=` rule: it REPLACES the declared `groupBy`, like `sortOverride` replaces `view.sort`.
+  if (groupOverride) assertNoFormulaReferencesInGroupBy({ groupBy: groupOverride });
+  const groupBy = groupOverride ?? readGroupByDeclaration(view);
   const declarations = readSummaryDeclarations(view?.summaries, "views[].summaries");
   if (!groupBy && !declarations) return {};
 
@@ -693,9 +698,11 @@ function buildGroupingDto({ view, order, formulas, retained, rows }) {
 // Optional frozen Web overrides:
 //   - `filterExtra`: [{ key, op, value }], appended as AND after base/view filters;
 //   - `textQuery`:   case-insensitive substring match over every view column;
-//   - `sortOverride`: [{ key, dir: "asc" | "desc" }], replaces `view.sort`.
+//   - `sortOverride`: [{ key, dir: "asc" | "desc" }], replaces `view.sort`;
+//   - `groupOverride`: { property, direction: "ASC" | "DESC" }, replaces the declared
+//     `groupBy` (partition only; summaries stay as declared).
 // An absent or empty override is a no-op, so the MCP call sites are unaffected.
-export function evaluateBaseView({ base, view, order, formulas, records = [], limit, sortOverride, filterExtra, textQuery }) {
+export function evaluateBaseView({ base, view, order, formulas, records = [], limit, sortOverride, filterExtra, textQuery, groupOverride }) {
   try {
     const filters = [base?.filters, view?.filters].filter(Boolean);
     // Detected once per filter (not per record): a pure-P0 tree keeps the frozen
@@ -745,7 +752,7 @@ export function evaluateBaseView({ base, view, order, formulas, records = [], li
       supportedSubset: true,
       // Declared ceiling of the selected view; null means "no semantic limit".
       viewLimit: view?.limit ?? null,
-      ...buildGroupingDto({ view, order, formulas, retained, rows }),
+      ...buildGroupingDto({ view, order, formulas, retained, rows, groupOverride }),
     };
   } catch (error) {
     throw toBaseQueryError(error, "unsupported");
@@ -783,11 +790,11 @@ export function listBaseViews(base) {
 // Full canonical pipeline used by protocol adapters: parse -> compile -> evaluate.
 // `view` is the resolved view name (MCP parity) and `views` lists every declared
 // view for the UI selector in declaration order. The optional `sortOverride` /
-// `filterExtra` / `textQuery` inputs are the frozen Web Base API overrides; they
-// default to undefined so the MCP call site is unchanged.
-export function queryBaseSnapshot({ raw, viewName, records, limit, sortOverride, filterExtra, textQuery }) {
+// `filterExtra` / `textQuery` / `groupOverride` inputs are the frozen Web Base API
+// overrides; they default to undefined so the MCP call site is unchanged.
+export function queryBaseSnapshot({ raw, viewName, records, limit, sortOverride, filterExtra, textQuery, groupOverride }) {
   const { base } = parseAndValidateBase(raw);
   const { view, viewName: selectedViewName, order, formulas } = compileBaseView(base, viewName);
-  const result = evaluateBaseView({ base, view, order, formulas, records, limit, sortOverride, filterExtra, textQuery });
+  const result = evaluateBaseView({ base, view, order, formulas, records, limit, sortOverride, filterExtra, textQuery, groupOverride });
   return { view: selectedViewName, views: listBaseViews(base), ...result };
 }

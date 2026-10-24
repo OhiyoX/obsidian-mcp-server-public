@@ -14,10 +14,21 @@
 //
 // G4: the operator list is the full desktop simple-builder table (matrix §2.3).
 //
+// U12: `所有视图` / `当前视图` are both drawn now. The sections list the filters the
+// `.base` DECLARES (server projection `filters: { base, view }`, see
+// app/src/base-filter-summary.js) as READ-ONLY rows, and each section's `.flair` is
+// the real leaf count of its layer (plus the URL overrides this surface adds, which
+// really are active conditions). Nothing here writes the declaration back: the
+// declared rows carry no editor and no per-row action, because removing or
+// retargeting a declared filter is a `PATCH /api/web/v1/base` operation this
+// read-only slice does not own (registered in BASES-COMPATIBILITY-MATRIX §14.5 U12).
+// When the DTO carries no `filters` (older server), the `所有视图` section is not
+// drawn at all and the `当前视图` count falls back to the URL-override leaves —
+// exactly the pre-U12 behavior, never a fabricated `0`.
+//
 // Deliberate omissions (no fake controls):
-//  - `所有视图` section: the desktop lists the Base-file-level `filters`, and the
-//    frozen Web DTO does not expose them. There is no honest count, so the section
-//    is not drawn at all.
+//  - the `所有视图` conjunction selector is not drawn: it is a write control, and
+//    this layer is displayed, not editable.
 //  - simple -> advanced conversion is NOT performed: the desktop serializes a
 //    simple filter into an expression, this build has no such serializer, so the
 //    attempt reports a visible message instead of pretending. advanced -> simple
@@ -81,6 +92,49 @@ function leavesOf(filter) {
   return Array.isArray(filter) ? filter : [];
 }
 
+// The declared layer's condition rows, in the desktop's own box: `.filter-group`
+// (column flex, app.css@470677) whose statements column is `display:flex;
+// flex-direction:column;gap:var(--size-2-3)` (@470700), and a nested group body is
+// `background-color:var(--background-primary-alt);border:var(--table-border-width)
+// solid var(--table-border-color);padding:var(--size-2-3);border-radius:
+// var(--radius-m)` (@470985). Each row is the desktop `.filter-row`
+// (`display:flex;align-items:center;gap:var(--size-4-2)`, @472153) carrying the
+// property select / operator select / value slots as TEXT, because this surface
+// does not own the declaration. The `</>` and the delete control are NOT drawn per
+// row: they are write affordances (see the module header and U10 in the matrix).
+export function declaredConditionRows(doc, layer, layerName) {
+  const conditions = Array.isArray(layer?.conditions) ? layer.conditions : [];
+  if (!conditions.length) return null;
+  const box = el(doc, "div", "base-panel-group-statements");
+  box.setAttribute("data-filter-statements", layerName);
+  conditions.forEach((condition, index) => {
+    const row = el(doc, "div", "base-panel-row filter-row");
+    row.setAttribute("data-filter-declared", String(index));
+    row.setAttribute("data-filter-layer", layerName);
+    if (condition?.property) {
+      row.appendChild(el(doc, "span", "base-panel-condition-part base-panel-condition-property", condition.property));
+      if (condition.operator) {
+        row.appendChild(el(doc, "span", "base-panel-condition-part base-panel-condition-operator", BASE_FILTER_OP_LABELS[condition.operator] ?? condition.operator));
+      }
+      if (condition.value !== null && condition.value !== undefined) {
+        row.appendChild(el(doc, "span", "base-panel-condition-part base-panel-condition-value", String(condition.value)));
+      }
+    } else {
+      // Not a `reference <cmp> literal` comparison (e.g. `file.inFolder("…")`):
+      // the honest rendering is the author's own expression.
+      row.appendChild(el(doc, "span", "base-panel-condition-part base-panel-condition-expression", condition?.expression ?? ""));
+    }
+    box.appendChild(row);
+  });
+  return box;
+}
+
+function declaredCount(layer) {
+  if (!layer) return 0;
+  if (Number.isFinite(layer.count) && layer.count >= 0) return layer.count;
+  return Array.isArray(layer.conditions) ? layer.conditions.length : 0;
+}
+
 // Write the same leaves under a new conjunction. `and` deliberately degrades to
 // the legacy array so the pre-G3 URL shape is preserved byte for byte. With no
 // leaves the conjunction carries no predicate at all, so it stays the legacy
@@ -96,7 +150,7 @@ export function buildFilterPanel(state, context, { onFilter } = {}) {
   const panel = panelShell(doc, "filter", "筛选");
   // G5: the desktop filter menu is `div.menu.bases-toolbar-menu` > `div.menu-scroll` and its
   // sections are the scroll node's own children (`r.scrollEl.createDiv("bases-toolbar-section"…)`,
-  // asar app.js@2479077) — no `bases-toolbar-menu-container` in this menu.
+  // asar app.js@2479145) — no `bases-toolbar-menu-container` in this menu.
   const scroll = panelScroll(doc);
   panel.appendChild(scroll);
   const filter = state.filter;
@@ -105,14 +159,38 @@ export function buildFilterPanel(state, context, { onFilter } = {}) {
   const advanced = expressions.length > 0;
   const columns = Array.isArray(context.columns) ? context.columns : [];
   const options = columnOptions(columns, conditions.map((condition) => condition?.key));
+  // U12: `filters` is the server's read-only summary of the two DECLARED layers.
+  // Absent (older DTO) -> no `所有视图` section and the pre-U12 count below.
+  const summary = state.filters && typeof state.filters === "object" ? state.filters : null;
+  const baseLayer = summary?.base ?? null;
+  const viewLayer = summary?.view ?? null;
+  // The `.flair` number is the number of ACTIVE conditions in that layer: the
+  // declared leaves plus the URL overrides this surface carries in `state.filter`
+  // (both are applied by the server, so both are real conditions).
+  const viewCount = declaredCount(viewLayer) + conditions.length;
+
+  if (summary) {
+    const baseSection = panelSection(doc, {
+      label: "所有视图",
+      count: declaredCount(baseLayer),
+      attribute: "data-filter-group",
+      name: "base",
+    });
+    scroll.appendChild(baseSection.section);
+    const baseRows = declaredConditionRows(doc, baseLayer, "base");
+    if (baseRows) baseSection.content.appendChild(baseRows);
+  }
 
   const { section, content } = panelSection(doc, {
     label: "当前视图",
-    count: conditions.length,
+    count: viewCount,
     attribute: "data-filter-group",
     name: "view",
   });
   scroll.appendChild(section);
+
+  const viewRows = declaredConditionRows(doc, viewLayer, "view");
+  if (viewRows) content.appendChild(viewRows);
 
   // The simple/advanced switch is the desktop's per-row `</>` icon control: the desktop
   // builds it INSIDE the filter row's action area
@@ -121,7 +199,7 @@ export function buildFilterPanel(state, context, { onFilter } = {}) {
   // with the `code-xml` / `mouse-pointer-click` glyphs and the
   // `tooltip-filter-advanced-mode` / `-simple-mode` tooltips at @2472380/@2472400). It was on
   // the `当前视图` heading row, which is NOT where the desktop puts it — the section header
-  // carries only the collapse icon, the label and the flair (@2479077).
+  // carries only the collapse icon, the label and the flair (@2479145).
   //
   // Placement deviation, registered: the desktop's toggle switches ONE row into the formula
   // editor, while this build's raw-expression mode is panel-wide (one expression per line,
@@ -165,8 +243,20 @@ export function buildFilterPanel(state, context, { onFilter } = {}) {
     message.hidden = !text;
   };
 
+  // The conjunction line is a ROW, not a stretched column child. The desktop builds it as
+  // `o.containerEl.createDiv("filter-group")` > `createDiv("filter-group-header")` carrying the
+  // `select.conjunction.dropdown` (asar app.js@2464509/@2464602), and `.filter-group-header` is
+  // `display:flex;align-items:center;justify-content:space-between;padding-bottom:var(--size-2-1)`
+  // (asar app.css@471459). That row is what stops the control from being stretched across the
+  // panel: inside a column flex box an `align-self:stretch` item takes the full cross size
+  // (which is how the conjunction selector used to be painted as a full-width form field), while
+  // in a row flex box it is a main-axis item and sizes to its content.
+  const groupHeader = el(doc, "div", "base-panel-group-header");
+  groupHeader.setAttribute("data-filter-group-header", "");
   const matchSelect = buildSelect(doc, {
-    className: "base-panel-select",
+    // The desktop's own two classes on the same element (`createEl("select",{cls:"conjunction
+    // dropdown"})`, asar app.js@2464602), kept alongside ours so a reading can address either.
+    className: "base-panel-select conjunction dropdown",
     options: BASE_FILTER_MATCH_OPTIONS,
     value: groupKeyOf(filter) ?? "and",
     attributes: { "data-filter-match": "" },
@@ -176,7 +266,8 @@ export function buildFilterPanel(state, context, { onFilter } = {}) {
     say("");
     onFilter?.(withConjunction(filter, matchSelect.value));
   };
-  content.appendChild(matchSelect);
+  groupHeader.appendChild(matchSelect);
+  content.appendChild(groupHeader);
 
   if (advanced) {
     // The raw-expression input owns its own full-width row: sharing the line with the

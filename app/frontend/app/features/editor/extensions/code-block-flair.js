@@ -18,7 +18,7 @@
 //   * it is only created when the block is **not** being edited (`canRenderLang()`
 //     covers mermaid/query/custom processors, which Web does not render yet, so
 //     every fence takes this branch here).
-// Spec: `<local-desktop-research>/findings/code-block-affordances-spec.md` §二,
+// Spec: `scratch/obsidian-desktop-re/findings/code-block-affordances-spec.md` §二,
 // corrected by the two points above (`canRenderLang` coverage; an unknown or empty
 // language paints the copy icon rather than nothing).
 import { WidgetType } from "@codemirror/view";

@@ -41,16 +41,32 @@
 //
 // `UPLOAD_NOT_FOUND`/`VAULT_CONTEXT_MISMATCH` messages never echo a foreign Vault id or a filesystem
 // path (§42 SEC-MV03 metadata minimization); pre-existing error prose is unchanged.
+//
+// Issue #470 Wave A adds a SECOND handle mode on the same durable handle/state machine:
+// `mode: "single-put"` means the bytes arrive as one HTTP `PUT /uploads/<uploadId>` body instead of
+// base64 chunks. The writers are mutually exclusive by construction (mode written once at creation +
+// the injected `deps.writerLock`); Wave A claims NO resume: an interrupted part is dropped and the
+// caller starts over — part length is never evidence of completion.
 
 import { createHash, randomUUID } from "node:crypto";
+import { createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { assertWritable, exists, isAcceptedObsidianFile, normalizeVaultInput } from "./local-fs.js";
+import { createDirectUploadResumeWriter } from "../direct-upload-resume.js";
 
 // Stable error codes; consumers/tests never match on prose.
 export const UPLOAD_NOT_FOUND = "UPLOAD_NOT_FOUND";
 export const VAULT_CONTEXT_MISMATCH = "VAULT_CONTEXT_MISMATCH";
 export const TRANSFER_RUNTIME_INVALID = "TRANSFER_RUNTIME_INVALID";
+// Issue #470 Wave A (single-PUT data plane). One code per HTTP outcome the router must map.
+export const DIRECT_UPLOAD_MODE = "single-put";
+export const UPLOAD_EXPIRED = "UPLOAD_EXPIRED", UPLOAD_MODE_CONFLICT = "UPLOAD_MODE_CONFLICT", UPLOAD_IN_PROGRESS = "UPLOAD_IN_PROGRESS";
+export const UPLOAD_FAILED = "UPLOAD_FAILED", UPLOAD_TOO_LARGE = "UPLOAD_TOO_LARGE", UPLOAD_INTEGRITY_MISMATCH = "UPLOAD_INTEGRITY_MISMATCH";
+// Wave B: retry at the authoritative offset (409) / the chunk would run past the declared total (416).
+export const UPLOAD_DESTINATION_EXISTS = "UPLOAD_DESTINATION_EXISTS", UPLOAD_OFFSET_CONFLICT = "UPLOAD_OFFSET_CONFLICT", UPLOAD_RANGE_EXCEEDED = "UPLOAD_RANGE_EXCEEDED";
 
 const TRANSFER_ID = /^[0-9a-f-]{36}$/i;
 const LIMIT_KEYS = Object.freeze(["maxTransferBytes", "chunkBytes", "ttlMs"]);
@@ -135,6 +151,15 @@ function resolveLimits(value) {
   return Object.freeze({ maxTransferBytes: value.maxTransferBytes, chunkBytes: value.chunkBytes, ttlMs: value.ttlMs });
 }
 
+/** Optional `deps.directUploadMaxBytes`: `undefined` keeps the pre-#470 ceiling for every caller. */
+function resolveDirectLimit(value, fallback) {
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || value <= 0) {
+    fail(TRANSFER_RUNTIME_INVALID, `deps.directUploadMaxBytes must be a positive integer, got ${describe(value)}`);
+  }
+  return value;
+}
+
 function resolveVaultRuntime(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     fail(TRANSFER_RUNTIME_INVALID, `vaultRuntime must be a B1 createVaultRuntime result, got ${describe(value)}`);
@@ -181,6 +206,10 @@ export function createTransferRuntime({ vaultRuntime, deps = {} } = {}) {
   if (!(protectedRoots instanceof Set)) {
     fail(TRANSFER_RUNTIME_INVALID, `deps.protectedRoots must be a Set, got ${describe(protectedRoots)}`);
   }
+  const directUploadMaxBytes = resolveDirectLimit(deps?.directUploadMaxBytes, limits.maxTransferBytes);
+  // `{ acquire(key) -> release | null }`; absent for the legacy in-process callers, so their
+  // behaviour is byte-identical to pre-#470.
+  const writerLock = deps?.writerLock ?? null;
   const vaultId = vault.vaultId;
   const uploadsRoot = vault.uploadsRoot;
   const localFs = vault.localFs;
@@ -205,8 +234,7 @@ export function createTransferRuntime({ vaultRuntime, deps = {} } = {}) {
     await fs.rename(temporary, target);
   }
 
-  async function readUpload(uploadId, declared) {
-    const paths = uploadPaths(uploadId);
+  async function readMetadata(paths, uploadId) {
     let source;
     try {
       source = await fs.readFile(paths.metadata, "utf8");
@@ -214,7 +242,11 @@ export function createTransferRuntime({ vaultRuntime, deps = {} } = {}) {
       if (error?.code === "ENOENT") fail(UPLOAD_NOT_FOUND, `Unknown uploadId ${uploadId}; it may have been cancelled or expired`);
       throw error;
     }
-    const metadata = JSON.parse(source);
+    return JSON.parse(source);
+  }
+  async function readUpload(uploadId, declared) {
+    const paths = uploadPaths(uploadId);
+    const metadata = await readMetadata(paths, uploadId);
     // §13.4: the Vault check runs before the expiry cleanup, so a mismatched caller can never cause
     // a part-file unlink (or read) in a Vault it did not select.
     assertVaultBinding(metadata, declared, primary);
@@ -266,6 +298,11 @@ export function createTransferRuntime({ vaultRuntime, deps = {} } = {}) {
     const { uploadId, offset, base64, finalize = false } = input;
     assertWritable();
     const { paths, metadata } = await readUpload(uploadId, declared);
+    // Issue #470 D6: a single-PUT handle has exactly one writer (the HTTP data plane). Mixing the
+    // base64 chunk writer into it would make byte offsets meaningless, so it is refused outright.
+    if (metadata.mode === DIRECT_UPLOAD_MODE) {
+      fail(UPLOAD_MODE_CONFLICT, `upload ${uploadId} was started for direct HTTP upload; PUT the bytes to /uploads/${uploadId} instead of upload_file_chunk`);
+    }
     const chunk = Buffer.from(base64 || "", "base64");
     const canonicalBase64 = chunk.toString("base64").replace(/=+$/, "");
     if (canonicalBase64 !== String(base64 || "").replace(/\s/g, "").replace(/=+$/, "")) throw new Error("Chunk is not valid canonical base64");
@@ -328,14 +365,116 @@ export function createTransferRuntime({ vaultRuntime, deps = {} } = {}) {
     return { uploadId, cancelled: true };
   }
 
+  // Issue #470 Wave A — single-PUT handle mode (same durable handle, same publish path).
+  async function startDirectUpload(input = {}, declaredVaultId) {
+    const declared = declaredVaultOf(declaredVaultId);
+    const { vaultPath, totalBytes, expectedSha256, overwrite = false } = input;
+    assertWritable();
+    if (!Number.isInteger(totalBytes) || totalBytes < 0) throw new Error("totalBytes must be a non-negative integer");
+    if (totalBytes > directUploadMaxBytes) fail(UPLOAD_TOO_LARGE, `totalBytes must be between 0 and ${directUploadMaxBytes}`);
+    if (!/^[0-9a-f]{64}$/i.test(expectedSha256 ?? "")) throw new Error("expectedSha256 must be the 64-character hexadecimal SHA-256 digest of the whole file");
+    const destination = transferPath(vaultPath);
+    if ((await exists(destination)) && !overwrite) throw new Error("Destination exists. Set overwrite=true to replace it.");
+    await fs.mkdir(uploadsRoot, { recursive: true });
+    const uploadId = randomUUID();
+    const paths = uploadPaths(uploadId);
+    const metadata = {
+      uploadId,
+      vaultId: declared ?? vaultId,
+      vaultPath: localFs.toVaultPath(destination),
+      totalBytes,
+      uploadedBytes: 0,
+      expectedSha256: expectedSha256.toLowerCase(),
+      overwrite,
+      mode: DIRECT_UPLOAD_MODE,
+      status: "uploading",
+      attempts: 0,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + limits.ttlMs).toISOString(),
+    };
+    await fs.writeFile(paths.part, Buffer.alloc(0), { mode: 0o600 });
+    await writeJsonAtomic(paths.metadata, metadata);
+    return { ...metadata, maxBytes: directUploadMaxBytes };
+  }
+  async function readDirectUpload(uploadId, declared) {
+    const paths = uploadPaths(uploadId), metadata = await readMetadata(paths, uploadId);
+    assertVaultBinding(metadata, declared, primary);
+    if (Date.parse(metadata.expiresAt) <= Date.now()) {
+      await removeUpload(paths);
+      fail(UPLOAD_EXPIRED, "Upload expired; start a new upload");
+    }
+    return { paths, metadata };
+  }
+  async function markFailed(paths, metadata, reason, terminal = false) {
+    metadata.status = terminal ? "failed-terminal" : "failed-retryable";
+    metadata.failedReason = reason;
+    metadata.attempts = (metadata.attempts || 0) + 1;
+    await writeJsonAtomic(paths.metadata, metadata);
+  }
+  /** Existence probe for the HTTP layer; no expiry cleanup (an expired handle must answer 410). */
+  async function peekDirectUpload(uploadId) {
+    return readMetadata(uploadPaths(uploadId), uploadId);
+  }
+  const { appendDirectUpload, publishDirectUpload } = createDirectUploadResumeWriter({
+    writerLock, uploadPaths, readDirectUpload, markFailed, writeJsonAtomic, transferPath, localFs, exists, assertWritable, declaredVaultOf, fail, describe, sha256,
+    ttlMs: limits.ttlMs, mode: DIRECT_UPLOAD_MODE, codes: { UPLOAD_DESTINATION_EXISTS, UPLOAD_FAILED, UPLOAD_IN_PROGRESS, UPLOAD_INTEGRITY_MISMATCH, UPLOAD_MODE_CONFLICT, UPLOAD_OFFSET_CONFLICT, UPLOAD_RANGE_EXCEEDED },
+  });
+  // Stream one HTTP body into `.part`, verify size + SHA-256, then publish through the very same
+  // `localFs.atomicWriteFile` + receipt path the base64 writer uses. Order is load-bearing (#470
+  // review §C2/§D): the writer lock precedes ANY staged read/truncate, and the buffer about to be
+  // published is re-hashed — the stream digest alone is never evidence of what is on disk.
+  async function receiveDirectUpload({ uploadId, stream, contentLength }, declaredVaultId) {
+    const declared = declaredVaultOf(declaredVaultId);
+    assertWritable();
+    const paths = uploadPaths(uploadId); // validates the id; touches nothing on disk
+    const release = writerLock ? writerLock.acquire(paths.metadata) : null;
+    if (writerLock && !release) fail(UPLOAD_IN_PROGRESS, `upload ${uploadId} already has an active writer`);
+    try {
+      const { metadata } = await readDirectUpload(uploadId, declared);
+      if (metadata.mode !== DIRECT_UPLOAD_MODE) fail(UPLOAD_MODE_CONFLICT, `upload ${uploadId} was created for base64 chunks; use upload_file_chunk`);
+      if (metadata.status === "complete") return { duplicate: true, result: metadata.result, receiptId: metadata.receiptId ?? null };
+      if (metadata.status !== "uploading") fail(UPLOAD_FAILED, `upload ${uploadId} is ${metadata.status}; start a new direct upload`);
+      if (metadata.uploadedBytes !== 0) fail(UPLOAD_MODE_CONFLICT, `upload ${uploadId} already carries staged bytes from another writer`);
+      const staged = await fs.stat(paths.part).then((stat) => stat.size, () => 0);
+      if (staged !== metadata.uploadedBytes) {
+        // Reachable only while HOLDING the lock (no in-process writer): these bytes are residue of an
+        // attempt that died. A length difference is never read as progress; the dead writer's token is kept as evidence.
+        await fs.writeFile(paths.part, Buffer.alloc(0), { mode: 0o600 });
+        Object.assign(metadata, { discardedStagedBytes: staged, discardedWriterToken: metadata.writerToken ?? null });
+        delete metadata.writerToken;
+        await markFailed(paths, metadata, "inconsistent-part");
+        fail(UPLOAD_FAILED, `upload ${uploadId} has inconsistent staged bytes; start a new direct upload`);
+      }
+      if (contentLength !== metadata.totalBytes) fail(UPLOAD_INTEGRITY_MISMATCH, `Content-Length must equal totalBytes (${metadata.totalBytes})`);
+      // Claim the part before the first byte: the lock is the liveness proof, the token the trace of a dead writer.
+      Object.assign(metadata, { writerToken: randomUUID(), writerStartedAt: new Date().toISOString() });
+      await writeJsonAtomic(paths.metadata, metadata);
+      const hash = createHash("sha256");
+      let received = 0;
+      const counter = new Transform({
+        transform(chunk, _encoding, callback) {
+          received += chunk.length;
+          if (received > metadata.totalBytes) { callback(fail(UPLOAD_TOO_LARGE, `body exceeds the declared ${metadata.totalBytes} bytes`)); return; }
+          hash.update(chunk);
+          callback(null, chunk);
+        },
+      });
+      const sink = createWriteStream(paths.part, { flags: "w", mode: 0o600 });
+      // Interrupted body: the part is kept, the status explains it, nothing is published.
+      try { await pipeline(stream, counter, sink); }
+      catch (error) { await markFailed(paths, metadata, "interrupted").catch(() => {}); throw error; }
+      if (received !== metadata.totalBytes) { await markFailed(paths, metadata, "size-mismatch", true); fail(UPLOAD_INTEGRITY_MISMATCH, `received ${received} of ${metadata.totalBytes} bytes`); }
+      const streamSha256 = hash.digest("hex");
+      if (streamSha256 !== metadata.expectedSha256) { await markFailed(paths, metadata, "sha256-mismatch", true); fail(UPLOAD_INTEGRITY_MISMATCH, `SHA-256 mismatch: expected ${metadata.expectedSha256}, received ${streamSha256}`); }
+      return await publishDirectUpload(paths, metadata, uploadId);
+    } finally {
+      release?.();
+    }
+  }
+
   return Object.freeze({
-    vaultId,
-    uploadsRoot,
-    primary,
-    limits,
-    startFileUpload,
-    appendFileUpload,
-    fileUploadStatus,
-    cancelFileUpload,
+    vaultId, uploadsRoot, primary, limits,
+    startFileUpload, appendFileUpload, fileUploadStatus, cancelFileUpload,
+    startDirectUpload, peekDirectUpload, receiveDirectUpload, appendDirectUpload,
   });
 }

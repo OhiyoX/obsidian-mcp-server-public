@@ -117,15 +117,21 @@ test("the cards layout shows the ƒ marker on the formula property label", async
   assert.equal(property.querySelector(".bases-cards-label").textContent, "ƒ Label");
 });
 
-test("the Properties popover shows the formula definition (read-only)", () => {
+test("the Properties popover shows the formula's LABEL, not its expression", () => {
+  // Owner report: the row read `项  ƒ file.asLink(if(title, title, f…` — the formula source
+  // took the row's width and cut the display name to one character. The desktop row is
+  // name + `›` only (owner screenshot 02), so the expression is not rendered at all and the
+  // label is the resolved displayName.
   const columns = page().columns;
   const panel = buildPropertiesPanel({}, { doc: document, columns, visibleColumns: columns });
-  const source = panel.querySelector('[data-formula-source="formula.label"]');
-  assert.notEqual(source, null);
-  assert.equal(source.textContent, `ƒ ${FORMULA_EXPRESSION}`);
-  assert.equal(source.getAttribute("title"), FORMULA_EXPRESSION);
-  // A plain property gets no formula source line.
-  assert.equal(panel.querySelector('[data-formula-source="file.name"]'), null);
+  assert.equal(panel.querySelector('[data-formula-source="formula.label"]'), null);
+  const label = panel.querySelector('[data-prop-row="formula.label"] .base-panel-option-label');
+  assert.equal(label.textContent, "Label");
+  // The raw expression must not appear anywhere in the popover text either.
+  assert.equal(panel.textContent.includes(FORMULA_EXPRESSION), false);
+  // A plain property keeps its own label — the PICKER label: a selector row reads the desktop
+  // built-in name (`file.name` → 名称), never the table header's displayName.
+  assert.equal(panel.querySelector('[data-prop-row="file.name"] .base-panel-option-label').textContent, "名称");
 });
 
 test("a fail-closed formula error shows the desktop-aligned message, not the generic 422 text", async () => {

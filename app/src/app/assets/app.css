@@ -1786,6 +1786,19 @@ button { color: inherit; }
    inline-tag hover affordance and a pointer, since only `tags` gets [data-tag]. */
 .preview .metadata-property-value .multi-select-pill[data-tag] { cursor: pointer; }
 .preview .metadata-property-value .multi-select-pill[data-tag]:hover { background: var(--tag-background-hover); color: var(--tag-color-hover); }
+/* Desktop parity for a multi-value property row: one `.multi-select-container` (asar app.css:
+   `display:inline-flex; vertical-align:top; flex-wrap:wrap; flex:1 1 auto; gap:var(--size-2-3);
+   min-height:var(--input-height)`) and `--size-2-3: 6px`. This repo has no `--size-2-3`, so the
+   gap is the literal 6px that token resolves to, on both axes (one `gap`, no per-axis magic
+   number). Exactly the geometry the Live panel already uses (`.cm-live-property-pills`). */
+.preview .metadata-property-value .multi-select-container {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  /* Definite width, or a single-pill row's percentage `max-width` is cyclic (see lane HANDOFF). */
+  width: 100%;
+}
 /* Desktop parity pills: accent #tag skin + desktop's own input size (@390969 / @80359). The
    13px / 1px-outline geometry below is the UNAPPROVED enlargement candidate (own commit). */
 .preview .metadata-property-value .multi-select-pill,
@@ -1800,6 +1813,21 @@ button { color: inherit; }
   color: var(--tag-color);
   line-height: 1;
   white-space: nowrap;
+  /* Desktop sets `box-sizing: border-box` on every element (asar app.css@108496), and `all: unset`
+     above resets ours to `content-box`; restating it is what makes the `max-width` below a budget on
+     the whole pill instead of on its text box. */
+  box-sizing: border-box;
+  /* Desktop `app.css@294431` (`--size-2-3` = 6px, `@86009`; `1ch` = the remove-button reserve). */
+  max-width: calc(100% - 6px - 1ch);
+}
+/* Desktop `app.css@295174`: wraps, and never ellipsises (only the link branch `@390120` does).
+   `white-space: normal` is ours: the pill body stays `nowrap` and a nowrap content box would hold
+   `min-width: auto` at the full text width, outranking `max-width`. */
+.preview .metadata-property-value .multi-select-pill-content,
+.cm-live-properties .cm-live-property-pills .multi-select-pill-content {
+  overflow: hidden;
+  word-break: break-word;
+  white-space: normal;
 }
 .preview .metadata-property-value .multi-select-pill:not([data-tag]),
 .cm-live-properties .cm-live-property-pills .cm-live-tag-pill:not(:has(> span[data-tag])) {

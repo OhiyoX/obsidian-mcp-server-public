@@ -14,7 +14,7 @@ export const SCOPE_DEFINITIONS = Object.freeze({
 
 const READ_TOOLS = new Set([
   "agent_bootstrap", "server_info", "get_note", "pull_note_file", "get_metadata", "list_notes", "list_files", "list_recent",
-  "search_notes", "get_file", "pull_file", "write_file", "start_file_upload", "file_upload_status", "upload_file_chunk",
+  "search_notes", "get_file", "pull_file", "write_file", "start_file_upload", "start_direct_upload", "file_upload_status", "upload_file_chunk",
   "cancel_file_upload", "create_archive", "inspect_archive", "read_archive_entry", "extract_archive", "get_canvas", "write_canvas", "write_note",
   "append_to_note", "patch_note", "replace_in_note", "manage_frontmatter", "list_tags", "manage_tags", "move_note", "delete_note",
   "list_trash", "restore_from_trash", "delete_trash_entry", "list_versions", "restore_version", "delete_version", "manage_folders",
@@ -28,7 +28,7 @@ const READ_TOOLS = new Set([
 ]);
 
 const WRITE_TOOLS = new Set([
-  "write_file", "start_file_upload", "upload_file_chunk", "cancel_file_upload", "create_archive", "extract_archive",
+  "write_file", "start_file_upload", "start_direct_upload", "upload_file_chunk", "cancel_file_upload", "create_archive", "extract_archive",
   "write_canvas", "write_note", "append_to_note", "patch_note", "replace_in_note", "manage_frontmatter", "manage_tags",
   "move_note", "delete_note", "restore_from_trash", "delete_trash_entry", "restore_version", "delete_version",
   "manage_folders", "update_task", "create_from_template", "rename_property", "set_property_type", "write_base", "patch_base", "create_base_entry",
@@ -38,7 +38,7 @@ const WRITE_TOOLS = new Set([
 ]);
 
 const FILE_TOOLS = new Set([
-  "get_file", "pull_file", "pull_note_file", "start_file_upload", "file_upload_status", "upload_file_chunk", "cancel_file_upload",
+  "get_file", "pull_file", "pull_note_file", "start_file_upload", "start_direct_upload", "file_upload_status", "upload_file_chunk", "cancel_file_upload",
   "create_archive", "inspect_archive", "read_archive_entry", "extract_archive", "skill_export", "skill_import",
 ]);
 

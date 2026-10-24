@@ -65,9 +65,11 @@ test("the URL round-trips view/sort/filter/q in a stable order", () => {
 });
 
 test("an empty override set produces no query string at all", () => {
-  assert.equal(buildBaseSearch({ view: null, sort: [], filter: [], q: "" }), "");
-  assert.deepEqual(parseBaseSearch(""), { view: null, sort: [], filter: [], q: "" });
-  assert.equal(buildBaseHref("/app/base/x", { sort: [], filter: [], q: "" }), "/app/base/x");
+  assert.equal(buildBaseSearch({ view: null, sort: [], filter: [], q: "", group: null }), "");
+  // `group` joined the override codec in the lane desktop-re/bases-grouping; the parsed
+  // shape carries it as an explicit `null` ("no rule"), like `sort: []`.
+  assert.deepEqual(parseBaseSearch(""), { view: null, sort: [], filter: [], q: "", group: null });
+  assert.equal(buildBaseHref("/app/base/x", { sort: [], filter: [], q: "", group: null }), "/app/base/x");
 });
 
 test("malformed URL values never throw and never leak into the request", () => {

@@ -32,9 +32,8 @@ function recordFor(raw, path = "Notes/note.md") {
 
 const SCALAR = recordFor("---\ntags: obsidian mcp oauth deployment\n---\nBody has no tag line.\n");
 const BLOCK = recordFor("---\ntype: deployment\ntags:\n  - memory\n  - inbox\n---\nBody.\n");
-// The desktop reference string, verbatim from the user's screenshot and the real note
-// `_Workspace/50-Ops/Services/example-host-nvultr/2026-08-29 WordPress MCP Adapter.md`.
-const WORDPRESS = recordFor("---\ntags:\n  - wordpress\n  - 运维\n  - mcp\n  - example-host\n---\nBody.\n");
+// A block tag sample with an operator-style tag.
+const WORDPRESS = recordFor("---\ntags:\n  - wordpress\n  - 运维\n  - mcp\n  - ops-host\n---\nBody.\n");
 const FLOW = recordFor("---\ntags: [web/deploy, other]\n---\nBody.\n");
 const INLINE = recordFor("---\ntitle: inline note\n---\nThe first line mentions #memory inline.\nSecond line.\n");
 const FENCED = recordFor("---\ntitle: fenced only\n---\n```js\nconst x = \"#memory\";\n```\nNo real tag.\n");
@@ -102,11 +101,11 @@ test("a block-list frontmatter tag renders the whole list as one desktop-style l
 
 test("the desktop reference line is reproduced verbatim for a real block list (U22)", () => {
   const after = expand(WORDPRESS, "tag:mcp");
-  assert.deepEqual(after.snippets, ["tags: wordpress 运维 mcp example-host"]);
-  assertBlockLine(WORDPRESS, after.snippets[0], "tags", ["wordpress", "运维", "mcp", "example-host"]);
+  assert.deepEqual(after.snippets, ["tags: wordpress 运维 mcp ops-host"]);
+  assertBlockLine(WORDPRESS, after.snippets[0], "tags", ["wordpress", "运维", "mcp", "ops-host"]);
   assert.deepEqual(after.replaced, ["#mcp"]);
   // The real note's frontmatter is exactly this shape, so the desktop bytes are pinned.
-  assert.equal(WORDPRESS.raw.includes("  - example-host"), true);
+  assert.equal(WORDPRESS.raw.includes("  - ops-host"), true);
 });
 
 test("a flow list keeps its own real line (not a synthesised one)", () => {

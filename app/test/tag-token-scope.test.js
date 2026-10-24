@@ -10,7 +10,7 @@
 // The fix removes the alias entirely, drives every state from desktop 1.14.4's
 // own tag/pill tokens, and gives both hosts the same geometry tokens. These pins
 // are source-level (the field-level proof is the Chromium probe in
-// `<local-desktop-research>/tools/verify-tag-tokens.mjs`).
+// `scratch/obsidian-desktop-re/tools/verify-tag-tokens.mjs`).
 
 import assert from "node:assert/strict";
 import fs from "node:fs";

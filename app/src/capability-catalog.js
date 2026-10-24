@@ -70,7 +70,8 @@ export const TOOLSET_TOOLS = Object.freeze({
   search: Object.freeze(["list_notes", "list_recent", "search_notes", "list_tags"]),
   files: Object.freeze([
     "list_files", "pull_note_file", "get_file", "pull_file", "write_file",
-    "start_file_upload", "upload_file_chunk", "file_upload_status", "cancel_file_upload",
+    "start_file_upload",
+  "start_direct_upload", "upload_file_chunk", "file_upload_status", "cancel_file_upload",
     "create_archive", "inspect_archive", "read_archive_entry", "extract_archive", "get_canvas", "write_canvas",
     "manage_folders",
   ]),
@@ -107,6 +108,7 @@ const TOOL_EXTRA_SCOPES = Object.freeze({
   pull_file: Object.freeze(["obsidian.files"]),
   write_file: Object.freeze(["obsidian.write"]),
   start_file_upload: Object.freeze(["obsidian.write", "obsidian.files"]),
+  start_direct_upload: Object.freeze(["obsidian.write", "obsidian.files"]),
   file_upload_status: Object.freeze(["obsidian.files"]),
   upload_file_chunk: Object.freeze(["obsidian.write", "obsidian.files"]),
   cancel_file_upload: Object.freeze(["obsidian.write", "obsidian.files"]),

@@ -4,6 +4,7 @@
 // assert structure only. Only existing app tokens are used; no new colors are
 // invented and no source asset other than the shared icon sprite is touched.
 
+import { BASE_PANEL_CSS } from "./styles-panels.js";
 export const BASE_SURFACE_CSS = [
   // Shell: the document area owns the height. `#base-host` fills `.document`
   // absolutely (like `.editor`/`.preview`), so the Base surface can never grow
@@ -37,6 +38,13 @@ export const BASE_SURFACE_CSS = [
   ".base-action-row{position:relative;display:flex;align-items:center;gap:2px;flex:0 0 auto;margin-left:auto;}",
   ".base-action{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--text-muted);font:inherit;font-size:13px;cursor:pointer;transition:background-color .12s ease,color .12s ease;}",
   ".base-action:hover{background:var(--background-modifier-hover,var(--hover));color:var(--text-normal,var(--text));}",
+  // Desktop active tool button: an OPEN menu paints `--background-modifier-hover`
+  // (`.text-icon-button.has-active-menu` asar app.css@262772), and only an open menu on an
+  // ACTIVE tool paints `--background-modifier-active-hover` (`.text-icon-button.is-active.has-active-menu`
+  // @263133, `.is-active:hover` @263492; token = `color-mix(in oklch, var(--interactive-accent) 10%,
+  // transparent)` @96013). A bare `is-active` keeps the accent text only (@261915).
+  ".base-action[aria-expanded=\"true\"]{background-color:var(--background-modifier-hover,var(--hover));}",
+  ".base-action.base-action-active[aria-expanded=\"true\"],.base-action.base-action-active:hover{background-color:var(--background-modifier-active-hover,color-mix(in oklch,var(--interactive-accent,var(--accent)) 10%,transparent));}",
   // Byte reclaim for this cut's narrow band (see HANDOFF-FIX2.md §5): groups of rules that
   // declared the SAME block at the same specificity are merged into one selector list at the
   // LAST member's position, so no intervening rule starts winning a longhand it did not win
@@ -44,252 +52,7 @@ export const BASE_SURFACE_CSS = [
   ".base-sort-indicator.base-sort-active,.base-action.base-action-active{color:var(--text-accent,var(--accent));}",
   ".base-action-icon{width:15px;height:15px;flex:0 0 15px;color:inherit;}",
   ".base-action-label{white-space:nowrap;}",
-  // Action popovers (排序 / 筛选 / 属性 / 搜索 / 新建). Each action button owns an anchor;
-  // the panel is absolutely positioned inside it, so opening a menu overlays the
-  // table instead of pushing it down, and the tool row never changes height. The
-  // header is lifted into its own stacking context so a popover always paints over
-  // the sticky table head. Only existing app tokens are used.
-  ".base-surface-header{position:relative;z-index:5;}",
-  ".base-action-anchor{position:relative;display:inline-flex;align-items:center;}",
-  // P0 shell (lane desktop-re/bases-css-port-impl): the panel IS the desktop's
-  // `div.menu.bases-toolbar-menu` (asar app.js@2368459), so it takes `.menu`'s own box
-  // (asar app.css@282803) plus the `.bases-toolbar-menu` attach block (@455439). No number is
-  // re-invented: `--layer-popover` = 30 (@74387), `--radius-m` = 8px (@83110),
-  // `--background-secondary` (@78369 via `--menu-background`), `--background-modifier-border-hover`
-  // (@78419 via `--menu-border-color`), `--shadow-s` (@78257 via `--menu-shadow`), `--icon-s`
-  // = 16px (@72362). Those tokens are DECLARED in `src/app/assets/app.css` (inside the
-  // `web-theme-fallback` layer, so a Vault theme that declares them still wins): the first
-  // version of this rule instead wrote one-off `var()` fallbacks that resolved differently from
-  // the desktop (`#dadada` came out `--color-base-30`; the shadow fallback was the desktop DARK
-  // `--shadow-s` under a light `--background-secondary`). Only the two chains whose producer the
-  // Web layer does not declare keep a fallback: `--menu-border-width` (this app declares no
-  // `--border-width`) and `--menu-border-color` (no `--background-modifier-border-hover`), both
-  // carrying the desktop's own resolved value.
-  //
-  // `--input-height: 28px` is deliberately NOT copied from `.bases-toolbar-menu` (@455439):
-  // nothing in this panel consumes it (the controls here are the Web app's 30px
-  // `.select-control` skin, pinned by `test/web-bases-panel-tokens.test.js`), and a copied
-  // declaration with no consumer is not alignment evidence.
-  // The desktop's `backdrop-filter:var(--menu-backdrop-filter)` (= `none`), its `corner-shape`
-  // and its `-webkit-app-region` are NOT copied: the first two are no-ops with no token in this
-  // app, the third is the desktop window frame's own concern.
-  ".base-panel{position:fixed;z-index:var(--layer-popover,30);min-width:220px;max-width:100vw;max-height:100%;overflow:hidden;padding:0;margin:0;display:flex;flex-direction:column;border:var(--menu-border-width,1px) solid var(--menu-border-color,var(--color-base-35));border-radius:var(--menu-radius,var(--radius-m));background-color:var(--menu-background,var(--background-secondary,var(--panel)));box-shadow:var(--menu-shadow,var(--shadow-s));user-select:none;}",
-  // P5 width semantics: the FILTER menu keeps the desktop's own width
-  // (`--bases-filter-menu-width: 520px`, asar app.css@57465, applied by
-  // `.bases-toolbar-menu.bases-toolbar-filter-menu` @455631). `:where()` holds the rule at zero
-  // specificity, so the `<=720px` and `<=480px` bands below still own the box when narrow.
-  ":where(.base-panel[data-base-panel=\"filter\"]){width:var(--bases-filter-menu-width,520px);}",
-  // ---------------------------------------------------------------------------
-  // G5 — `.menu-scroll`: the desktop panel's scroll container
-  // ---------------------------------------------------------------------------
-  // The desktop menu is `div.menu.bases-toolbar-menu` > `div.menu-scroll` (asar
-  // app.js@2369180) and the Bases variant makes THAT node the scroller
-  // (`.bases-toolbar-menu .menu-scroll{overflow-y:auto;padding:0}`, app.css@455560) while the shell
-  // keeps `.menu{overflow:hidden}` (@282803). The previous cut scrolled the shell itself
-  // (`overflow:auto` on `.base-panel`), so the panel's own header travelled with the content.
-  // The desktop class name is carried alongside ours so a reading can address either selector.
-  // The `flex`/`min-height` that make this the shell's only growing child are set on
-  // `.base-panel > .base-panel-scroll` below, after the column reset would otherwise flatten it.
-  ".base-panel-scroll{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0;}",
-  // G6 — `.bases-toolbar-menu-container` (app.css@452892; built by the menu constructor at
-  // app.js@2366362 and by the property page at app.js@2506194): the inner column of the menus
-  // that really have one. It — NOT the shell — owns `max-width:300px` (the shell is
-  // `max-width:100vw`, @455439) and the three local token overrides; `--bases-property-menu-item-radius`
-  // is the one the property rows consume (`border-start-start-radius`, @455105).
-  ".base-panel-container{--icon-size:var(--icon-s);--icon-stroke:var(--icon-s-stroke-width);--bases-property-menu-item-radius:var(--radius-m);display:flex;flex-direction:column;min-height:0;width:100%;max-width:300px;}",
-  // The desktop's `.bases-toolbar-section` wrapper is not a node in this surface (its header
-  // row is `.base-panel-section` itself, see P3 below), so that wrapper's own
-  // `padding:var(--size-2-1)` = 2px lives on the panel's direct children instead: the shell is
-  // `padding:0` like `.menu`, and without this inset every row and control would sit flush
-  // against the shell edge. `panel-position.js` still owns where the box lands; the desktop
-  // `--bases-filter-menu-width` is adopted above and the reading is in
-  // `evidence/readings.json`.
-  // The popover is a column flex box so its own `max-height` is a real budget for its
-  // body: every child is a full-width block (a native `<select>` and a `<textarea>`
-  // are inline-level by default, which is what used to shrink the advanced filter
-  // input into the leftover space of the conjunction selector), and the scrollable
-  // lists are the only children allowed to shrink. No child may carry a `flex`
-  // shorthand: its basis would become a *height* in this container, so the row
-  // layouts below scope their `flex` to `.base-panel-row`.
-  ".base-panel-row{display:flex;align-items:center;gap:6px;margin:0 0 6px;}",
-  ".base-panel-row:last-child{margin-bottom:0;}",
-  // Section heading (已显示 / 全部属性 / 当前视图 / 排序依据) with its real count. The
-  // heading is the popover's hierarchy: one step brighter than the counts, with the
-  // desktop section hairline under it (`.bases-toolbar-menu .bases-toolbar-section:not(:last-child)
-  // {border-bottom:var(--border-width) solid var(--background-modifier-border)}`, asar
-  // app.css@455428 block) so 当前视图 and 已显示 stop reading as one flat list.
-  // FIX-1 F4: the heading row's `gap` is the DESKTOP's own
-  // `.bases-toolbar-section-header{gap:var(--size-4-1)}` (asar app.css@455960 = 4px), not this
-  // surface's 6px row rhythm — the heading is a desktop component and the desktop wins that
-  // argument. `.base-panel-row` / `.base-panel-footer` have no desktop counterpart and keep the
-  // 6px rhythm (nail ⑤ of `test/web-bases-panel-tokens.test.js`, which gives way here).
-  // ---------------------------------------------------------------------------
-  // G7/G8 — the desktop section, its header container and its flair
-  // ---------------------------------------------------------------------------
-  // G7 wrapper: `.bases-toolbar-menu .bases-toolbar-section{padding:var(--size-2-1)}`
-  // (asar app.css@455722; `--size-2-1` = 2px @85969) plus the hairline BETWEEN sections
-  // (`:not(:last-child){border-bottom:var(--border-width) solid var(--background-modifier-border)}`,
-  // @455797). This layer declares no `--border-width` (its menu border reads the same desktop
-  // token through `--menu-border-width`, see the token contract in `web-bases-panel-tokens`), so
-  // the desktop's 1px is written out. The wrapper is a real node now: the old `.base-panel-section`
-  // WAS the heading row, so the desktop heading box had nowhere to live (gaps.md G7).
-  ".base-panel-section{padding:2px;}",
-  ".base-panel-section:not(:last-child){border-bottom:1px solid var(--background-modifier-border);}",
-  // G7 header: `.bases-toolbar-menu .bases-toolbar-section-header` (asar app.css@455939,
-  // built at app.js@2479077). It declares `--font-medium`/`--font-ui-small`, neither of which this
-  // layer declares, so the desktop's own resolved 500/13px are written out — the same rule this
-  // sheet already follows for other desktop-only tokens. `justify-content:space-between` is gone:
-  // the desktop keeps the flair right after the label (@455939 + @456413), not at the far edge.
-  ".base-panel-section-header{--flair-background:var(--background-modifier-hover);--flair-color:var(--text-muted);display:flex;align-items:center;padding:var(--size-4-2) var(--size-4-3);color:var(--text-normal,var(--text));font-weight:500;font-size:13px;gap:var(--size-4-1);}",
-  ".base-panel-section-label{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}",
-  // G8: the count IS the desktop `.flair`. The filter menu's section headers each create one
-  // (`e.createSpan({cls:"flair"})`, asar app.js@2479449 / @2479951) and fill it with the real
-  // number of active filters (`setText(String(t))`, @2480093) — so a bare number was the wrong
-  // shape. `.flair`'s own box is app.css@253669; the Bases override `margin-inline-start`
-  // (@456413, `--size-4-1` = 4px) is what puts it 4px after the label. `--size-2-1`/`--size-2-2`
-  // (2px/4px, @85969/@85988) are not declared here, so those two paddings are literal, and
-  // `font-variant-numeric:tabular-nums` is the one declaration this count already carried.
-  ".base-panel-section-header .flair{background-color:var(--flair-background);border-radius:var(--radius-s);color:var(--flair-color);font-size:10px;letter-spacing:.05em;margin-inline-start:var(--size-4-1);padding:2px 4px;position:relative;text-transform:uppercase;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums;}",
-  ".base-panel-count{flex:0 0 auto;}",
-  // The section's own content column (desktop `div.bases-toolbar-section-content`, app.js@2479077).
-  ".base-panel-section-content{display:flex;flex-direction:column;min-height:0;}",
-  // Static conjunction line of the filter popover (the frozen contract is AND only).
-  ".base-panel-hint{margin:0 0 6px;color:var(--text-muted);font-size:12.5px;}",
-  // Footer: the rows' 6px rhythm plus the hairline before the group actions. The
-  // actions are a COLUMN of full-width rows, which is the desktop shape
-  // (`.bases-toolbar-menu-actions{display:flex;flex-direction:column;padding:var(--size-4-1)}`,
-  // asar app.css@459374, with `.text-icon-button{width:100%}` for 添加筛选器 @459252) —
-  // not two equal-width boxes stretched across one line.
-  ".base-panel-footer{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:6px 0 0;padding-top:6px;border-top:1px solid var(--background-modifier-border,var(--line));}",
-  ".base-panel-search{margin:0 0 6px;}",
-  ".base-panel-icon-button{justify-content:center;flex:0 0 30px;padding:0;}",
-  // The `</>` simple/advanced switch: an icon control on the `当前视图` heading row
-  // (desktop keeps it in `.bases-toolbar-menu-container-header` next to the menu
-  // title), so it must not grow the heading row into a button bar.
-  // The simple/advanced switch — the desktop's own row-action icon control
-  // (`l.createDiv("filter-row-actions")` then `h.createEl("button",{cls:"clickable-icon
-  // filer-expression-mode-toggle"})`, asar app.js@2468679/@2468775; `.clickable-icon` box
-  // app.css@258658, hover @259149). Two notes: (1) the section header is NOT its home — the
-  // desktop header there carries only the collapse icon, the label and the flair (@2479077);
-  // (2) it is scoped to the action row on purpose, because the shared 30px control skin below is
-  // a ONE-class rule and a one-class `.base-panel-mode` lost its `border`/`background` to it —
-  // that is exactly how the switch ended up wearing the input frame the owner photographed
-  // (`.base-panel-button` matches the skin at equal specificity, later in the cascade).
-  // `--clickable-icon-radius`/`--size-2-2`/`--size-2-3` are not declared in this layer, so the
-  // desktop's 4px/6px padding is written out over this surface's own `--radius-s`.
-  ".base-panel-actions{display:flex;align-items:center;padding-top:4px;}",
-  ".base-panel-actions .base-panel-mode{flex:0 0 auto;margin-inline-start:auto;height:auto;padding:4px 6px;border:0;border-radius:var(--radius-s);background:transparent;color:var(--text-muted);}",
-  ".base-panel-actions .base-panel-mode:hover{background:var(--background-modifier-hover,var(--hover));color:var(--text-normal);}",
-  ".base-panel-actions .base-panel-mode[data-filter-mode=\"advanced\"]{color:var(--text-accent,var(--accent));}",
-  // The grow intent lives on the generated `.select-control` wrapper, which is the node
-  // that is really laid out; the native `<select>` it wraps is the 1px `.select-native`,
-  // so a `flex` on the select was dead. The conjunction selector is a direct child of the
-  // panel, so the column layout already stretches it to the full width.
-  // Option rows: the app's `.select-option` skin (min-height 30, radius 4).
-  // P2 menu item: the desktop `.bases-toolbar-menu-item` (asar app.css@466792) — one item
-  // class for the rows a menu really lists. `padding-inline-start` is the wider side, as in
-  // the desktop declaration pair.
-  ".base-panel-option{display:flex;align-items:center;gap:var(--size-4-2);min-height:30px;width:100%;padding:4px 4px;padding-inline-start:6px;border-radius:var(--radius-s);color:var(--text-normal,var(--text));font-size:13px;cursor:pointer;}",
-  ".base-panel-option:hover{background:var(--background-modifier-hover,var(--hover));}",
-  // The row is a `<label>`: keyboard focus lands on the checkbox, so the row needs
-  // the focus twin of its hover face or the option list has no visible focus at all.
-  ".base-panel-option:focus-within{background:var(--background-modifier-hover,var(--hover));}",
-  // FIX-1 F7: the desktop overrides the property menu row's START corners with its own token
-  // (`border-start-start-radius`/`border-end-start-radius: var(--bases-property-menu-item-radius)`,
-  // asar app.css@455105; `--bases-property-menu-item-radius: var(--radius-m)` @453001 = 8px).
-  // Only the properties menu gets it — every other panel keeps the 4px `--radius-s` option row.
-  // Logical longhands, exactly as the desktop writes them (and not a second `border-radius`
-  // number, so nail ① of `test/web-bases-panel-tokens.test.js` still reads one scale).
-  ".base-panel[data-base-panel=\"properties\"] .base-panel-option{border-start-start-radius:var(--bases-property-menu-item-radius,var(--radius-m));border-end-start-radius:var(--bases-property-menu-item-radius,var(--radius-m));}",
-  ".base-panel-option-label{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}",
-  // Read-only formula source of a computed property: real information, but a second
-  // full-size label made the row read as one long run of text. Muted monospace, on
-  // its own shrinkable slot, one line.
-  ".base-panel-formula-source{flex:1 1 auto;color:var(--text-faint);font-family:var(--font-monospace,monospace);font-size:11.5px;}",
-  ".base-panel-check{height:15px;flex:0 0 15px;margin:0;}",
-  ".base-panel-icon{width:13px;height:13px;flex:0 0 13px;color:currentColor;}",
-  // FIX-1 F6: the close control must be a 24x24 hit target. The desktop's icon size in these
-  // headers is `--icon-s` = 16px (asar app.css@72362) and this button carries `padding:4px`, so
-  // 16+4+4 = 24 — the 13px glyph left a 21x21 target. The `<=480px` overlay band re-sizes the
-  // same glyph at 18px and still wins (it is later in this sheet).
-  ".base-panel-close .base-panel-icon{width:var(--icon-s);height:var(--icon-s);flex:0 0 var(--icon-s);}",
-  // ONE control skin: input, button and (fallback) select share one declaration block.
-  // `user-select:text` keeps the shell's desktop `user-select:none` from reaching a real text
-  // field (a menu has none, this panel has three roles of them).
-  ".base-panel-input,.base-panel-select,.base-panel-button{height:30px;min-width:0;padding:0 8px;border:1px solid var(--control-border);border-radius:6px;background:var(--control-bg);color:var(--text-normal,var(--text));font:inherit;font-size:13px;user-select:text;}",
-  // P5 search field: the desktop container's own skin (asar app.css@453150/@453414) — the input
-  // itself is transparent with no box and the hairline lives under it. It has to sit AFTER the
-  // shared control skin above: both are one-class selectors, so source order is what decides, and
-  // the first placement of this rule was dead (real-Chromium reading: border-width 1px). The 6px
-  // bottom rhythm from `.base-panel-search` above stays.
-  ".base-search-input,.base-panel-search{border:0;border-radius:0;box-shadow:none;background-color:transparent;margin-top:4px;padding-bottom:2px;border-bottom:1px solid var(--background-modifier-border,var(--line));}",
-  ".base-panel-input{flex:1 1 90px;}",
-  // The laid-out select is the generated `.select-control`: 28px trigger + 1px borders.
-  ".base-panel .select-control{height:30px;}",
-  // `min-height:0` is load-bearing, not decoration: app.css `@media (max-width:720px)`
-  // hands `.select-trigger` a 44px touch `min-height`, and `min-height` beats `height`
-  // whichever comes later in the cascade. Without this reset a narrow viewport paints a
-  // 44px trigger inside a 30px wrapper (+14px, the 「不协调」 regression the review of
-  // `641ba056` found). The wrapper is the visible box at every width, the trigger only
-  // ever fills its content box.
-  ".base-panel .select-trigger{height:100%;min-height:0;}", 
-  // The row `flex` above is a *width* only inside `.base-panel-row`; in the popover's own
-  // column layout it would be a height, so every direct child of the panel resets it.
-  // ORDER MATTERS: this reset must stay after `.base-panel-input` (it wins on source
-  // order, both are one class) and before `.base-panel-list` (which grows back into the
-  // popover's leftover budget) — `test/web-bases-panel-layout.test.js` pins the order.
-  ".base-panel > *,.base-panel-scroll > *,.base-panel-container > *{flex:0 0 auto;margin-inline:2px;}",
-  // G7: the section and its content are column flex boxes too, but their children carry the
-  // DESKTOP's own 2px inset (`--size-2-1`, the section's padding above) instead of the margin
-  // the sectionless panels use, so a heading row lands at 2+12 = 14px from the panel edge —
-  // which is what the desktop's `.bases-toolbar-section{padding:2px}` + header `padding:8px 12px`
-  // add up to as well.
-  ".base-panel-section > *,.base-panel-section-content > *{flex:0 0 auto;}",
-  ".base-panel-list{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-height:0;max-height:260px;overflow:auto;}",
-  // G5: the scroll node is the shell's only growing child. It is written as a two-class
-  // selector so it wins over the column reset above on specificity, not on source order — the
-  // reset sits at the position `web-bases-panel-layout` pins (input < reset < list).
-  ".base-panel > .base-panel-scroll{flex:1 1 auto;}",
-  // The two panels that have no section node (search / new) keep the section's own 2px inset
-  // on the scroller, so their single row is not flush against the panel edge.
-  ".base-panel[data-base-panel=\"search\"] .base-panel-scroll,.base-panel[data-base-panel=\"new\"] .base-panel-scroll{padding:2px;}",
-  // ---------------------------------------------------------------------------
-  // G9/G10 — the desktop item's state classes and its second-level elements
-  // ---------------------------------------------------------------------------
-  // G9, destructive action: `.bases-toolbar-menu-item.mod-destructive{color:var(--text-error)}`
-  // (asar app.css@467177), set from the action's own flag
-  // (`n.rowEl.toggleClass("mod-destructive",e.destructive)`, app.js@2523902). The desktop's
-  // carrier is the action ROW; here the row's real control is the remove button, so the class
-  // lands on that control (HANDOFF §G9). `--text-error` is not declared in this layer, so the
-  // same `currentColor` fallback the surface's error box already uses is kept.
-  ".base-panel-button.mod-destructive{color:var(--text-error,currentColor);}",
-  // G9, hidden item: `.bases-toolbar-menu-item.mod-hidden` (@467406) + its name override
-  // (@467509), set for a property the view does not show (`t.toggleClass("mod-hidden",!v)`,
-  // asar app.js@2490299). This is the condition's real carrier — the visibility checkbox is
-  // exactly the `d.contains(l)` set the desktop reads.
-  ".base-panel-option.mod-hidden{--icon-color:var(--text-faint);color:var(--text-faint);}",
-  ".base-panel-option.mod-hidden .base-panel-item-name{--link-color:var(--text-faint);--link-color-hover:var(--text-muted);--link-unresolved-color:var(--text-faint);}",
-  // G9, disabled item: `.bases-toolbar-menu-item.is-disabled` (@467250; set from `!!e.error`,
-  // asar app.js@2512259). Here the row carries it exactly when its own control is disabled.
-  ".base-panel-option.is-disabled{--icon-color:var(--text-faint);color:var(--text-faint);cursor:default;background-color:transparent;}",
-  // G10, the item's second level: `.bases-toolbar-menu-item .bases-toolbar-menu-item-info`
-  // (asar app.css@468482; built at app.js@2488830), `-info-icon` (@469227/@469406) and the
-  // trailing action slot (@469509). The info box grows and clips, so the name ellipsises inside
-  // it and the action slot stays at the row end; `gap` is the desktop `--size-4-2` = 8px, which
-  // this layer DOES declare.
-  ".base-panel-item-info{display:flex;align-items:center;gap:var(--size-4-2);font-size:13px;flex-grow:1;overflow:hidden;}",
-  ".base-panel-item-name{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}",
-  ".base-panel-item-info-icon{cursor:pointer;display:flex;align-items:center;user-select:none;}",
-  ".base-panel-item-info-icon::before{content:\"\\200B\";width:0;}",
-  ".base-panel-action-icon{color:var(--text-muted);display:flex;align-items:center;justify-content:center;}",
-  // Fixed 56px block, no resize grip (the popover's own budget is a `max-height`).
-  ".base-panel-textarea{height:auto;min-height:56px;resize:none;font-family:var(--font-monospace,monospace);font-size:12.5px;line-height:1.45;}",
-  // A footer action is a menu row: full width (the column above stretches it) and
-  // left-aligned icon + label, like the desktop `.bases-toolbar-menu-item`
-  // (asar app.css@466779). Scoped to the footer so the icon buttons elsewhere keep
-  // their centred face.
-  ".base-panel-footer .base-panel-button{justify-content:flex-start;text-align:left;}",
-  ".base-panel-button{display:inline-flex;align-items:center;gap:6px;padding:0 10px;cursor:pointer;}",
+  ...BASE_PANEL_CSS,
   ".base-action:focus-visible,.base-panel-button:focus-visible{outline:2px solid var(--interactive-accent,var(--accent));outline-offset:1px;}",
   ".base-search-input{flex:0 1 220px;}",
   // Table: the table box is the only vertical scroll owner inside the Base document.
@@ -306,9 +69,35 @@ export const BASE_SURFACE_CSS = [
   ".base-table th:last-child,.base-table td:last-child{border-inline-end:0;}",
   ".base-table th:first-child,.base-table td:first-child{padding-left:20px;}",
   ".base-table th:last-child,.base-table td:last-child{padding-right:20px;}",
-  ".base-table thead th{border-top:1px solid var(--background-modifier-border,var(--line));border-bottom:1px solid var(--background-modifier-border,var(--line));position:sticky;top:0;z-index:1;background:var(--background-primary,var(--panel));color:var(--text-muted);font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
+  // Desktop header geometry: `.bases-thead{position:sticky;height:var(--bases-table-row-height)…}`
+  // (asar app.css@488533), `.bases-thead .bases-table-header{height:var(--bases-table-row-height)}`
+  // (@488885) and `.bases-td{height:var(--bases-table-row-height)}` (@494332) — the SAME 30px token as
+  // the body rows (@58915), so the header is exactly one row band tall. Like the body cells, the
+  // block padding has to go: `height` is a minimum on a table cell, so `padding-block:10px` kept the
+  // header at 42.25 no matter what height was asked for.
+  ".base-table thead th{border-top:1px solid var(--background-modifier-border,var(--line));border-bottom:1px solid var(--background-modifier-border,var(--line));position:sticky;top:0;z-index:1;background:var(--background-primary,var(--panel));color:var(--text-muted);font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:var(--bases-table-row-height,30px);padding-block:0;}",
   ".base-table td{overflow-wrap:anywhere;}",
-  ".base-column-icon{width:14px;height:14px;vertical-align:-2px;margin-right:6px;color:var(--text-muted);}",
+  // Group headings (lane desktop-re/bases-grouping). The desktop class family is
+  // `bases-group-heading`; its 1.14.4 offsets were NOT re-measured on this host (no asar),
+  // so the geometry below is our own minimal box and the mismatch is registered in
+  // HANDOFF-GROUPING.md as [未证实] rather than claimed as parity. It reuses the table's
+  // own tokens (muted label, `--bases-table-row-height` band, hairline) so a grouped
+  // table stays in the same visual system as its rows.
+  ".base-table .base-group-heading>th{background:var(--background-secondary,var(--background-primary-alt,var(--panel)));color:var(--text-muted);font-weight:600;font-size:12.5px;}",
+  ".base-table .base-group-heading>th .bases-group-heading-label{color:var(--text-normal,var(--text));}",
+  ".base-table .base-group-heading .base-group-heading-count{margin-inline-start:var(--size-4-1,4px);background-color:var(--flair-background);border-radius:var(--radius-s);color:var(--flair-color);font-size:10px;padding:2px 4px;font-variant-numeric:tabular-nums;}",
+  // Desktop row geometry: `.bases-tr{height:var(--bases-table-row-height)}` (asar app.css@494000,
+  // token `--bases-table-row-height:30px` @58915) plus `.bases-td{height:var(--bases-table-row-height)}`
+  // (@494332) — the 30px lives on the cell BOX, the desktop sets no vertical padding at all. Our
+  // `td{padding:10px 16px}` was the whole difference (42–43px rows), so the block padding goes to
+  // zero and the line box is centred in the row by the `vertical-align:middle` above.
+  ".base-table tbody tr{height:var(--bases-table-row-height,30px);}",
+  ".base-table tbody td{padding-block:0;}",
+  // The sprite carries `.svg-icon`'s `display:block` (Obsidian app.css), which in a table cell stacks a
+  // SECOND block box under the label: measured 56.25 = 20 padding + 2 borders + 20.25 label line + 14
+  // icon. The header cell is an inline formatting context (the desktop's is a flex row instead), so the
+  // icon has to be inline again for the header to be one line.
+  ".base-column-icon{display:inline-block;width:14px;height:14px;vertical-align:middle;margin-right:6px;color:var(--text-muted);}",
   ".base-table tbody tr:hover{background:var(--background-modifier-hover,var(--hover));}",
   // Column resize: handle sits on the column boundary, appears on hover/drag.
   ".base-col-resize{position:absolute;top:0;right:-3px;bottom:0;width:7px;display:block;cursor:col-resize;background:transparent;touch-action:none;z-index:2;}",
@@ -356,6 +145,40 @@ export const BASE_SURFACE_CSS = [
   ".bases-cards-property.mod-title .bases-cards-label{display:none;}",
   ".bases-cards-label{flex:0 0 auto;color:var(--text-muted);font-size:12px;}",
   ".bases-cards-line{min-width:0;overflow-wrap:anywhere;}",
+  // Group headings in list + cards (lane desktop-re/group-headings-list-cards). The desktop
+  // factory is `_J.createGroupHeadingEl` (app.js@2499736) = `bases-group-heading mod-collapsible`
+  // + `bases-group-property` + `bases-group-value` + `collapse-indicator collapse-icon`; the
+  // skin is app.css `.bases-group-heading` @447337 (flex / baseline / gap --size-4-1 / ellipsis),
+  // @448504 (property: --font-ui-smaller, --text-muted, display block), @448773 (value:
+  // --font-smaller, 600), chevron rotate @448062 / un-rotate @448184, hover-only indicator
+  // @448311 + always-on under `(hover:none)` @448423. `mod-collapsible` is also what keeps these
+  // rules off the TABLE's heading cell, which carries `bases-group-heading` but not the mod.
+  // The desktop holds the folded state in its query controller and persists it
+  // (`saveGroupFolds`); this surface folds for the mount only. These headings are NOT sticky:
+  // every `position:sticky` in app.css is the table thead (@488569) or the footer (@491293),
+  // and the headings themselves are absolute blocks at a measured `top` inside a virtualized
+  // list/cards container (@484742 / @475598). Our layouts have no virtualization, so the
+  // heading and its group box sit in normal flow.
+  ".bases-group-heading.mod-collapsible{display:flex;align-items:baseline;gap:4px;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;line-height:var(--bases-table-row-height,30px);cursor:var(--cursor,default);padding:4px 0 8px;}",
+  ".bases-group-heading .bases-group-property{font-size:var(--font-ui-smaller,12px);font-weight:400;color:var(--text-muted);}",
+  ".bases-group-heading .bases-group-value{font-size:var(--font-smaller,.875em);font-weight:600;color:var(--text-normal,var(--text));overflow:hidden;text-overflow:ellipsis;}",
+  ".bases-group-heading .collapse-indicator{flex:0 0 auto;align-self:center;padding-inline:2px;color:var(--collapse-icon-color,var(--text-faint));opacity:0;}",
+  ".bases-group-heading .collapse-indicator svg{transform:rotate(90deg);}",
+  ".bases-group-heading .collapse-indicator.is-collapsed svg{transform:none;}",
+  ".bases-group-heading:hover .collapse-indicator{opacity:1;}",
+  "@media (hover:none){.bases-group-heading .collapse-indicator{opacity:1;}}",
+  // The folded class lives on the GROUP BOX (desktop: list @3185086 / cards @3154320
+  // `toggleClass(\"is-collapsed\")` on the group container, cards additionally dropping its
+  // padding and border). `display:none` is this surface's way of not painting the rows; the
+  // desktop detaches them. The heading stays, which is the whole point of a fold.
+  ".bases-list-group.is-collapsed .bases-list-group-list,.bases-cards-group.is-collapsed{display:none;}",
+  // Cards: the container is ONE grid when ungrouped, so a grouped list turns it into the
+  // desktop's column of (heading, group box) pairs (@3154320 pushes `groupHeadingEl` then
+  // `containerEl`) and each group box becomes the grid. `.is-grouped .bases-cards-container
+  // .bases-cards-group{padding:0 0 16px;border-bottom:1px}` + heading `padding:4px 0 8px`
+  // (app.css@475726 / @475598); the group gap is --size-4-3 (@475905).
+  ".bases-cards-container[data-base-group-by]{display:flex;flex-direction:column;gap:0;align-items:stretch;}",
+  ".bases-cards-group{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--base-card-size,200px),1fr));gap:12px;align-items:start;padding:0 0 16px;border-bottom:1px solid var(--background-modifier-border,var(--line));}",
   // kanban's own rules are NOT here: the layout ships as an on-demand asset and
   // injects them at runtime (kanban-runtime.js KANBAN_BOARD_CSS), so this stylesheet
   // - which every first screen loads - stays free of a surface that may never open.

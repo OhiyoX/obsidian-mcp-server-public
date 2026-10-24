@@ -155,7 +155,11 @@ test("the panel paints one radius scale and no 5px/7px orphan", () => {
   // `input[type=search]` is a flat hairline row, `border-radius:0`, asar app.css@453150), so the
   // allowance is now pinned to those two selectors and to nothing else: a new zero elsewhere is a
   // failure again, and dropping the search row's own zero is a failure too.
-  const desktopTokens = ["var(--radius-s)", "var(--menu-radius,var(--radius-m))"];
+  // U12: `.base-panel-group-statements` (the read-only declared-filter box) paints the
+  // desktop's own `border-radius: var(--radius-m)` (asar app.css@470985, the nested
+  // `.filter-group` body). It is the SAME 8px member of the scale above, declared
+  // through the token the desktop itself uses, so the scale is unchanged.
+  const desktopTokens = ["var(--radius-s)", "var(--menu-radius,var(--radius-m))", "var(--radius-m)"];
   const zeroRadius = new Set();
   for (const [selector, values] of radii) {
     for (const value of values) {
@@ -345,11 +349,19 @@ test("only the properties menu takes the desktop's 8px start radius", () => {
 });
 
 test("the shell carries no declaration without a consumer", () => {
-  // F11: the desktop's `.bases-toolbar-menu{--input-height:28px}` was copied here while nothing in
-  // the panel reads it (the controls are the Web app's 30px `.select-control` skin, nail ②). It is
-  // deleted, and this assertion is the reason it may not come back as "alignment evidence".
+  // F11: the desktop's `.bases-toolbar-menu{--input-height:28px}` was copied onto the shell while
+  // nothing in the panel read it (the controls are the Web app's 30px `.select-control` skin,
+  // nail ②). The SHELL still must not carry it.
   assert.equal(valueOf(".base-panel", "--input-height"), null);
-  assert.ok(!BASE_SURFACE_CSS.includes("--input-height"), "the surface must not declare a dead --input-height");
+  // D4 (lane desktop-re/panel-sort): the token is declared ONLY where the desktop's own
+  // consumer exists — the sort menu, whose two segments are the desktop comboboxes and whose
+  // `.select-control` height reads the token (`height:var(--input-height,30px)`). A declaration
+  // whose selector scope has no reader in this sheet is still a failure.
+  const declarations = [...BASE_SURFACE_CSS.matchAll(/([^{}]+)\{[^}]*--input-height:([^;}]+)/g)]
+    .map((match) => ({ selector: match[1].trim(), value: match[2].trim() }));
+  assert.deepEqual(declarations.map((entry) => entry.selector), ['.base-panel[data-base-panel="sort"]']);
+  assert.equal(declarations[0].value, "28px", "the desktop value, not a re-invented one");
+  assert.ok(BASE_SURFACE_CSS.includes("height:var(--input-height,30px)"), "the declaration has a consumer");
 });
 
 test("every control the panel bodies build is a node the stylesheet actually styles", () => {

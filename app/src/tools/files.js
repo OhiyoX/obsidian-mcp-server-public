@@ -17,6 +17,7 @@ import {
   startFileUpload,
 } from "../file-transfer.js";
 import { err, ok } from "../result.js";
+import { startDirectUpload } from "../direct-upload.js";
 import { requireRequestAuthor, stampFrontmatter } from "../request-context.js";
 import { assessWriteImpact, assertShrinkConfirmed } from "../write-guard.js";
 import {
@@ -262,6 +263,28 @@ export function registerFileTools(server) {
     async ({ path, totalBytes, sha256, overwrite, acceptedOnly }) => {
       try {
         return ok(await startFileUpload({ vaultPath: path, totalBytes, expectedSha256: sha256, overwrite, acceptedOnly }));
+      } catch (error) {
+        return err(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "start_direct_upload",
+    {
+      title: "Start Direct HTTP Vault File Upload",
+      description: "Create an HTTP upload handle so the file bytes travel from the client to the server without passing through the model, MCP JSON or base64. Send bytes to relativePath with the same credential. Either PUT the exact bytes in one request with the exact Content-Length, or resumable: PATCH consecutive byte ranges with Upload-Offset set to the bytes already stored (single writer, contiguous only; a mismatched offset returns 409 with the authoritative Upload-Offset). An interrupted upload can be resumed from its stored offset instead of restarting; expect a transient 409 UPLOAD_IN_PROGRESS right after a disconnect and retry after a short backoff.",
+      inputSchema: {
+        path: z.string().min(1),
+        totalBytes: z.number().int().min(0),
+        sha256: z.string().regex(/^[0-9a-f]{64}$/i),
+        overwrite: z.boolean().default(false),
+      },
+      annotations: { destructiveHint: true, openWorldHint: false },
+    },
+    async ({ path, totalBytes, sha256, overwrite }) => {
+      try {
+        return ok(await startDirectUpload({ vaultPath: path, totalBytes, expectedSha256: sha256, overwrite }));
       } catch (error) {
         return err(error);
       }

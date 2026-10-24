@@ -52,7 +52,7 @@ test("#218: Windows drive and UNC inputs fail closed instead of becoming vault-r
   const localFs = makeFs({ root, data });
   // Each of these used to become a vault-relative path (`D:/...`) and materialize a `D:`
   // directory inside the vault, which Windows clients can never pull (issue #218).
-  for (const input of ["C:\\work\\scratch", "C:/work/scratch", "D:notes/scratch", "D:", "\\\\server\\share\\notes"]) {
+  for (const input of ["D:\\Coding\\Codex\\scratch", "D:/Coding/Codex/scratch", "D:notes/scratch", "D:", "\\\\server\\share\\notes"]) {
     assert.throws(() => localFs.resolveVaultPath(input), /Windows absolute and UNC paths are not accepted/, `must reject ${input}`);
   }
   // The pinned leading-slash semantics stay untouched by this fix.

@@ -1,26 +1,42 @@
 // Sort popover body (desktop Bases "Sort" menu).
 //
-// Shape: a section heading + one row per active sort (`属性 select` + `方向 select`
-// + 删除) + a footer with `添加排序` / `清除排序`. The desktop's `分组依据` section is
-// NOT rendered: the Base DTO reports `capabilities.grouping === false` and the
-// frozen query contract has no grouping support, so drawing it would be a fake
-// control. The desktop row also carries a ⠿ drag handle for re-ordering sorts;
-// the shared icon sprite has no grip glyph and drag re-ordering is not
-// implemented, so the handle is not drawn either (no dead affordance).
+// Shape (all offsets re-measured on the pinned 1.14.4 extract, not on the 1.13.7
+// offsets the parity inventory still carries):
+//   * `.bases-toolbar-section.bases-sort-container` > `.bases-toolbar-section-header`
+//     (the bare `排序依据` label, NO flair: app.js@2526324 builds the page, app.js@2526548 the header text
+//     only) + `.bases-toolbar-section-content` holding the rows;
+//   * one row per sort = `.base-toolbar-sort-item` (app.js@2481117), a single frame with
+//     the grip handle, the property combobox, the direction combobox and the trash icon;
+//   * the add action is its own section, `.bases-toolbar-section.bases-toolbar-menu-actions`
+//     holding one borderless menu item (`lucide-plus` + `添加排序`, app.js@2526713), so the
+//     desktop's `:not(:last-child)` hairline separates it from the rows.
 //
-// The direction labels follow the property type the desktop uses (`A → Z` for
-// text, `0 → 1` for numbers, `旧 → 新` for dates). The type is *inferred from the
-// values of the current page* — the DTO does not carry a declared property type —
-// and falls back to the text labels when the sample is empty or mixed.
+// The row list OPENS on the sort the `.base` declares for the selected view
+// (`loadSort(){ return queryController.getViewConfig()?.getSort() ?? [] }`,
+// app.js@2527776; the Web DTO carries it as `viewSort`). The URL override
+// (`?sort=`) still wins: it is this surface's only write path, because editing or
+// clearing the view's own declaration is a `PATCH /api/web/v1/base` operation.
+//
+// The `分组依据` section is NOT rendered: the Base DTO reports
+// `capabilities.grouping === false` and the frozen query contract has no grouping
+// support, so drawing it would be a fake control.
+//
+// The direction labels follow the property type the desktop resolves through
+// `getWidgetForIdent()` (app.js@2482225: `date`/`datetime` -> 从旧到新/从新到旧,
+// `number` -> 0 → 1/1 → 0, everything else -> A → Z/Z → A; the strings are the app's
+// own i18n values, i18n/zh.txt:2359-2360). The type is *inferred from the values of the
+// current page* — the DTO does not carry a declared property type — and falls back
+// to the text labels when the sample is empty or mixed.
 
 import { buildSelect } from "./dom.js";
 import { panelButton, panelFooter, panelScroll, panelSection, panelShell, columnOptions } from "./panel-chrome.js";
+import { spriteIcon } from "./dom.js";
 import { BASE_SORT_MAX } from "./query-state.js";
 
 export const SORT_DIRECTION_LABELS = Object.freeze({
   text: Object.freeze({ asc: "A → Z", desc: "Z → A" }),
   number: Object.freeze({ asc: "0 → 1", desc: "1 → 0" }),
-  date: Object.freeze({ asc: "旧 → 新", desc: "新 → 旧" }),
+  date: Object.freeze({ asc: "从旧到新", desc: "从新到旧" }),
 });
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
@@ -74,6 +90,23 @@ export function replaceSortKey(list, index, key) {
   });
 }
 
+// The rows the menu draws: the URL override when the user has one, else the sort the
+// selected view declares (`loadSort()` on the desktop). Both are `[{ key, dir }]`.
+export function effectiveSortList(state) {
+  const override = Array.isArray(state?.sort) ? state.sort : [];
+  if (override.length) return override;
+  return Array.isArray(state?.viewSort) ? state.viewSort : [];
+}
+
+export function moveSortEntry(list, from, to) {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from === to) return list;
+  if (from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+  const next = list.slice();
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
 export function buildSortPanel(state, context, { onSort } = {}) {
   const panel = panelShell(context.doc, "sort", "排序");
   // G5: the sort menu is a `.menu`/`.menu-scroll` menu like the filter one (its own add row
@@ -81,22 +114,62 @@ export function buildSortPanel(state, context, { onSort } = {}) {
   const scroll = panelScroll(context.doc);
   panel.appendChild(scroll);
   const columns = Array.isArray(context.columns) ? context.columns : [];
-  const list = Array.isArray(state.sort) ? state.sort : [];
+  const list = effectiveSortList(state);
   const columnKeys = columns.map((column) => column.key);
-  const options = columnOptions(columns, list.map((entry) => entry.key));
+  // The desktop's sort rows read the RAW property key (`updated`, not the `.base` displayName
+  // 更新) — the same rule the properties menu follows, and what the owner's 04 shot shows — so
+  // `columnOptions` paints `propertyPickerLabel` (built-in name, else raw key; a formula keeps
+  // its displayName), not the displayName-first table header label.
+  // `file.file` and `file.backlinks` are filtered out of the desktop's property chooser
+  // (`app.js@2528675`), so they are excluded here too instead of being registered as
+  // "unreachable" (review round 1 showed they ARE reachable when a `.base` declares them).
+  const SORT_EXCLUDED_KEYS = new Set(["file.file", "file.backlinks"]);
+  const options = columnOptions(columns, list.map((entry) => entry.key))
+    .filter((option) => !SORT_EXCLUDED_KEYS.has(option.value));
 
+  // D8: the desktop header carries the bare `排序依据` label — its flair is the TOOLBAR
+  // badge, not a section count (app.js@2526548), so no `count` is passed.
   const { section, content } = panelSection(context.doc, {
     label: "排序依据",
-    count: list.length,
     attribute: "data-sort-section",
     name: "sort",
   });
   scroll.appendChild(section);
 
+  let dragSource = null;
   list.forEach((entry, index) => {
+    // D3: one frame, two segments — `.base-toolbar-sort-item` (app.js@2481117). The rows
+    // carry `data-sort-row` (the frozen hook) and the desktop's own class.
     const row = context.doc.createElement("div");
-    row.className = "base-panel-row";
+    row.className = "base-toolbar-sort-item";
     row.setAttribute("data-sort-row", entry.key);
+
+    // D2: the desktop prepends `createDiv("grip-handle")` + `LM(r,"grip-vertical")` as the
+    // row's first child and wires drag re-ordering to `moveSortRow` (app.js@2528519). The
+    // handle below is that node and the drop handler below is that operation.
+    const grip = context.doc.createElement("span");
+    grip.className = "grip-handle";
+    grip.setAttribute("aria-hidden", "true");
+    const glyph = spriteIcon(context.doc, "grip-vertical", "base-panel-icon");
+    if (glyph) grip.appendChild(glyph);
+    grip.draggable = true;
+    grip.ondragstart = (event) => {
+      dragSource = index;
+      if (event?.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", String(index));
+      }
+    };
+    grip.ondragend = () => { dragSource = null; };
+    row.appendChild(grip);
+    row.ondragover = (event) => { event?.preventDefault?.(); };
+    row.ondrop = (event) => {
+      event?.preventDefault?.();
+      const raw = dragSource ?? Number(event?.dataTransfer?.getData?.("text/plain"));
+      dragSource = null;
+      if (!Number.isInteger(raw) || raw === index) return;
+      onSort?.(moveSortEntry(list, raw, index));
+    };
 
     const property = buildSelect(context.doc, {
       className: "base-panel-select",
@@ -129,7 +202,7 @@ export function buildSortPanel(state, context, { onSort } = {}) {
     row.appendChild(direction);
 
     const remove = panelButton(context.doc, {
-      icon: "x",
+      icon: "trash-2",
       attributes: { "data-sort-remove": entry.key, "aria-label": `删除排序：${entry.key}` },
       focusKey: `sort-remove-${index}`,
       // G9: deleting a level is the desktop's destructive action (`.mod-destructive`,
@@ -142,7 +215,16 @@ export function buildSortPanel(state, context, { onSort } = {}) {
     content.appendChild(row);
   });
 
+  // D6: the add action is the desktop's borderless menu row, in its own
+  // `.bases-toolbar-section.bases-toolbar-menu-actions` sibling of the rows section
+  // (app.js@2526713 + `C$` row class `bases-toolbar-menu-item bases-toolbar-menu-action`,
+  // app.js@2373586). Being a sibling is what gives the rows section the desktop's
+  // `:not(:last-child)` hairline (app.css@455818) above the action row.
   const footer = panelFooter(context.doc);
+  // The desktop action row's box (`.bases-toolbar-menu-item` + `.bases-toolbar-menu-action`,
+  // app.js@2373586/app.css@466793) is the menu-item skin this sheet already carries for the
+  // filter menu's action rows, so the footer joins it instead of duplicating the declarations.
+  footer.classList.add("base-panel-actions");
   const atLimit = list.length >= BASE_SORT_MAX;
   const noColumns = columnKeys.length === 0;
   const add = panelButton(context.doc, {
@@ -163,9 +245,15 @@ export function buildSortPanel(state, context, { onSort } = {}) {
   footer.appendChild(add);
   if (add.disabled) add.classList.add("is-disabled");
 
-  if (list.length) {
+  // The desktop sort page has NO clear action. We need one only because a `?sort=` override is
+  // this surface's only write path: without it the reader cannot drop the override. Showing it
+  // while the menu is merely echoing the VIEW's declared sort made it a fake action (clicking it
+  // just re-renders the same seed row - review round 1), so it appears only when an override is
+  // actually in force.
+  const hasOverride = Array.isArray(state.sort) && state.sort.length > 0;
+  if (hasOverride && list.length) {
     const clear = panelButton(context.doc, {
-      text: "清除排序",
+      text: "清除本次排序",
       attributes: { "data-sort-clear": "" },
       focusKey: "sort-clear",
     });
@@ -174,10 +262,6 @@ export function buildSortPanel(state, context, { onSort } = {}) {
     footer.appendChild(clear);
   }
 
-  // The add actions sit inside the section's content, under its rows: the desktop's own add
-  // row is the LAST child of the menu there (@2526713), and keeping it out of the
-  // `.base-panel-section:not(:last-child)` hairline avoids a doubled 2px divider above a
-  // footer that already paints its own `border-top`.
-  content.appendChild(footer);
+  scroll.appendChild(footer);
   return panel;
 }

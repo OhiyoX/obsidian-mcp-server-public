@@ -157,7 +157,7 @@ test("dropping one group member is rejected, so the gate is not vacuous", () => 
   const reading = checkCompactDescriptorIntegrity({ tools: WIRE.tools, routing: ROUTING, groups: driftedGroups });
   assert.equal(reading.ok, false);
   assert.ok(reading.errors.some((error) => /obsidian_read.*members=6 exposedActions=7/.test(error)), reading.errors.join("\n"));
-  assert.ok(reading.errors.some((error) => /exposed action total=90 but group membership total=89/.test(error)), reading.errors.join("\n"));
+  assert.ok(reading.errors.some((error) => /exposed action total=91 but group membership total=90/.test(error)), reading.errors.join("\n"));
 });
 
 test("renaming one action without touching the mapping is rejected", () => {

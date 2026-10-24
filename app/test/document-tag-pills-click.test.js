@@ -101,14 +101,73 @@ test("Reading tags pills render as tag links with data-tag, only for tags", () =
 
   assert.match(
     html,
-    /<a class="tag property-pill multi-select-pill" href="#alpha" data-tag="alpha" data-internal-link="true">alpha<\/a>/,
+    /<a class="tag property-pill multi-select-pill" href="#alpha" data-tag="alpha" data-internal-link="true"><span class="multi-select-pill-content">alpha<\/span><\/a>/,
   );
   assert.match(html, /href="#beta" data-tag="beta"/);
   assert.match(html, /href="#gamma" data-tag="gamma"/, "singular tag key is a tag too");
   assert.equal(/data-tag="Alias A"/.test(html), false, "aliases are not tag searches");
   assert.equal(/data-tag="wide"/.test(html), false, "cssclasses is not a tag");
-  assert.match(html, /<span class="property-pill multi-select-pill">Alias A<\/span>/);
-  assert.match(html, /<span class="property-pill multi-select-pill">wide<\/span>/);
+  assert.match(html, /<span class="property-pill multi-select-pill"><span class="multi-select-pill-content">Alias A<\/span><\/span>/);
+  assert.match(html, /<span class="property-pill multi-select-pill"><span class="multi-select-pill-content">wide<\/span><\/span>/);
+  // Lane pill-max-width: every pill holds desktop's `.multi-select-pill-content` box (asar
+  // app.js@1845965), which is the node the pill's `max-width` clamp sizes, so the label wraps inside
+  // the pill instead of widening the value column.
+  assert.equal((html.match(/class="multi-select-pill-content"/g) ?? []).length, 5, "one content box per pill (5 values across 4 rows)");
+});
+
+// Lane note-pills-gap: a multi-value property row in the reading view must be one desktop
+// `.multi-select-container`, not a space-joined inline flow. Before this pin, `valueHtml()` joined
+// the pills with `join(" ")` inside the plain block value cell, so the wrap distance was the line
+// box: measured in real Chromium (1440x900, dark, 9 tags) the two lines sat 21.5px apart for a
+// 21.5px pill (line gap 0.00px) and neighbouring pills on one line were 3.56px apart (the width of
+// one space at 13px). Desktop 1.14.4 `app.css` lays the same row out as
+// `.multi-select-container { display: inline-flex; vertical-align: top; flex-wrap: wrap;
+// flex: 1 1 auto; gap: var(--size-2-3); min-height: var(--input-height) }` with
+// `--size-2-3: 6px`, i.e. 6px in both axes. Single-value rows are NOT wrapped: they keep their own
+// inline box, height and click behaviour.
+test("reading list values wrap in one desktop multi-select-container", () => {
+  const html = propertiesHtml([
+    ["tags", ["alpha", "beta"]],
+    ["aliases", ["Alias A"]],
+    ["created", new Date("2026-10-20T00:00:00.000Z")],
+    ["flag", true],
+    ["mcp_author", { client: "probe" }],
+    ["project", "note-pills-gap"],
+  ]);
+  const rows = new Map([...html.matchAll(
+    /<div class="metadata-property-key">.*?<span>([^<]+)<\/span><\/div><div class="metadata-property-value">(.*?)<\/div><\/div>/g,
+  )].map((match) => [match[1], match[2]]));
+  assert.deepEqual([...rows.keys()], ["tags", "aliases", "created", "flag", "mcp_author", "project"], "the row parser must see every property");
+
+  // List values: exactly one container, pills adjacent (no space text node anywhere).
+  assert.match(rows.get("tags"), /^<span class="multi-select-container"><a class="tag property-pill multi-select-pill" href="#alpha"/, "the tags row opens with the container, not with a space-separated pill flow");
+  assert.match(rows.get("tags"), /alpha<\/span><\/a><a class="tag property-pill multi-select-pill" href="#beta"/, "pills must be adjacent: the gap is the container's, not a text space");
+  assert.match(rows.get("tags"), /beta<\/span><\/a><\/span>$/, "the container must close right after the last pill");
+  assert.equal((rows.get("tags").match(/class="multi-select-container"/g) ?? []).length, 1, "one container per list row");
+  assert.match(rows.get("aliases"), /^<span class="multi-select-container"><span class="property-pill multi-select-pill"><span class="multi-select-pill-content">Alias A<\/span><\/span><\/span>$/);
+
+  // Single values: untouched. Wrapping them would change their line box and click target.
+  assert.match(rows.get("created"), /^<time class="metadata-property-date" datetime="/, "a date row keeps its own inline time box");
+  assert.equal(rows.get("flag"), "<span class=\"property-pill property-boolean\">true</span>");
+  assert.match(rows.get("mcp_author"), /^<code>/, "an object row keeps the monospace JSON code box");
+  assert.equal(rows.get("project"), "note-pills-gap");
+  for (const key of ["created", "flag", "mcp_author", "project"]) {
+    assert.equal(/multi-select-container/.test(rows.get(key)), false, `${key} must not be wrapped`);
+  }
+});
+
+test("Live property pills expose desktop's `.multi-select-pill-content` label box", () => {
+  assert.match(panelSource, /multi-select-pill-content/);
+  const root = createPropertiesPanel({
+    data: { tags: ["alpha"], aliases: ["Alias A"] },
+    onSearchTag: () => {},
+    editable: true,
+  });
+  for (const [key, label] of [["tags", "alpha"], ["aliases", "Alias A"]]) {
+    const [pillLabel] = tagPillLabels(root, key);
+    assert.equal(pillLabel.className, "multi-select-pill-content", `${key}: the pill label is the content box the pill's max-width clamp sizes`);
+    assert.equal(pillLabel.textContent, label, "the wrapper must not change the label text");
+  }
 });
 
 test("Reading tag links escape the value into the attribute", () => {

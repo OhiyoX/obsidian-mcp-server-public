@@ -10,9 +10,10 @@
 // the DOM.
 
 import {
-  BASE_ACTION_ITEMS,
   actionIsActive,
+  activeGroup,
   describeSortIndicator,
+  visibleActionItems,
 } from "./actions.js";
 import { el, spriteIcon } from "./dom.js";
 import { panelBackdrop } from "./panel-chrome.js";
@@ -48,6 +49,7 @@ export function createBaseToolbar({
   onSelectView,
   onSort,
   onFilter,
+  onGroup,
   onQuery,
   onToggleColumn,
   onHideAllColumns,
@@ -75,6 +77,7 @@ export function createBaseToolbar({
     onBack: () => back(),
     onSort,
     onFilter,
+    onGroup,
     onQuery,
     onToggleColumn,
     onHideAllColumns,
@@ -192,6 +195,12 @@ export function createBaseToolbar({
   }
 
   function buildActionRow(state, context) {
+    // The row decides which panels can still be reached. A layout switch can remove an
+    // action (the 分组 button is gone in list/cards), and an open panel of a removed action
+    // would then have no button to dismiss it — and would silently re-open after switching
+    // back. Prune it here, before the row is painted (the `is-panel-open` class below).
+    const items = visibleActionItems(state.capabilities, state.viewType);
+    if (topPanel() && !items.some((item) => item.id === topPanel())) panelStack = [];
     const row = el(doc, "div", "base-action-row");
     row.setAttribute("id", ACTION_MENU_ID);
     row.setAttribute("data-base-action-row", "");
@@ -205,8 +214,11 @@ export function createBaseToolbar({
       filter: state.filter ?? [],
       q: state.q ?? "",
       hidden: context?.config?.hidden ?? [],
+      // The badge follows the partition the last response was built from, i.e. the
+      // reader's `?group=` override or the view's declared `groupBy`.
+      group: activeGroup(state),
     };
-    for (const item of BASE_ACTION_ITEMS) {
+    for (const item of items) {
       // The anchor is the popover's positioning context: the panel floats inside
       // it, so opening a menu never changes the tool row height and the table never
       // moves (desktop Bases popovers).
@@ -219,7 +231,9 @@ export function createBaseToolbar({
       button.setAttribute("aria-haspopup", "dialog");
       if (actionIsActive(item.id, flags)) button.classList.add("base-action-active");
       button.setAttribute("aria-expanded", String(topPanel() === item.id));
-      const glyph = spriteIcon(doc, item.icon, "base-action-icon");
+      // An item without an `icon` paints no glyph at all: the sprite is addressed by name,
+      // and a missing name would emit an empty `<use>` (see actions.js `group`).
+      const glyph = item.icon ? spriteIcon(doc, item.icon, "base-action-icon") : null;
       if (glyph) button.appendChild(glyph);
       button.appendChild(el(doc, "span", "base-action-label", item.label));
       button.onclick = () => togglePanel(item.id);

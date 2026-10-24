@@ -15,6 +15,19 @@
 //      the column set, the row values, the filter/sort semantics and the frozen
 //      fail-closed direction are untouched (`compileBaseFormulas` still rejects
 //      an unknown function / a type error before any row is read).
+//   4. U12 filter projection. `filters: { base, view }` carries the condition
+//      summary of the Base-file-level and selected-view-level `filters:` the
+//      filter menu draws (`所有视图` / `当前视图`). Read-only metadata: the
+//      evaluator still owns the semantics, and `capabilities` is unchanged.
+//   5. Sort projection (lane desktop-re/panel-sort). `viewSort: [{ key, dir }]`
+//      is the selected view's DECLARED `sort:`, in the frozen override shape, so
+//      the sort menu can open with the document's own row instead of an empty
+//      list. Additive metadata: the evaluator still owns the ordering.
+//   6. Grouping projection (lane desktop-re/bases-grouping). `viewGroupBy:
+//      { property, direction } | null` is the selected view's DECLARED `groupBy:`,
+//      so the `分组依据` menu can open on the document's own rule while the Web
+//      `?group=` override stays the only thing this surface writes. Additive
+//      metadata: the partition itself is still built by the evaluator.
 //
 // `view.limit` is a semantic ceiling whose canonical legal domain is a positive
 // safe integer; `validateBaseDocument` rejects any other value (0, negative,
@@ -26,6 +39,8 @@
 // limit straight through `queryBaseSnapshot`, where an explicit limit still wins.
 import { isFormulaProperty, formulaPropertyName } from "../base-formulas.js";
 import { compileBaseView, parseAndValidateBase, queryBaseSnapshot } from "../base-query.js";
+import { summarizeBaseFilters } from "../base-filter-summary.js";
+import { readGroupByDeclaration } from "../base-grouping.js";
 
 // Redundant guard: a validated `view.limit` is already a positive safe integer.
 // Any other value (or a non-number) means "no declared ceiling", which can only
@@ -68,6 +83,30 @@ export function exposeFormulaColumns(base, columns) {
   });
 }
 
+// The selected view's DECLARED sort (`.base` `views[].sort`), projected into the same
+// wire shape as the frozen Web override (`[{ key, dir }]`). Desktop authority: the sort
+// menu seeds its rows from the view config (`display()` merges `currentSort` with
+// `loadSort(){ return queryController.getViewConfig()?.getSort() ?? [] }`, asar
+// app.js@2526324/@2527053), so a document-declared sort has to reach the client.
+//
+// `key` is the declared `property` verbatim: that is the vocabulary `order` (and hence
+// every column key and the override assertion in `assertBaseColumnKeys`) already uses.
+// `direction` maps onto the override's `asc`/`desc`; an absent direction is `ASC`, the
+// same default the document pipeline applies (base-query.js `item.direction || "ASC"`).
+// Items without a string property, and repeated properties, are dropped — the desktop
+// keeps one row per property.
+export function summarizeBaseSort(view) {
+  const items = Array.isArray(view?.sort) ? view.sort : [];
+  const out = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const key = typeof item.property === "string" ? item.property : "";
+    if (!key || out.some((entry) => entry.key === key)) continue;
+    out.push({ key, dir: item.direction === "DESC" ? "desc" : "asc" });
+  }
+  return out;
+}
+
 export function createBaseSnapshotEvaluator(evaluate = queryBaseSnapshot) {
   return function evaluateBaseSnapshot(input) {
     const { base } = parseAndValidateBase(input.raw);
@@ -81,6 +120,17 @@ export function createBaseSnapshotEvaluator(evaluate = queryBaseSnapshot) {
       viewLimit,
       columns: exposeFormulaColumns(base, result.columns),
       view: selected || { name: typeof result.view === "string" ? result.view : null, type: null },
+      // U12: additive, read-only condition summary of the two declared filter
+      // layers. Never throws for a document the domain accepted (`compileBaseView`
+      // already ran the same tree assertion above).
+      filters: summarizeBaseFilters({ base, view: resolvedView }),
+      // ADDITIVE (lane desktop-re/panel-sort): the selected view's DECLARED sort, which
+      // the sort menu shows until the user overrides it.
+      viewSort: summarizeBaseSort(resolvedView),
+      // The declared grouping rule (null when the view declares none). `compileBaseView`
+      // above already ran the same declaration gate, so this never introduces a new
+      // failure mode for a document the domain accepted.
+      viewGroupBy: readGroupByDeclaration(resolvedView),
     };
   };
 }

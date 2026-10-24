@@ -17,6 +17,7 @@ import {
 } from "./actions.js";
 import { panelScroll, panelSection, panelShell, panelButton, withPanelChrome } from "./panel-chrome.js";
 import { buildFilterPanel } from "./panel-filter.js";
+import { buildGroupPanel } from "./panel-group.js";
 import { buildPropertiesPanel } from "./panel-properties.js";
 import { buildSortPanel } from "./panel-sort.js";
 
@@ -27,6 +28,7 @@ export function createBasePanels({
   close,
   onSort,
   onFilter,
+  onGroup,
   onQuery,
   onToggleColumn,
   onHideAllColumns,
@@ -157,6 +159,9 @@ export function createBasePanels({
       doc,
       columns: declared,
       visibleColumns: visible,
+      // The desktop Properties menu's full row set (the additive DTO field). An older
+      // server sends none, and the panel then lists the declared columns only.
+      propertyCatalog: Array.isArray(context.propertyCatalog) ? context.propertyCatalog : [],
       config: context.config ?? {},
     };
   }
@@ -183,6 +188,8 @@ export function createBasePanels({
         return buildSortPanel(state, shared, { onSort });
       case "filter":
         return buildFilterPanel(state, shared, { onFilter });
+      case "group":
+        return buildGroupPanel(state, shared, { onGroup });
       case "properties":
         return buildPropertiesPanel(state, shared, {
           onToggleColumn,

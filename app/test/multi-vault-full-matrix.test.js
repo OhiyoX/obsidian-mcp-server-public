@@ -49,6 +49,7 @@ export const TOOL_COVERAGE = Object.freeze({
   pull_file: "multi-vault-gap-tools-matrix.test.js",
   write_file: "multi-vault-d-files-matrix.test.js",
   start_file_upload: "multi-vault-gap-tools-matrix.test.js",
+  start_direct_upload: "multi-vault-gap-tools-matrix.test.js",
   file_upload_status: "multi-vault-gap-tools-matrix.test.js",
   upload_file_chunk: "multi-vault-gap-tools-matrix.test.js",
   cancel_file_upload: "multi-vault-gap-tools-matrix.test.js",

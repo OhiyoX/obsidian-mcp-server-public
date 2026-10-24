@@ -7,7 +7,12 @@
 // desktop menu tokens. The invariants below are the regression nails for that cut:
 //
 //   ① user language on the surface, diagnostic CODE kept on the node;
-//   ② built-in `file.*` display names (desktop i18n) with custom keys untouched;
+//   ② built-in `file.*` display names (desktop i18n) with custom keys untouched, and the ONE
+//      label rule the owner's screenshots show on every surface: a formula column keeps its
+//      declared displayName, anything else reads built-in name / raw key. The header was the last
+//      surface still resolving a note property's displayName; lane `desktop-re/column-label-surfaces`
+//      (2026-10-24) closed that split — the header of the owner's own Projects.base reads `status`
+//      (01, x~862,y~162) while the document declares `status:{displayName:状态}`;
 //   ③ the desktop-shaped footer (a column of full-width action rows) and the `</>`
 //      simple/advanced switch on the section heading;
 //   ④ the popover chrome the desktop shares (radius 8, border-box 320px) and the
@@ -44,7 +49,7 @@ const document = harness.document;
 
 const COLUMNS = [
   { key: "file.name", label: "name", kind: "property" },
-  { key: "file.mtime", label: "编辑时间", kind: "property" },
+  { key: "file.mtime", label: "修改时间", kind: "property" },
   { key: "status", label: "status", kind: "property" },
   { key: "formula.note", label: "笔记", kind: "formula", formula: { expression: "file.asLink(file.name)" } },
 ];
@@ -140,16 +145,22 @@ function labelsFor({ declared = {}, order = [] } = {}) {
   return Object.fromEntries(snapshot.columns.map((column) => [column.key, column.label]));
 }
 
-test("a declared properties.<key>.displayName is the label for every kind, not just formulas", () => {
+test("a declared properties.<key>.displayName labels a formula column only", () => {
+  // Was "…is the label for every kind, not just formulas" (`.30`, 2026-10-21). The owner's
+  // screenshots say otherwise on the header: 01 reads `status` and 04 reads `updated` while the
+  // same `.base` declares 状态 / 更新, so a note property's displayName is NOT consumed by any
+  // surface, and only a formula column keeps it (项目). Every declaration below is therefore
+  // visible in exactly one place: the formula.
   const labels = labelsFor({
     declared: { "file.ctime": "创建时间", "file.mtime": "编辑时间", "file.size": "大小", "formula.note": "笔记" },
     order: ["formula.note", "file.mtime", "file.ctime", "file.size", "file.name", "status"],
   });
   assert.deepEqual(labels, {
     "formula.note": "笔记",
-    "file.mtime": "编辑时间",
+    // Declared but not a formula ⇒ the declaration is ignored, the built-in name stands (U5).
+    "file.mtime": "修改时间",
     "file.ctime": "创建时间",
-    "file.size": "大小",
+    "file.size": "文件大小",
     // Undeclared ⇒ the desktop built-in name wins over the key tail (U5).
     "file.name": "名称",
     status: "status",
@@ -163,31 +174,49 @@ test("without a declaration the label falls back to the built-in name table, and
   assert.deepEqual(labelsFor({ order: ["file.mtime", "file.ctime", "file.size", "status"] }), {
     "file.mtime": "修改时间", "file.ctime": "创建时间", "file.size": "文件大小", status: "status",
   });
-  // Negative control ②: any declared string is shown as declared, not translated.
+  // Negative control ②: a declared string on a NOTE property is not shown at all — the label is
+  // still the built-in name, so no surface prints a name the desktop's header does not print.
   assert.deepEqual(labelsFor({ declared: { "file.mtime": "Whatever the author typed" }, order: ["file.mtime"] }), {
-    "file.mtime": "Whatever the author typed",
+    "file.mtime": "修改时间",
   });
   // The formula branch keeps its own fallback (the formula key).
   assert.deepEqual(labelsFor({ order: ["formula.note"] }), { "formula.note": "formula.note" });
 });
 
-test("the same label reaches the table header, the properties panel and the filter/sort dropdowns", () => {
+// The old pin read "the same label reaches the table header, the properties panel and the
+// filter/sort dropdowns". It was first split (a SELECTOR row does not take a note property's
+// displayName: 02 reads `status` / `updated`, 04 reads `updated` in the sort row, 01 reads
+// `kind`) and is now whole again on the correct rule: the header reads what the three pickers
+// read, because the server's `columnLabel` no longer applies a note property's displayName
+// either. Only a formula row/column keeps its displayName.
+test("the header and the properties panel read the same label rule", () => {
   const properties = build("properties");
   assert.deepEqual(properties.querySelectorAll("[data-prop-row]").map((row) => row.getAttribute("data-prop-row")), ["file.name", "file.mtime", "status", "formula.note"]);
-  assert.equal(properties.querySelector('[data-prop-row="file.mtime"] .base-panel-option-label').textContent, "编辑时间");
+  // This fixture hands the panel the SERVER's labels (`file.mtime` arrives as 修改时间, the
+  // built-in name) and the popover must agree with the header rather than print a stale label.
+  assert.equal(properties.querySelector('[data-prop-row="file.mtime"] .base-panel-option-label').textContent, "修改时间");
+  // The header half of the same rule: a declared note-property displayName is ignored server-side.
+  assert.equal(labelsFor({ declared: { "file.mtime": "编辑时间" }, order: ["file.mtime"] })["file.mtime"], "修改时间");
+  // A formula row is the one selector row that keeps its declared name.
+  assert.equal(properties.querySelector('[data-prop-row="formula.note"] .base-panel-option-label').textContent, "笔记");
   const filter = build("filter", { state: { filter: [{ key: "file.mtime", op: "is", value: "2026" }] } });
   const options = [...filter.querySelectorAll("[data-filter-key] option")];
-  assert.equal(options.find((option) => option.value === "file.mtime")?.textContent, "编辑时间");
+  assert.equal(options.find((option) => option.value === "file.mtime")?.textContent, "修改时间");
+  assert.equal(options.find((option) => option.value === "formula.note")?.textContent, "笔记");
   const sort = build("sort", { state: { sort: [{ key: "file.mtime", dir: "desc" }] } });
   const sortOptions = [...sort.querySelectorAll("[data-sort-key] option")];
-  assert.equal(sortOptions.find((option) => option.value === "file.mtime")?.textContent, "编辑时间");
+  assert.equal(sortOptions.find((option) => option.value === "file.mtime")?.textContent, "修改时间");
+  assert.equal(sortOptions.find((option) => option.value === "formula.note")?.textContent, "笔记");
 });
 
-test("the label is display-only: the value of every control stays the raw key", () => {
+test("the header label is the server's one, and the controls' values stay raw keys", () => {
+  // The header reads `column.label`, and the server builds it with the one rule (built-in name /
+  // key tail / a formula's displayName): the author's 编辑时间 does not reach the header either.
+  assert.equal(labelsFor({ declared: { "file.mtime": "编辑时间" }, order: ["file.mtime"] })["file.mtime"], "修改时间");
   const filter = build("filter", { state: { filter: [{ key: "file.mtime", op: "is", value: "2026" }] } });
   const mtime = [...filter.querySelectorAll("[data-filter-key] option")].find((option) => option.value === "file.mtime");
   assert.notEqual(mtime, undefined, "the option VALUE must stay the real key");
-  assert.equal(mtime.textContent, "编辑时间", "the option LABEL is the declared display name");
+  assert.equal(mtime.textContent, "修改时间", "the option LABEL is the picker label, not the header's");
 });
 
 // --- nail ③: the desktop-shaped footer and the `</>` switch -------------------
@@ -283,7 +312,8 @@ test("the filter and properties popovers still expose every hook the panels cont
   assert.equal(advanced.querySelector("[data-filter-add]"), null, "advanced mode offers no simple add");
   const properties = build("properties");
   assert.deepEqual(properties.querySelectorAll("[data-prop-row]").map((row) => row.getAttribute("data-prop-row")), ["file.name", "file.mtime", "status", "formula.note"]);
-  assert.equal(properties.querySelector('[data-prop-row="file.mtime"] .base-panel-option-label').textContent, "编辑时间");
+  assert.equal(properties.querySelector('[data-prop-row="file.mtime"] .base-panel-option-label').textContent, "修改时间");
   // `placeholder` is assigned as a property, which the Node harness does not model.
-  assert.match(read("panel-properties.js"), /^\s+search\.placeholder = "查找属性…";$/m, "the property search keeps its hint");
+  // Desktop hint, verbatim: 1.14.4 `i18n/zh.txt:2300` 查找或创建… (the same box filters and names).
+  assert.match(read("panel-properties.js"), /^\s+search\.placeholder = "查找或创建…";$/m, "the property search keeps the desktop hint");
 });

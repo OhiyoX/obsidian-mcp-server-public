@@ -78,7 +78,7 @@
       "source": "SEMANTIC-ORDER-EVIDENCE.md（现场）B6",
       "locator": "B6 DESIGN 5 条补口",
       "quote": "① missing ≡ null ② 排序里空值在最小侧 ③ NaN / 非法日期按 missing ④ Stddev 样本 ⑤ Unique 类型化相等",
-      "url": "https://example.com/research/SEMANTIC-ORDER-EVIDENCE.md"
+      "url": "file:///D:/Coding/Codex/obsidian%20server%20projects/scratch/bases-p1/SEMANTIC-ORDER-EVIDENCE.md"
     },
     {
       "kind": "project-contract",

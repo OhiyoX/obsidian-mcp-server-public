@@ -216,15 +216,21 @@ test("adapter Web: GET /api/web/v1/base maps an invalid groupBy direction to 422
     const body = await plain.json();
     assert.equal(body.supportedSubset, true);
     assert.deepEqual(body.rows.map((row) => row.path), ["WB/One.md"]);
-    assert.deepEqual(body.capabilities, { editable: false, grouping: false, aggregation: false });
+    assert.deepEqual(body.capabilities, { editable: false, grouping: true, aggregation: false });
+    // `viewGroupBy` is the DECLARED rule of the selected view (null when it declares none):
+    // additive metadata for the `分组依据` menu, exactly like `viewSort` for the sort menu.
+    assert.equal(body.viewGroupBy, null);
 
-    // 刀4 flip: a VALID groupBy/summaries Base is served. The Web DTO stays as
-    // it was (the route does not publish the grouping surface yet — the UI leg
-    // is a separate lane), so `capabilities.grouping` stays false on purpose.
+    // 刀4 flip: a VALID groupBy/summaries Base is served. Since the lane
+    // desktop-re/bases-grouping the Web surface DOES publish the grouping face:
+    // `capabilities.grouping` is true (the server executes `groupBy`) and the DTO
+    // carries both the partition and the declared rule.
     const grouped = await fetch(`${server.base}/api/web/v1/base?path=ValidGrouped.base`, { signal: AbortSignal.timeout(5000) });
     assert.equal(grouped.status, 200, "a valid groupBy Base must be served");
     const groupedBody = await grouped.json();
     assert.equal(groupedBody.supportedSubset, true);
+    assert.equal(groupedBody.capabilities.grouping, true);
+    assert.deepEqual(groupedBody.viewGroupBy, { property: "status", direction: "ASC" });
     // The Web fixture injects its records in this order and the Base declares no
     // `sort`, so the row order is the P0 input order (the frozen pipeline sorts
     // only by declared keys + the file.path tie-break).

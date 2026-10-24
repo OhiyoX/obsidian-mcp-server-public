@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { parseFrontmatter } from "../frontmatter.js";
-import { MAX_READ_BYTES, READ_ONLY, VAULT, VAULT_ADMISSIONS_PATH, VAULT_ADMISSION_ENROLLMENT_PATH, VAULT_DISCOVERY_DEBOUNCE_MS, VAULT_DISCOVERY_ENABLED, VAULT_DISCOVERY_MAX_COALESCE_MS, VAULT_DISCOVERY_PERIODIC_MAX_SECONDS, VAULT_DISCOVERY_PERIODIC_SECONDS, configuredWebDefaultVault, configuredWebVaultsRoot } from "../config.js";
+import { MAX_READ_BYTES, READ_ONLY, VAULT, VAULT_ADMISSIONS_PATH, VAULT_ADMISSION_ENROLLMENT_PATH, VAULT_DISCOVERY_DEBOUNCE_MS, VAULT_DISCOVERY_ENABLED, VAULT_DISCOVERY_MAX_COALESCE_MS, VAULT_DISCOVERY_PERIODIC_MAX_SECONDS, VAULT_DISCOVERY_PERIODIC_SECONDS, configuredPrimaryVaultId, configuredWebVaultsRoot } from "../config.js";
 import { allTagsForNote } from "../obsidian.js";
 import { evaluateObsidianQuery } from "../search/evaluator.js";
 import { hybridSearch } from "../search/hybrid-search.js";
@@ -22,7 +22,8 @@ import { readBaseInRoot } from "./base-reader.js";
 
 const webVaultsRoot = configuredWebVaultsRoot();
 const VAULTS_ROOT = webVaultsRoot ? path.resolve(webVaultsRoot) : null;
-const DEFAULT_ID = String(configuredWebDefaultVault() || path.basename(VAULT) || "vault").trim();
+// #659: one shared derivation (`config.js#configuredPrimaryVaultId`) instead of an inline copy.
+const DEFAULT_ID = configuredPrimaryVaultId();
 const MAX_WEB_NOTES = 10_000;
 
 // W2 fix (#437 RETURN): the serving gate exists whenever multi-Vault management is configured. It

@@ -33,6 +33,7 @@ import {
 } from "./labels.js";
 import { isCoarsePointer, nextSelectionKey } from "./pointer-policy.js";
 import { createBaseToolbar } from "./toolbar.js";
+import { appendGroupedRows, rebuildsOnAppend } from "./group-heading.js";
 import {
   BASE_VIEW_TYPE_CARDS,
   BASE_VIEW_TYPE_KANBAN,
@@ -71,6 +72,7 @@ export function createBaseView({
   onRetry,
   onSort,
   onFilter,
+  onGroup,
   onQuery,
   onToggleColumn,
   onNewNote,
@@ -107,6 +109,7 @@ export function createBaseView({
     onSelectView,
     onSort,
     onFilter,
+    onGroup,
     onQuery,
     onToggleColumn: (key) => {
       const state = currentState;
@@ -262,13 +265,6 @@ export function createBaseView({
     return block;
   }
 
-  function createCount(state) {
-    const count = doc.createElement("span");
-    count.className = "base-surface-count";
-    count.textContent = `${state.totalMatched} 个结果`;
-    return count;
-  }
-
   function createFooter(state) {
     const footer = doc.createElement("div");
     footer.className = "base-surface-footer";
@@ -333,8 +329,9 @@ export function createBaseView({
     thead.appendChild(headRow);
     table.appendChild(thead);
     const tbody = doc.createElement("tbody");
-    state.rows.forEach((row, index) => tbody.appendChild(createRow(row, columns, index)));
-    table.appendChild(tbody);
+    // Grouping headings live in group-heading.js (they own the desktop class family and
+    // its [未证实] geometry note).
+    appendGroupedRows({ doc, tbody, state, columns, createRow, valueFor });    table.appendChild(tbody);
     wrap.appendChild(table);
     refs.headRow = headRow;
     refs.table = table;
@@ -371,7 +368,7 @@ export function createBaseView({
     currentCardsOptions = currentViewType === BASE_VIEW_TYPE_KANBAN ? resolveViewOptions(BASE_VIEW_TYPE_CARDS, storedOptions) : null;
     root.setAttribute("data-view-type", currentViewType);
 
-    const header = toolbar.render(state, { columns, allColumns: state.columns, config });
+    const header = toolbar.render(state, { columns, allColumns: state.columns, propertyCatalog: state.propertyCatalog, config });
     refs.viewSelect = typeof header.querySelector === "function" ? header.querySelector(".base-view-select") : null;
     refs.count = typeof header.querySelector === "function" ? header.querySelector(".base-surface-count") : null;
     root.appendChild(header);
@@ -443,6 +440,8 @@ export function createBaseView({
     // Kanban rows are grouped, so a page append cannot land at the end of the DOM:
     // the whole board is rebuilt instead (one extra render, never a mixed board).
     if (currentViewType === BASE_VIEW_TYPE_KANBAN) return render(state);
+    // A grouped table cannot take a bare page append (group-heading.js).
+    if (rebuildsOnAppend(state)) return render(state);
     if (!refs.rowHost || !refs.root) return render(state);
     const offset = refs.rowHost.childNodes ? refs.rowHost.childNodes.length : 0;
     rows.forEach((row, index) => refs.rowHost.appendChild(createRowItem(row, currentColumns, offset + index)));

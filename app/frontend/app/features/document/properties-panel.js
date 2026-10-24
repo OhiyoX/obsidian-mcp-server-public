@@ -87,6 +87,9 @@ export function createPropertiesPanel(options = {}) {
         const pill = document.createElement("span");
         pill.className = "property-pill multi-select-pill cm-live-tag-pill";
         const label = document.createElement("span");
+        // Desktop parity: the pill's label is the `.multi-select-pill-content` box (asar
+        // app.js@1845965), which is what the pill's `max-width` clamp sizes (see app.css).
+        label.className = "multi-select-pill-content";
         // Desktop strips one leading `#` from a tag value before showing/searching it.
         const text = taggable ? String(item).replace(/^#/, "") : String(item);
         label.textContent = text;

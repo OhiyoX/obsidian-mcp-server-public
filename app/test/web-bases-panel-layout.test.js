@@ -56,31 +56,46 @@ function rule(selector) {
   return match[1];
 }
 
-// --- nail ①: 全部属性 is the difference ---------------------------------------
+// --- nail ①: one flat list, checked = visible --------------------------------
 
-test("全部属性 lists the hidden columns only; every property is listed exactly once", () => {
+test("every property is listed exactly once and the checkbox carries the visibility", () => {
   const panel = build("properties");
-  const visible = keys(panel, "visible");
-  const all = keys(panel, "all");
-  assert.deepEqual(visible, ["name", "status", "formula.link"]);
-  assert.deepEqual(all, ["created", "updated"]);
-  // The invariant in one line: the two groups are disjoint and their union is the
-  // declared column set (so a duplicate entry is a failure, not a cosmetic detail).
-  const overlap = all.filter((key) => visible.includes(key));
-  assert.deepEqual(overlap, [], "全部属性 must not repeat a 已显示 entry");
-  assert.deepEqual([...visible, ...all].slice().sort(), COLUMNS.map((column) => column.key).sort());
-
-  // A hidden column is still toggleable from below the fold: that is the undo path.
-  const toggle = panel.querySelector('[data-prop-group="all"] [data-prop-toggle="created"]');
+  const rows = keys(panel, "all");
+  // The desktop menu is ONE list (owner screenshot 02): no `已显示` / `全部属性` split, so
+  // every property is listed exactly once and nothing can repeat.
+  assert.deepEqual(rows, COLUMNS.map((column) => column.key));
+  assert.deepEqual(panel.querySelectorAll("[data-prop-section]"), [], "the desktop properties menu has no section headings");
+  const checked = rows.map((key) => panel.querySelector(`[data-prop-row="${key}"] [data-prop-toggle]`).checked);
+  assert.deepEqual(checked, COLUMNS.map((column) => VISIBLE.includes(column)), "the box is checked exactly when the property is shown");
+  // The unchecked rows are the desktop's `mod-hidden` items (muted text).
+  for (const hiddenKey of HIDDEN) {
+    assert.equal(panel.querySelector(`[data-prop-row="${hiddenKey}"]`).classList.contains("mod-hidden"), true);
+  }
+  // A hidden column is still toggleable from the same list: that is the undo path.
+  const toggle = panel.querySelector('[data-prop-row="created"] [data-prop-toggle]');
   assert.notEqual(toggle, null);
   assert.equal(toggle.checked, false);
 });
 
-test("an empty difference is not drawn at all", () => {
-  const panel = build("properties", { visibleColumns: COLUMNS });
-  assert.deepEqual(panel.querySelectorAll("[data-prop-section]").map((section) => section.getAttribute("data-prop-section")), ["visible"]);
-  assert.equal(panel.querySelector('[data-prop-group="all"]'), null);
-  assert.equal(panel.querySelector("[data-prop-section]").textContent, "已显示");
+test("the desktop row shape: a typed info-icon slot and the trailing ›", () => {
+  const panel = build("properties");
+  const icon = panel.querySelector('[data-prop-row="name"] [data-prop-info-icon]');
+  assert.notEqual(icon, null);
+  // The row now CARRIES the desktop's type glyph (`app.js@2381738`: built-in -> info, formula ->
+  // the function glyph, note property -> its type's icon). This build has no DECLARED types, so
+  // the glyph follows the catalog's inferred kind - a registered deviation (matrix §14.7), not an
+  // invented decoration: the slot must name a symbol that really exists in the sprite.
+  // The glyph is a sprite <use>, so the slot's TEXT is empty by construction - assert the <use>
+  // itself (a plain textContent check would pass on an empty slot, which is what we are guarding).
+  const use = icon.querySelector("use");
+  assert.notEqual(use, null, "the info slot carries a sprite <use>");
+  assert.match(use.getAttribute("href") ?? "", /icons\.svg#(circle-info|calendar|text|tag|code)$/);
+  // The trailing `›` is the desktop's row-end slot (app.css@469509); no submenu is ported,
+  // so the slot is decorative and hidden from assistive tech.
+  const action = panel.querySelector('[data-prop-row="name"] [data-prop-action-icon]');
+  assert.notEqual(action, null);
+  assert.equal(action.getAttribute("aria-hidden"), "true");
+  assert.notEqual(action.querySelector(".base-panel-icon"), null);
 });
 
 // --- nail ②: the advanced expression input owns a full-width row --------------
@@ -146,7 +161,11 @@ test("the section flair follows the desktop `toggle(t>0)`: 0 is hidden, a real c
   assert.equal(oneFlair.getAttribute("hidden"), null, "a real count is painted");
   assert.equal(oneFlair.textContent, "1");
   const zeroSort = build("sort", { state: { sort: [] } });
-  assert.equal(zeroSort.querySelector("[data-section-count]").getAttribute("hidden"), "");
+  // D8 (lane desktop-re/panel-sort): the SORT header carries no flair at all — the desktop
+  // builds it as `createDiv({cls:"bases-toolbar-section-header",text:l1.labelSortBy()})`
+  // (asar app.js@2525647), so there is no count node to toggle, at 0 or above. The filter
+  // panels keep the desktop's `e.toggle(t>0)` flair asserted above.
+  assert.equal(zeroSort.querySelector("[data-section-count]"), null, "the sort header has no flair");
 });
 
 // --- FIX-R1 nail: no class the desktop never builds is stuck on our nodes ---

@@ -123,9 +123,9 @@ The brief lists `WEB_VAULTS_ROOT` among "constants from `app/src/config.js`". On
 | Where | Before | After (Wave F / F1) |
 |---|---|---|
 | `src/config.js` | — | **the single read point**: `configuredWebVaultsRoot()` / `configuredWebDefaultVault()` |
-| `src/app/vault-registry.js` | `:14–:16` raw env read | imports the helper (`:15–:18`); the canonical A2 instance is exported as `webVaultRegistry` (§31/D1) |
+| `src/app/vault-registry.js` | `:14–:16` raw env read | imports `config.js#configuredPrimaryVaultId` (`:15–:18`) — **#659** moved its inline `WEB_DEFAULT_VAULT \|\| basename(VAULT)` expression into that helper, so it no longer imports `configuredWebDefaultVault` itself; the canonical A2 instance is exported as `webVaultRegistry` (§31/D1) |
 | `src/oauth/primitives.js` | `:9`, `:65` raw env read | imports the helper |
-| `src/vault.js` | `:41` raw env read (Wave B / B1) | imports the helper — byte-identical derivation to `oauth/primitives.js` (`DEFAULT_VAULT_ID`), still ratcheted by `app/test/vault-runtime-factory-core.test.js` |
+| `src/vault.js` | `:41` raw env read (Wave B / B1) | **#659**: does NOT import the helper any more — `PRIMARY_VAULT_ID` *is* `oauth/primitives.js#DEFAULT_VAULT_ID` (the byte-identical copy became the import), so both of its `config.js` helper imports were dropped. Still ratcheted by `app/test/vault-runtime-factory-core.test.js` (value identity) |
 | `app/server.js` | `:180` `String(process.env.WEB_VAULTS_ROOT \|\| "").trim()` passed to the Admin assembly | **gone**: `server.js` injects the exported canonical registry, which already owns the root |
 
 The helpers are functions rather than frozen constants so each consumer still evaluates them at its own module load — the frozen module-load semantics (and the `?cache-buster=` fixture pattern several suites use) do not change. The machine-checked ratchet therefore **tightens**: `FROZEN.envReaders` is now `{ WEB_VAULTS_ROOT: ["src/config.js"], WEB_DEFAULT_VAULT: ["src/config.js"] }` (one reader instead of three), and `FROZEN.configImporters` gains both helpers with exactly the three former readers.
@@ -292,6 +292,7 @@ this document and the test, and changed **no behavior**:
 |---|---|---|
 | `configImporters.RETRIEVAL_INDEX_PATH` | `+ src/vault.js` | the facade feeds the A7 primary `vaultDataPaths` mapping (§1.5) |
 | `envReaders.WEB_VAULTS_ROOT` | `+ src/vault.js` | `PRIMARY_VAULT_ID`, derived exactly like the auth plane's `DEFAULT_VAULT_ID` (§1.7) |
+| `configImporters.configuredWebVaultsRoot` / `.configuredWebDefaultVault` | `− src/vault.js` (**#659**) | `PRIMARY_VAULT_ID` is now literally `DEFAULT_VAULT_ID` imported from `oauth/primitives.js` instead of a re-derivation, so it reads neither helper. The equivalence is pinned by `app/test/primary-vault-id.test.js` across three configurations, including the one configuration where the two planes legitimately disagree |
 | `dataPathLiterals.transfers` / `.mutation-journal` / `.mutation-idempotency` | `+ src/vault.js` | same A7 mapping; those derivations are scheduled to collapse onto `runtime.paths` when lanes B2/B5/B6 consume it (§2) |
 | `singletons["src/vault.js"]` | **removed** | the lock is now `vault-runtime/local-fs.js`'s closure-local `mutationTail` (per instance, not module-level) — rule 3 (§3, matrix 3) |
 
@@ -478,6 +479,8 @@ behavioral semantics of Waves A–E; it removes duplicated process state and tig
 | `envReaders.WEB_VAULTS_ROOT` | `[src/app/vault-registry.js, src/oauth/primitives.js, src/vault.js]` → **`[src/config.js]`** | tightening (one reader instead of three): the two Web multi-Vault reads became `config.js` helpers and every former direct reader imports them (debt D2, brief §1) |
 | `envReaders.WEB_DEFAULT_VAULT` | **added** `[src/config.js]` | the same single read point now covers the default-vault id read |
 | `configImporters.configuredWebVaultsRoot` / `.configuredWebDefaultVault` | **added** `[src/app/vault-registry.js, src/oauth/primitives.js, src/vault.js]` | the two new helper exports and their exact consumer set (rule 1) |
+| `configImporters.configuredWebVaultsRoot` | **tightened** `[…]` → `[src/app/vault-registry.js, src/oauth/primitives.js]` (**#659**) | `src/vault.js` stopped reading it (its id became the auth-plane import), so the read surface shrank; the assertion stays an exact `deepEqual`, it just has one fewer member |
+| `configImporters.configuredWebDefaultVault` | **tightened** `[…]` → `[src/oauth/primitives.js]` (**#659**) | both `src/vault.js` and `src/app/vault-registry.js` stopped importing it — the registry now calls `config.js#configuredPrimaryVaultId`, which is the only remaining reader besides the auth plane |
 | `server.js` inline `WEB_VAULTS_ROOT` read | **removed** | the composition root injects the exported canonical registry instead of re-deriving its root (debt D2) |
 | `src/admin/vault-git-assembly.js` second A2 registry | **removed** | Wave E / EA built a second read-only A2 instance because B7's canonical one was private (`EA.HANDOFF.md` D1). F1 exports `webVaultRegistry` from `src/app/vault-registry.js` and `server.js` injects exactly that instance into the assembly and the D0 runtime map. The degraded primary-only view stays, but as a *view* built from A1's pure `createVaultDescriptor` over the same instance — never a rival inventory. `src/**` now has exactly ONE `createVaultRegistry(` construction site |
 | `src/vault-runtime/capabilities.js` | **added** `"retrieval"`; `UNWIRED_CAPABILITY_DECISIONS` added | the per-Vault index/retrieval instances and their routing were already real (D-search); the map-level key was the recorded Wave F residual. `semantic`/`webCatalog`/`events` stay fail-closed with a now-recorded owner+reason instead of a generic "no lane yet" (§3.4) |

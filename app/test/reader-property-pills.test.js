@@ -76,6 +76,7 @@ function tokenBlock(name) {
 
 const pillRule = ruleBlock(".preview .metadata-property-value .multi-select-pill,");
 const plainRule = ruleBlock(".preview .metadata-property-value .multi-select-pill:not([data-tag]),");
+const contentRule = ruleBlock(".preview .metadata-property-value .multi-select-pill-content,");
 const themeTokens = tokenBlock("tag-background");
 
 test("property pills ride the 13px row size (the owner-approved enlargement)", () => {
@@ -147,6 +148,42 @@ test("reading view and Live Preview share one pill rule", () => {
   assert.match(pillRule.selector, /\.cm-live-properties \.cm-live-property-pills \.cm-live-tag-pill$/m, "the Live preview pill must be in the same block as the reader pill");
   const liveHover = ruleBlock(".cm-live-properties .cm-live-property-pills .cm-live-tag-pill:has(> span[data-tag]):hover");
   assert.match(liveHover.body, /var\(--tag-background-hover\)/);
+});
+
+// Lane note-pills-gap: the reading view lays a multi-value property row out through desktop's
+// `.multi-select-container` (`app.css`: `display: inline-flex; vertical-align: top; flex-wrap:
+// wrap; flex: 1 1 auto; gap: var(--size-2-3); min-height: var(--input-height)`), and
+// `--size-2-3: 6px`. This repo has no `--size-2-3` of its own, so the gap is written as the literal
+// 6px that token resolves to, in BOTH axes (`gap`, never a one-axis `row-gap` magic number).
+const containerRule = ruleBlock(".preview .metadata-property-value .multi-select-container");
+
+test("the reading multi-select row is desktop's 6px-gapped wrapping flex container", () => {
+  assert.match(containerRule.body, /display:\s*inline-flex/);
+  assert.match(containerRule.body, /flex-wrap:\s*wrap/);
+  assert.match(containerRule.body, /align-items:\s*center/);
+  assert.match(containerRule.body, /gap:\s*6px;/, "desktop --size-2-3 resolves to 6px; both axes come from one `gap`");
+  assert.doesNotMatch(containerRule.body, /(?:row|column)-gap\s*:/, "no per-axis magic number");
+});
+
+// Lane pill-max-width: desktop ALSO clamps each pill and gives it a wrapping content box
+// (`app.css@294527` `.multi-select-pill{max-width:calc(100% - var(--size-2-3) - 1ch)}`,
+// `app.css@295174` `.multi-select-pill-content{word-break:break-word;overflow:hidden}`). Without the
+// pair, one very long tag/alias value pushed the whole value column out of the row.
+test("property pills clamp to the row like desktop (max-width - 6px - 1ch)", () => {
+  assert.match(pillRule.body, /max-width:\s*calc\(100% - 6px - 1ch\);/, "desktop --size-2-3 resolves to 6px, plus desktop's 1ch remove-button reserve");
+  assert.doesNotMatch(pillRule.body.replace(/\/\*[\s\S]*?\*\//g, ""), /var\(--size-2-3\)/, "the declaration uses the resolved 6px, not a token this repo does not declare");
+});
+
+test("the pill's clamp lands on desktop's wrapping `.multi-select-pill-content` box", () => {
+  assert.match(contentRule.selector, /^\.preview \.metadata-property-value \.multi-select-pill-content,$/m);
+  assert.match(contentRule.selector, /\.cm-live-properties \.cm-live-property-pills \.multi-select-pill-content$/m, "both faces share one content rule");
+  assert.match(contentRule.body, /overflow:\s*hidden/);
+  assert.match(contentRule.body, /word-break:\s*break-word/);
+  assert.match(contentRule.body, /white-space:\s*normal/, "the pill body is nowrap, so the content box must opt back into wrapping or min-width:auto outranks max-width");
+  // Desktop has NO `text-overflow` on this box: an over-long value wraps (pill grows taller), it is
+  // not ellipsised. The only ellipsis desktop puts on a pill content box is the `.external-link` /
+  // `.internal-link` branch (`@390161`), which a property pill (a plain div, no link class) never hits.
+  assert.doesNotMatch(contentRule.body, /text-overflow/, "no invented `…`: desktop wraps here");
 });
 
 test("the U13 click contract on property tag pills is untouched", () => {

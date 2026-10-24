@@ -134,7 +134,7 @@ test("baseline limits disclose the 86-tool frozen baseline and additive tools", 
   assert.equal(current.baselineLimits.historicalInventoryToolCount, 86);
   assert.equal(current.baselineLimits.fixtureBaseline.taskCount, 50);
   assert.match(current.baselineLimits.fixtureBaseline.toolCatalog, /85 tools/);
-  assert.deepEqual(current.baselineLimits.additiveToolsSinceFixtureBaseline, ["patch_base", "create_base_entry", "list_base_views", "get_note_context"]);
+  assert.deepEqual(current.baselineLimits.additiveToolsSinceFixtureBaseline, ["start_direct_upload", "patch_base", "create_base_entry", "list_base_views", "get_note_context"]);
   assert.deepEqual(current.baselineLimits.historicalInventoryMissingFromCurrentCatalog, []);
   assert.ok(current.baselineLimits.toolsUnreferencedByFixtures.includes("get_note_context"));
   assert.ok(current.baselineLimits.notes.join(" ").includes("get_note_context"));
@@ -189,9 +189,10 @@ test("report distinguishes canonical membership order from native wire order", a
   // Set equality is required; positional order is explicitly allowed to differ and
   // is recorded, not assumed. The supervisor independently observed 51 mismatches at the
   // 86-tool catalog; inserting read_archive_entry after inspect_archive shifted one more row,
-  // and #630's create_base_entry (registered next to patch_base, not at the canonical
-  // position of the additive block) shifted two more.
-  assert.equal(current.runtimeParity.positionalMismatchesVsCanonical, 54);
+  // #630's create_base_entry (registered next to patch_base, not at the canonical
+  // position of the additive block) shifted two more, and #470 wave A's start_direct_upload
+  // (registered next to start_file_upload) shifted one more.
+  assert.equal(current.runtimeParity.positionalMismatchesVsCanonical, 55);
   assert.equal(current.runtimeParity.fullProfileWiredMatchesNative, true);
   assert.equal(current.runtimeParity.fullProfileWiredNamesDeepEqualNative, true);
   assert.equal(current.runtimeParity.fullProfileWiredDescriptorsDeepEqualNative, true);

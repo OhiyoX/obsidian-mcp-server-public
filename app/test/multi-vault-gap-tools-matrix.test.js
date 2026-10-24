@@ -136,6 +136,23 @@ test("§29/§13.4: the upload face is Vault-bound end to end and archives stay i
     assert.equal(await fs.readFile(path.join(SECONDARY_ROOT, "assets", "upload.bin"), "utf8"), payload.toString("utf8"));
     assert.equal(await exists(path.join(PRIMARY_ROOT, "assets", "upload.bin")), false);
 
+    // Issue #470 Wave A: the direct HTTP control plane mints the same Vault-bound handle under the
+    // SAME A7 root, and the base64 writer may not touch it (D6).
+    const direct = await client.call("start_direct_upload", { vaultId: SECONDARY_ID, path: "assets/direct.bin", totalBytes: payload.length, sha256: sha256(payload), overwrite: true });
+    assert.equal(direct.mode, "single-put");
+    assert.equal(direct.method, "PUT");
+    assert.equal(direct.relativePath, `/uploads/${direct.uploadId}`);
+    assert.equal(direct.uploadUrl, undefined, "never an absolute URL derived from the request Host");
+    const directMetadata = path.join(SECONDARY_DATA, "transfers", "uploads", `${direct.uploadId}.json`);
+    assert.equal(await exists(directMetadata), true, "the direct handle lives under the secondary's own A7 root");
+    assert.equal(JSON.parse(await fs.readFile(directMetadata, "utf8")).vaultId, SECONDARY_ID);
+    assert.equal(await exists(path.join(env.dataRoot, "transfers", "uploads", `${direct.uploadId}.json`)), false, "never the primary legacy transfers root");
+    assert.equal((await client.attempt("file_upload_status", { vaultId: PRIMARY_ID, uploadId: direct.uploadId })).isError, true, "another Vault may not read the direct handle either");
+    const wrongWriter = await client.attempt("upload_file_chunk", { vaultId: SECONDARY_ID, uploadId: direct.uploadId, offset: 0, base64: payload.toString("base64"), finalize: true });
+    assert.equal(wrongWriter.isError, true, "a single-PUT handle has exactly one writer (D6)");
+    assert.match(wrongWriter.text ?? "", /direct HTTP upload/);
+    assert.equal(await exists(path.join(SECONDARY_ROOT, "assets", "direct.bin")), false, "starting an upload publishes nothing");
+
     // A cancelled upload leaves no payload behind in either Vault.
     const cancelledUpload = await client.call("start_file_upload", { vaultId: SECONDARY_ID, path: "assets/cancelled.bin", totalBytes: 4, overwrite: true });
     const cancelled = await client.call("cancel_file_upload", { vaultId: SECONDARY_ID, uploadId: cancelledUpload.uploadId });
