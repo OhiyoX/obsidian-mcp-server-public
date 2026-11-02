@@ -1,0 +1,27 @@
+formulas:
+  label: file.asLink(file.name)
+views:
+  - type: table
+    name: Main
+    summaries:
+      price: Average
+      age: Min
+      progress: Max
+      score: Sum
+      range_number: Range
+      median_number: Median
+      stddev_number: Stddev
+      earliest_date: Earliest
+      latest_date: Latest
+      range_date: Range
+      checked_flag: Checked
+      unchecked_flag: Unchecked
+      empty_any: Empty
+      filled_any: Filled
+      unique_any: Unique
+      formula.label: Min
+    order:
+      - file.name
+      - price
+      - score
+      - status

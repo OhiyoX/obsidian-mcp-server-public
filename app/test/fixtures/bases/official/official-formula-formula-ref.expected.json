@@ -1,0 +1,15 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "formula.<name> 引用（官方允许）自 INT-B 起支持：b 依赖 a 在 compile 期通过 DAG 校验后按 memo 求值",
+  "flipIn": null,
+  "flippedIn": "INT-B"
+}

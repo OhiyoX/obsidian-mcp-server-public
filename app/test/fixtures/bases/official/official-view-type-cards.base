@@ -1,0 +1,7 @@
+views:
+  - type: cards
+    name: Cards
+    cardSize: 200
+    image: cover
+    order:
+      - file.name

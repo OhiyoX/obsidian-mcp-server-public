@@ -1,0 +1,7 @@
+formulas:
+  formatted_price: 'if(price, price.toFixed(2) + " dollars")'
+views:
+  - type: table
+    name: Main
+    order:
+      - formula.formatted_price

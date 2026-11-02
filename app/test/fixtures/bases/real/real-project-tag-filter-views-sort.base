@@ -1,0 +1,32 @@
+filters:
+  and:
+    - file.hasTag("project")
+    - not:
+        - status == "done"
+formulas:
+  label: file.asLink(if(title, title, file.name))
+properties:
+  formula.label:
+    displayName: Project
+views:
+  - type: table
+    name: In progress
+    order:
+      - file.name
+      - status
+      - priority
+      - formula.label
+    sort:
+      - property: priority
+        direction: ASC
+      - property: updated
+        direction: DESC
+  - type: table
+    name: Done
+    filters: 'status == "done"'
+    order:
+      - file.name
+      - status
+    sort:
+      - property: file.name
+        direction: ASC

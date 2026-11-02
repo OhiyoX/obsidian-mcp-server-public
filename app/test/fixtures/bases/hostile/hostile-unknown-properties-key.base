@@ -1,0 +1,8 @@
+properties:
+  status:
+    format: weird
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

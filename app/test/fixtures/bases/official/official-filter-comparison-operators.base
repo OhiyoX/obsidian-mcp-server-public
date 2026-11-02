@@ -1,0 +1,15 @@
+filters:
+  and:
+    - note.status != "done"
+    - price >= 2
+    - or:
+        - age < 4
+        - price == 2
+    - file.name != "Ghost"
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - price
+      - age

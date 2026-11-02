@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: 'file.hasTag("work")'
+    order:
+      - file.name

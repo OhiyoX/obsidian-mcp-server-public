@@ -1,0 +1,10 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Hostile/Shadow.md"
+  ],
+  "note": "记录 frontmatter 的 own __proto__ 数据键可被 filter 正常读取（JSON own property 不被当作原型）",
+  "flipIn": null
+}

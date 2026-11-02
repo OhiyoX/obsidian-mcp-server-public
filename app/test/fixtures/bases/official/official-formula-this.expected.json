@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "官方 this.file.name 被 fail closed 拒绝（unsupported namespaced reference）",
+  "flipIn": null
+}

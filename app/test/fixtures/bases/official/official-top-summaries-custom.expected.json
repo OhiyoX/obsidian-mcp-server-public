@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Notes/Alpha.md", "Notes/Beta.md", "Archive/Gamma.md", "Notes/Delta.md", "Notes/Nested/Deep.md"],
+  "note": "刀4：顶层 summaries 作为自定义 summary 注册表被接受（未被引用 ⇒ 不改行/列/组）；被引用时仍 fail closed（values.* 未实现）",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

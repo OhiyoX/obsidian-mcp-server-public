@@ -1,0 +1,195 @@
+{
+  "target": "base-expression",
+  "group": "errors",
+  "title": "结构/词法错误：空表达式、非法字符、尾随 token、非字符串输入、赋值/模板/Unicode 标识符",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Arithmetic operators（表格）",
+      "quote": "| Operator | Description | | -------- | ----------- | | `+`      | plus        | | `-`      | minus       | | `*`      | multiply    | | `/`      | divide      | | `%`      | modulo      | | `( )`    | parenthesis |",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Comparison operators（表格）",
+      "quote": "| `==`     | equals                   | | `!=`     | not equal                | | `>`      | greater than             | | `<`      | less than                | | `>=`     | greater than or equal to | | `<=`     | less than or equal to    |",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Operators → ### Boolean operators（表格）",
+      "quote": "| `!`      | logical not | | `&&`     | logical and | | \\|\\|     | logical or  |",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## String type → ### replace()（字符串字面量边界示例）",
+      "quote": "If `pattern` is a string, all occurrences of the pattern will be replaced.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§14.2 Parser / AST",
+      "quote": "unknown namespace、unknown function、bad arity、trailing token、malformed YAML。… deterministic error text/code，不泄漏 stack/absolute path。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    },
+    {
+      "kind": "project-contract",
+      "source": "vault MCP/TODO - 增强 Bases 支持.md",
+      "locator": "§7 公式引擎架构约束",
+      "quote": "禁止 eval、Function、vm、动态 import。… hostile key（例如 __proto__）、inherited property、accessor/getter 不得被执行。",
+      "url": "obsidian://vault/_Workspace/40-Projects/obsidian_mcp_server/MCP/TODO%20-%20增强%20Bases%20支持.md"
+    }
+  ],
+  "cases": [
+    {
+      "id": "error-empty-expression",
+      "input": "",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": null,
+      "messageTemplate": "Expression is empty",
+      "note": "空表达式没有位置可言，position 为 null"
+    },
+    {
+      "id": "error-whitespace-only-expression",
+      "input": "   ",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": null,
+      "messageTemplate": "Expression is empty",
+      "note": "只有空白等价于空表达式"
+    },
+    {
+      "id": "error-tab-and-newline-only-expression",
+      "input": "\t\n ",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": null,
+      "messageTemplate": "Expression is empty",
+      "note": "同上（空白包括 tab / 换行）"
+    },
+    {
+      "id": "error-non-string-number-input",
+      "input": 42,
+      "outcome": "reject",
+      "code": "syntax",
+      "position": null,
+      "messageTemplate": "Expression must be a string",
+      "note": "公式源在 Base YAML 里恒为字符串；非字符串输入 fail closed，不做隐式 String() 转换"
+    },
+    {
+      "id": "error-non-string-null-input",
+      "input": null,
+      "outcome": "reject",
+      "code": "syntax",
+      "position": null,
+      "messageTemplate": "Expression must be a string",
+      "note": "同上（null 不是空表达式，而是错误输入）"
+    },
+    {
+      "id": "error-unexpected-character-at",
+      "input": "1 @ 2",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 2,
+      "messageTemplate": "Unexpected character \"{token}\" at position {position}",
+      "note": "`@` 不在官方运算符表内"
+    },
+    {
+      "id": "error-unexpected-character-backtick",
+      "input": "`value`",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Unexpected character \"{token}\" at position {position}",
+      "note": "模板字符串不是 Bases 语法（永久 unsupported 的语法面；报 syntax 因为它连记号都不存在）"
+    },
+    {
+      "id": "error-assignment-operator",
+      "input": "a = 1",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 2,
+      "messageTemplate": "Unexpected character \"{token}\" at position {position}",
+      "note": "表达式没有赋值（官方运算符表无 `=`）；永久 unsupported"
+    },
+    {
+      "id": "error-unexpected-character-unicode-identifier",
+      "input": "1 + π",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 4,
+      "messageTemplate": "Unexpected character \"{token}\" at position {position}",
+      "note": "非 ASCII 属性名不在本刀标识符类内；官方对这类键给的是方括号写法（见 07 组）"
+    },
+    {
+      "id": "error-trailing-token-number",
+      "input": "1 2",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 2,
+      "messageTemplate": "Unexpected token \"{token}\" at position {position}; expected end of expression",
+      "note": "尾随 token"
+    },
+    {
+      "id": "error-trailing-comma",
+      "input": "1,",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 1,
+      "messageTemplate": "Unexpected token \"{token}\" at position {position}; expected end of expression",
+      "note": "顶层逗号没有语义（逗号只在调用参数里合法）"
+    },
+    {
+      "id": "error-dangling-close-paren",
+      "input": "1 + 2)",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 5,
+      "messageTemplate": "Unexpected token \"{token}\" at position {position}; expected end of expression",
+      "note": "多余的右括号"
+    },
+    {
+      "id": "error-unclosed-string",
+      "input": "\"abc",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Unterminated string literal at position {position}",
+      "note": "与 literals 组同模板（跨组一致性：位置指向引号起点）"
+    },
+    {
+      "id": "error-double-dot-member",
+      "input": "1.2.3",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 4,
+      "messageTemplate": "Expected a property name after \".\" at position {position}",
+      "note": "数字字面量后接 `.` 只能是成员访问，而成员名必须是标识符"
+    },
+    {
+      "id": "error-trailing-dot",
+      "input": "3.",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 2,
+      "messageTemplate": "Expected a property name after \".\" at position {position}",
+      "note": "同上；位置是 `.` 之后那个 token 的起点"
+    },
+    {
+      "id": "error-exponent-without-digits",
+      "input": "1e",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 1,
+      "messageTemplate": "Unexpected token \"{token}\" at position {position}; expected end of expression",
+      "note": "`1e` 被读成数字 1 后跟标识符 e → 尾随 token；确定性优先于猜用户意图"
+    }
+  ]
+}

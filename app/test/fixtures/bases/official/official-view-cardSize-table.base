@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    cardSize: 300
+    order:
+      - file.name

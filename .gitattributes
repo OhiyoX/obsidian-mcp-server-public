@@ -1,0 +1,11 @@
+# Generated Web bundles and static assets.
+#
+# `npm run build:web` (esbuild) writes app/src/app/assets/** as LF. On a
+# checkout with core.autocrlf=true Git rewrites those blobs to CRLF in the
+# working tree, so every rebuild made `git status` report a phantom
+# " M app/src/app/assets/*" entry with zero content diff (`git diff` clean),
+# which blocked naive cleanliness checks in the release tooling.
+#
+# Marking the tree as -text (binary-ish: no EOL conversion, no clean filter)
+# keeps working-tree bytes == repository bytes == esbuild output.
+app/src/app/assets/** -text linguist-generated=true

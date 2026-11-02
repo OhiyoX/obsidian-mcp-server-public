@@ -1,0 +1,12 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Work/Project One.md",
+    "Work/Project Two.md",
+    "Work/Project Four.md"
+  ],
+  "note": "Project.base 形状（标签过滤 + 负向状态过滤 + 多视图 + formula 列 + 双键 sort + displayName）全部落在现行支持子集内",
+  "flipIn": null
+}

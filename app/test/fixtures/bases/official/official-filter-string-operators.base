@@ -1,0 +1,11 @@
+filters:
+  or:
+    - file.name.startsWith("B")
+    - file.name.endsWith("a")
+    - status.contains("fer")
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - status

@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "view-not-found",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "请求不存在的 view 名 → view-not-found",
+  "flipIn": null
+}

@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "formulas 的值为非字符串（YAML 数字）→ fail closed（unsupported）",
+  "flipIn": null
+}

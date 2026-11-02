@@ -1,0 +1,11 @@
+filters:
+  and:
+    - file.hasTag("reading")
+views:
+  - type: table
+    name: Reading queue
+    order:
+      - file.name
+      - status
+      - priority
+      - updated

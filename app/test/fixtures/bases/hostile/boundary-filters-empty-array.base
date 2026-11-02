@@ -1,0 +1,6 @@
+filters: []
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

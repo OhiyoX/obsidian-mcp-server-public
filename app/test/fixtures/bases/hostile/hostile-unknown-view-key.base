@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    zzz: 1
+    order:
+      - file.name

@@ -1,0 +1,19 @@
+filters:
+  and:
+    - file.hasTag("project")
+    - not:
+        - status == "done"
+views:
+  - type: table
+    name: In progress
+    order:
+      - file.name
+  - type: table
+    name: Done
+    filters: 'status == "done"'
+    order:
+      - file.name
+      - status
+    sort:
+      - property: file.name
+        direction: ASC

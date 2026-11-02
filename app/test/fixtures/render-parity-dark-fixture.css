@@ -1,0 +1,50 @@
+/* Render-parity self-built DARK fixture (issue #360).
+ *
+ * The three committed community-theme subsets (Things / Minimal / AnuPpuccin)
+ * are LIGHT-ONLY by construction: the extractor drops every `.theme-dark` rule,
+ * and `test/render-parity-community-themes.test.js` pins that invariant. So on
+ * the gate's dark side the subsets can only ever prove "a light-only subset must
+ * not paint dark" plus the app's own dark fallback — never that a THEME's
+ * `.theme-dark` declaration is in force.
+ *
+ * This file is that missing fixture, written by hand (no third-party theme, no
+ * license/provenance question). It declares the same two tokens in both scopes,
+ * using the SAME per-side shape the real subsets use (`.theme-light` /
+ * `.theme-dark`, which match <html> AND <body>):
+ *
+ *   * `--h1-color` is a real semantic token the document hosts consume
+ *     (`app.css` `.preview h1 { color: var(--h1-color, var(--heading-1)) }`), so
+ *     the dark value must reach paint, not just the custom-property map. app.css
+ *     itself declares `--h1-color: #c3adff` in its layered `.theme-dark`
+ *     fallback, so this also proves the theme's unlayered dark declaration is not
+ *     clobbered by that fallback.
+ *   * `--render-parity-dark-probe` is a private sentinel no app rule consumes,
+ *     so the token-level assertion cannot be satisfied by a lucky paint value.
+ *
+ * The light value is declared on `.theme-light`, NOT on `:root`. app.css's own
+ * fallback block is `:root, .theme-light { … }` inside `@layer
+ * web-theme-fallback`, and <body> carries the `.theme-light` class too. A
+ * `:root`-only theme declaration therefore matches <html> but not <body>, so on
+ * <body> the app's layered `.theme-light` declaration wins over the inherited
+ * <html> value (measured: html computed the theme's `rgb(17, 34, 51)` while
+ * <body>/.preview computed the app's `#4f3a91`). `.theme-light` matches <body>
+ * directly, so the unlayered theme declaration outranks the layered fallback and
+ * the light side is asserted too, exactly like Things/Minimal/AnuPpuccin.
+ *
+ * The light and dark values are mutually distinguishable AND differ from the app
+ * dark fallback (`#c3adff`), so a side that sampled the other cascade — or the
+ * fallback — is visible as a mismatch. Every value is an `rgb()` triple with all
+ * channels <= 191, the shape `mutateSubsetCss` always moves, so the gate's own
+ * negative control can prove the declarations are followed.
+ *
+ * Do not copy these values anywhere else. This file is test data only.
+ */
+.theme-light {
+  --h1-color: rgb(17, 34, 51);
+  --render-parity-dark-probe: rgb(23, 46, 69);
+}
+
+.theme-dark {
+  --h1-color: rgb(187, 170, 153);
+  --render-parity-dark-probe: rgb(179, 158, 137);
+}

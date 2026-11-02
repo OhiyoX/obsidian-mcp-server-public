@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    { "id": "home", "type": "file", "file": "_Workspace/80-Maps/Home.md", "x": -420, "y": -140, "width": 260, "height": 120 },
+    { "id": "launch", "type": "file", "file": "_Workspace/40-Projects/aurora-launch/README.md", "x": -60, "y": -260, "width": 300, "height": 140 },
+    { "id": "migration", "type": "file", "file": "_Workspace/40-Projects/atlas-migration/README.md", "x": -60, "y": -40, "width": 300, "height": 140 },
+    { "id": "arch", "type": "file", "file": "_Workspace/30-Knowledge/Engineering/Architecture.md", "x": 340, "y": -160, "width": 280, "height": 120 },
+    { "id": "search", "type": "file", "file": "_Workspace/30-Knowledge/Research/Hybrid Search.md", "x": 340, "y": 40, "width": 280, "height": 120 },
+    { "id": "memory", "type": "file", "file": "_Workspace/20-Memory/README.md", "x": -60, "y": 180, "width": 300, "height": 120 },
+    { "id": "skills", "type": "file", "file": "_Workspace/60-Skills/README.md", "x": 340, "y": 220, "width": 280, "height": 120 },
+    { "id": "note", "type": "text", "text": "**Workspace boundary**\n\nSynthetic demo data only.\nNo production vault is read.", "x": -420, "y": 60, "width": 280, "height": 130 }
+  ],
+  "edges": [
+    { "id": "e1", "fromNode": "home", "fromSide": "right", "toNode": "launch", "toSide": "left" },
+    { "id": "e2", "fromNode": "home", "fromSide": "right", "toNode": "migration", "toSide": "left" },
+    { "id": "e3", "fromNode": "launch", "fromSide": "right", "toNode": "arch", "toSide": "left" },
+    { "id": "e4", "fromNode": "migration", "fromSide": "right", "toNode": "search", "toSide": "left" },
+    { "id": "e5", "fromNode": "arch", "fromSide": "bottom", "toNode": "skills", "toSide": "top" },
+    { "id": "e6", "fromNode": "memory", "fromSide": "right", "toNode": "skills", "toSide": "left" },
+    { "id": "e7", "fromNode": "note", "fromSide": "right", "toNode": "memory", "toSide": "left" }
+  ]
+}

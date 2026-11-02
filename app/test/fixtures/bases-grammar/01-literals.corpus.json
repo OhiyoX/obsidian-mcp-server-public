@@ -1,0 +1,195 @@
+{
+  "target": "base-expression",
+  "group": "literals",
+  "title": "字面量：字符串（含转义）/ 数字（含负号、小数、指数）/ boolean / null",
+  "anchors": [
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Types → ### Strings, numbers, and booleans",
+      "quote": "Strings are enclosed in single or double quotes, for example `\"message\"`.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Types → ### Strings, numbers, and booleans",
+      "quote": "Numbers are written as digits, and may optionally be enclosed in parenthesis for clarity. For example, `1` or `(2.5)`.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Bases syntax.md",
+      "locator": "## Types → ### Strings, numbers, and booleans",
+      "quote": "Booleans are written as `true` or `false` without quotes.",
+      "url": "https://obsidian.md/help/bases/syntax"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Functions.md",
+      "locator": "## Global → ### if()",
+      "quote": "`falseResult` is the optional output if `condition` is false. If omitted, defaults to `null`.",
+      "url": "https://obsidian.md/help/bases/functions"
+    },
+    {
+      "kind": "official-doc",
+      "source": "REFERENCE/official-docs/Formulas.md",
+      "locator": "## Data types",
+      "quote": "**Strings** — Text enclosed in quotes: `\"hello\"` or `'world'`",
+      "url": "https://obsidian.md/help/formulas"
+    }
+  ],
+  "cases": [
+    {
+      "id": "literal-string-double-quoted",
+      "input": "\"message\"",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "string", "value": "message" },
+      "note": "官方示例字面量（Bases syntax.md Types → Strings）"
+    },
+    {
+      "id": "literal-string-single-quoted",
+      "input": "'world'",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "string", "value": "world" },
+      "note": "官方明示单引号与双引号等价（同样的 Types 段）"
+    },
+    {
+      "id": "literal-string-empty",
+      "input": "\"\"",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "string", "value": "" },
+      "note": "空串是 string 而非 missing；官方 isEmpty() 用「没有字符」表示它为空（Functions.md string.isEmpty）"
+    },
+    {
+      "id": "literal-string-escapes",
+      "input": "\"a\\\"b\\\\c\\nd\\te\"",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "string", "value": "a\"b\\c\nd\te" },
+      "note": "转义集合冻结为 \\\\ \\\" \\' \\n \\r \\t（见 docs/bases/BASES-GRAMMAR-CORPUS.md §3）；未知转义 fail closed"
+    },
+    {
+      "id": "literal-string-quote-inside",
+      "input": "'it\"s'",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "string", "value": "it\"s" },
+      "note": "另一种引号无须转义"
+    },
+    {
+      "id": "literal-number-integer",
+      "input": "42",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 42 },
+      "note": "官方示例数字（Bases syntax.md Types）"
+    },
+    {
+      "id": "literal-number-decimal",
+      "input": "3.14",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 3.14 },
+      "note": "官方示例小数（Bases syntax.md：`radius * (2 * 3.14)`）"
+    },
+    {
+      "id": "literal-number-parenthesised",
+      "input": "(2.5)",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 2.5 },
+      "note": "官方「may optionally be enclosed in parenthesis」；括号透明，树形与 2.5 相同"
+    },
+    {
+      "id": "literal-number-negated-integer",
+      "input": "-5",
+      "outcome": "accept",
+      "ast": {
+        "type": "unary",
+        "operator": "-",
+        "argument": { "type": "literal", "valueType": "number", "value": 5 }
+      },
+      "note": "官方把 `-` 记为算术运算符（Bases syntax.md Arithmetic operators 表），负数即一元负号，不是带符号的字面量"
+    },
+    {
+      "id": "literal-number-negated-decimal",
+      "input": "-2.5",
+      "outcome": "accept",
+      "ast": {
+        "type": "unary",
+        "operator": "-",
+        "argument": { "type": "literal", "valueType": "number", "value": 2.5 }
+      },
+      "note": "同上；小数同样走一元负号"
+    },
+    {
+      "id": "literal-number-exponent",
+      "input": "1e3",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "number", "value": 1000 },
+      "note": "DESIGN：官方只说 digits；指数写法沿用「Bases functions follow JavaScript behavior」的 JS 数字字面量形状，取值确定（1e3 → 1000）。非有限值（1e999）另行 fail closed"
+    },
+    {
+      "id": "literal-boolean-true",
+      "input": "true",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "boolean", "value": true },
+      "note": "官方 Types：Booleans are written as `true` or `false` without quotes"
+    },
+    {
+      "id": "literal-boolean-false",
+      "input": "false",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "boolean", "value": false },
+      "note": "同上"
+    },
+    {
+      "id": "literal-null",
+      "input": "null",
+      "outcome": "accept",
+      "ast": { "type": "literal", "valueType": "null", "value": null },
+      "note": "官方 if() 省略 falseResult 时得到 null（Functions.md if()），reduce 示例也直接写 `acc == null`"
+    },
+    {
+      "id": "literal-reject-unterminated-string",
+      "input": "\"abc",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Unterminated string literal at position {position}",
+      "note": "字符串必须闭合；错误位置是引号起点"
+    },
+    {
+      "id": "literal-reject-newline-in-string",
+      "input": "\"ab\ncd\"",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Unterminated string literal at position {position}",
+      "note": "字面换行不构成字符串（换行在 YAML 单行公式里本就非法）；要换行必须写 \\n"
+    },
+    {
+      "id": "literal-reject-unsupported-escape",
+      "input": "\"a\\qb\"",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 2,
+      "messageTemplate": "Unsupported escape sequence \"{token}\" at position {position}",
+      "note": "未知转义 fail closed，不静默保留反斜杠（否则同一字符串两种解释）"
+    },
+    {
+      "id": "literal-reject-number-overflow",
+      "input": "1e999",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Invalid number literal \"{token}\" at position {position}",
+      "note": "非有限数字字面量拒绝进入 AST（Infinity 会在后续比较/聚合里传染）"
+    },
+    {
+      "id": "literal-reject-leading-dot",
+      "input": ".5",
+      "outcome": "reject",
+      "code": "syntax",
+      "position": 0,
+      "messageTemplate": "Expected an expression but found \"{token}\" at position {position}",
+      "note": "官方数字从 digits 开始，`.5` 不是数字字面量"
+    }
+  ]
+}

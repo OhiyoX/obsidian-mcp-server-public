@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "未知 filter 函数（file.zzz(...)）→ fail closed（unsupported）",
+  "flipIn": null
+}

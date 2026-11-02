@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "note": "Natural-language read-only tasks with no tool names. Each prompt is answerable from the fixture vault under vault/ without naming any MCP tool.",
+  "tasks": [
+    {
+      "id": "full-roadmap-status",
+      "profile": "full",
+      "toolsets": "",
+      "prompt": "What is the status field value in the note Projects/Roadmap.md? Answer with just the value.",
+      "expect": "active"
+    },
+    {
+      "id": "core-roadmap-status",
+      "profile": "core",
+      "toolsets": "",
+      "prompt": "What is the status field value in the note Projects/Roadmap.md? Answer with just the value.",
+      "expect": "active"
+    },
+    {
+      "id": "module-roadmap-search",
+      "profile": "module",
+      "toolsets": "info,search,context",
+      "prompt": "Does any note in this vault mention the word milestones? Answer with just yes or no.",
+      "expect": "yes"
+    }
+  ]
+}

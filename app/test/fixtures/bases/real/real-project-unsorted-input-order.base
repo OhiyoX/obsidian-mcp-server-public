@@ -1,0 +1,7 @@
+filters: 'file.hasTag("project")'
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - status

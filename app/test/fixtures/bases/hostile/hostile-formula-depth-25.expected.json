@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "公式嵌套超过 20 层 fail closed（MAX_FORMULA_DEPTH 未被 P1 放宽）",
+  "flipIn": null
+}

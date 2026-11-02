@@ -1,0 +1,9 @@
+views:
+  - type: table
+    name: Main
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - status

@@ -1,0 +1,15 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Notes/Nested/Deep.md",
+    "Notes/Delta.md",
+    "Archive/Gamma.md"
+  ],
+  "note": "INT-C：公式属性可参与 view.sort（P1-A typed 总序，字符串码元序）；label=file.asLink(file.name) 的原始值排序为 Alpha<Beta<Deep<Delta<Gamma（reject→accept 于 INT-C 翻转）",
+  "flipIn": null,
+  "flippedIn": "INT-C"
+}

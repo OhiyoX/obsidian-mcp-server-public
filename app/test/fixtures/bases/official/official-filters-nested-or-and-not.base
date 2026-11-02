@@ -1,0 +1,15 @@
+filters:
+  or:
+    - file.hasTag("work")
+    - and:
+        - file.hasTag("beta")
+        - file.hasLink("Alpha")
+    - not:
+        - file.hasTag("work")
+        - file.inFolder("Archive")
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - status

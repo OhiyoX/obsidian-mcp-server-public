@@ -1,0 +1,5 @@
+views:
+  - type: list
+    name: List
+    order:
+      - file.name

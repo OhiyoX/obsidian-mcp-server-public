@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "invalid-schema",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "view 缺 name → invalid-schema（fail closed）",
+  "flipIn": null
+}

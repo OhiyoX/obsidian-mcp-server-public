@@ -1,0 +1,8 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [],
+  "note": "DEFERRED (P1-A security)：filter 路径读继承属性未走 own-key 检查；W0-D 明确不修，归 P1-A 安全加固",
+  "flipIn": null
+}

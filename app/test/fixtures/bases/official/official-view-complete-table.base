@@ -1,0 +1,26 @@
+formulas:
+  ppu_link: file.asLink(if(title, title, file.name))
+properties:
+  status:
+    displayName: Status
+summaries:
+  customAverage: 'values.mean().round(3)'
+views:
+  - type: table
+    name: My table
+    limit: 10
+    groupBy:
+      property: status
+      direction: DESC
+    filters:
+      and:
+        - 'status != "done"'
+        - or:
+            - 'price > 2.1'
+            - 'file.hasTag("work")'
+    order:
+      - file.name
+      - status
+      - formula.ppu_link
+    summaries:
+      formula.ppu_link: Average

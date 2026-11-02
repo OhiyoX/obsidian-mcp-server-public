@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    limit: "5"
+    order:
+      - file.name

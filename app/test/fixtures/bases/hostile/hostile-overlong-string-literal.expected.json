@@ -1,0 +1,8 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [],
+  "note": "超长字符串字面量（1024 字符）不触发任何长度上限，filter 只是线性比较后返回空集",
+  "flipIn": null
+}

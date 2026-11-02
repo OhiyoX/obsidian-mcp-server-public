@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    sort: []
+    order:
+      - file.name

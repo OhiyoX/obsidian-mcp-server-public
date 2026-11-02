@@ -1,0 +1,14 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "DISPLAY-METADATA：未知 view 键属官方允许的视图自有状态，不改变行集合；W0-D 不翻转（保持 accept）",
+  "flipIn": null
+}

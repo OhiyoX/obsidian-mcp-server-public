@@ -1,0 +1,8 @@
+formulas:
+  a: file.asLink(file.name)
+  b: file.asLink(formula.a)
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

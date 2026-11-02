@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a focused capability or behavior change.
+title: "[feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real tokens, vault contents, customer data, or private
+        deployment details.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user-facing problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the smallest useful change and its trade-offs.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      render: text

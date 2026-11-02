@@ -1,0 +1,27 @@
+/* Render-parity font-token fixture, BODY-ONLY shape (issue #361).
+ *
+ * Same three font tokens as `render-parity-font-fixture.css`, same sentinel
+ * lists, but declared ONLY on `body` instead of `:root, .theme-light,
+ * .theme-dark`.
+ *
+ * This is not a synthetic corner case: the Obsidian theme documentation's own
+ * "change the font" example is `body { --font-text-theme: Georgia, serif; }`,
+ * and the real Things theme declares `--font-text-theme` (and the interface /
+ * monospace tokens) in a `body { … }` rule — see
+ * `test/fixtures/render-parity-things.subset.css`.
+ *
+ * A `:root`-only alias such as
+ *   `:root { --font-text: var(--font-text-override, var(--font-text-theme)) }`
+ * computes its `var()` substitution on <html>. A token declared on `body` is
+ * invisible there, so the alias resolves to the app fallback and every document
+ * host silently keeps the interface font — while still "consuming
+ * `var(--font-text)`". The root-shaped fixture cannot see this because it also
+ * declares the token at `:root`; this file is the one that can fail.
+ *
+ * Do not copy these families anywhere else. This file is test data only.
+ */
+body {
+  --font-interface-theme: "RenderParity UI Alpha", "RenderParity UI Beta", sans-serif;
+  --font-text-theme: "RenderParity Text Alpha", "RenderParity Text Beta", serif;
+  --font-monospace-theme: "RenderParity Mono Alpha", monospace;
+}

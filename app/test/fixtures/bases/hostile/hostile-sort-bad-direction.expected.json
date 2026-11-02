@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "sort.direction 取 ASC/DESC 之外的值 → fail closed（unsupported）",
+  "flipIn": null
+}

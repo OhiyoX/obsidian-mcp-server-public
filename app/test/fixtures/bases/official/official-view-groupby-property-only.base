@@ -1,0 +1,7 @@
+views:
+  - type: table
+    name: Main
+    groupBy:
+      property: status
+    order:
+      - file.name

@@ -1,0 +1,23 @@
+// Admin plane — 主体侧栏的定时授权配置（2026-10-31）— Simplified Chinese copy.
+export default Object.freeze({
+  "adm.subjectAuthz.title": "定时授权",
+  "adm.subjectAuthz.help": "只在这个主体已有的权限上再加限制，不会放大权限；管理后台本身不受策略约束。",
+  "adm.subjectAuthz.unrestricted": "不受定时授权限制 · 没有策略引用这个主体，按原有权限访问",
+  "adm.subjectAuthz.stateAllowed": "此刻允许",
+  "adm.subjectAuthz.stateRestricted": "此刻受限",
+  "adm.subjectAuthz.stateDisabled": "已停用",
+  "adm.subjectAuthz.edit": "编辑",
+  "adm.subjectAuthz.applyLabel": "要应用的定时授权规则",
+  "adm.subjectAuthz.applyChoose": "选一条已有规则…",
+  "adm.subjectAuthz.apply": "应用",
+  "adm.subjectAuthz.applyHelp": "只把这个主体加入所选规则；规则的时间窗口、限制的能力与窗口外行为都保持不变。撤销请到规则里编辑主体。",
+  "adm.subjectAuthz.applyEmpty": "没有其他可应用的规则；下面可以直接新建一条。",
+  "adm.subjectAuthz.newRule": "新建规则",
+  "adm.subjectAuthz.done": "已把这个主体加入所选规则",
+  "adm.subjectAuthz.errUnknownPolicy": "那条规则已经不在了（可能被其他人删除），刷新后再选一次。",
+  "adm.subjectAuthz.errStale": "规则在提交前被其他人修改了，这次没有写入；刷新页面后重新应用。",
+  "adm.subjectAuthz.errUnknownSubject": "这个主体不在当前的凭据快照里，没有写入。",
+  "adm.subjectAuthz.errUnavailable": "策略存储暂时不可用，没有写入。",
+  "adm.subjectAuthz.errInvalid": "提交的内容无法识别，没有写入。",
+  "adm.subjectAuthz.errGeneric": "没有写入：服务端拒绝了这次修改。",
+});

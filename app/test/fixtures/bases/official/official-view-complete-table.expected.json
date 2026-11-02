@@ -1,0 +1,9 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": ["Notes/Alpha.md", "Notes/Beta.md"],
+  "note": "刀4：groupBy(DESC)+view.summaries+顶层 summaries 全文档执行；formula.ppu_link 是 asLink 值 ⇒ Average 不可算，显式 reason=type-mismatch（不静默无值）",
+  "flipIn": null,
+  "flippedIn": "CUT4"
+}

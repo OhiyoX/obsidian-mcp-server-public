@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "partial-keep-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Dropped-Fields.md",
+      "createdAt": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "vaultId": "default",
+      "path": "Notes/No-Id.md"
+    },
+    {
+      "id": "partial-novault-xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "path": "Notes/No-Vault.md"
+    },
+    {
+      "id": "partial-nopath-xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default"
+    },
+    null,
+    {
+      "id": "partial-bogus-life-xxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "Notes/Unknown-Lifecycle.md",
+      "lifecycle": "bogus"
+    },
+    {
+      "id": "partial-escape-xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "../escape.md"
+    },
+    {
+      "id": "partial-abs-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "vaultId": "default",
+      "path": "C:absolute.md"
+    },
+    "not-an-object"
+  ]
+}

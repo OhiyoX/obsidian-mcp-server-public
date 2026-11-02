@@ -1,0 +1,15 @@
+formulas:
+  label: file.asLink(file.name)
+properties:
+  status:
+    displayName: Status
+  file.ext:
+    displayName: Extension
+  formula.label:
+    displayName: Label
+views:
+  - type: table
+    name: Main
+    order:
+      - status
+      - formula.label

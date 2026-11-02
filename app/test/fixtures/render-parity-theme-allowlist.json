@@ -1,0 +1,5 @@
+{
+  "_comment": "Phase 1 theme inheritance gate allowlist. Prefer fixing over allowing; every entry needs a reason and an environment note. Empty means the gate owns every RenderKind in its matrix.",
+  "tolerancePx": 1,
+  "knownEnvironmentFailures": []
+}

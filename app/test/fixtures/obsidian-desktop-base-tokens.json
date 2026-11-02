@@ -1,0 +1,419 @@
+{
+  "fixture": "obsidian-desktop-base-tokens",
+  "fixtureVersion": 1,
+  "toolVersion": "1.0.0",
+  "obsidianVersion": "1.14.4",
+  "extractedAt": "2026-10-22T13:44:24.008Z",
+  "scope": {
+    "note": "Derived subset of Obsidian's shipped app.css defaults, restricted to the tokens the Web fallback layer claims.",
+    "layer": "@layer web-theme-fallback in src/app/assets/app.css",
+    "selectorModel": "effective value on the note surface: body wins over :root by inheritance; .theme-light/.theme-dark win by specificity; @media print/forced-colors excluded",
+    "tokens": 99,
+    "totalDesktopTokens": 978
+  },
+  "source": {
+    "kind": "asar",
+    "locator": "obsidian-<version>.asar (the app Obsidian actually runs: bundled resources/obsidian.asar, or the auto-updated copy in the Electron userData dir)",
+    "entry": "app.css",
+    "archiveSha256": "146ef8470d8cbb4a6db209bdc19bf2bad13350444186c0fd93c31087b142b92f",
+    "appCssSha256": "866e50ac84dd8ad2775e0047ebd3ec5bd03e5af722aff259e6c4ea3cec42d7ba"
+  },
+  "tokens": {
+    "--accent-h": {
+      "light": "258",
+      "dark": "258"
+    },
+    "--accent-l": {
+      "light": "66%",
+      "dark": "66%"
+    },
+    "--accent-s": {
+      "light": "88%",
+      "dark": "88%"
+    },
+    "--background-modifier-active-hover": {
+      "light": "color-mix(in oklch, var(--interactive-accent) 10%, transparent)",
+      "dark": "color-mix(in oklch, var(--interactive-accent) 10%, transparent)"
+    },
+    "--background-modifier-border": {
+      "light": "var(--color-base-30)",
+      "dark": "var(--color-base-30)"
+    },
+    "--background-modifier-hover": {
+      "light": "color-mix(in oklch, var(--mono-100) 6.7%, transparent)",
+      "dark": "color-mix(in oklch, var(--mono-100) 6.7%, transparent)"
+    },
+    "--background-primary": {
+      "light": "var(--color-base-00)",
+      "dark": "var(--color-base-00)"
+    },
+    "--background-primary-alt": {
+      "light": "var(--color-base-10)",
+      "dark": "var(--color-base-10)"
+    },
+    "--background-secondary": {
+      "light": "var(--color-base-20)",
+      "dark": "var(--color-base-20)"
+    },
+    "--background-secondary-alt": {
+      "light": "var(--color-base-05)",
+      "dark": "var(--color-base-30)"
+    },
+    "--code-background": {
+      "light": "var(--background-primary-alt)",
+      "dark": "var(--background-primary-alt)"
+    },
+    "--color-accent": {
+      "light": "hsl(var(--accent-h), var(--accent-s), var(--accent-l))",
+      "dark": "hsl(var(--accent-h), var(--accent-s), var(--accent-l))"
+    },
+    "--color-accent-1": {
+      "light": "hsl(calc(var(--accent-h) - 1), calc(var(--accent-s) * 1.01), calc(var(--accent-l) * 1.075))",
+      "dark": "hsl(calc(var(--accent-h) - 3), calc(var(--accent-s) * 1.02), calc(var(--accent-l) * 1.15))"
+    },
+    "--color-accent-2": {
+      "light": "hsl(calc(var(--accent-h) - 3), calc(var(--accent-s) * 1.02), calc(var(--accent-l) * 1.15))",
+      "dark": "hsl(calc(var(--accent-h) - 5), calc(var(--accent-s) * 1.05), calc(var(--accent-l) * 1.29))"
+    },
+    "--color-accent-hsl": {
+      "light": "var(--accent-h), var(--accent-s), var(--accent-l)",
+      "dark": "var(--accent-h), var(--accent-s), var(--accent-l)"
+    },
+    "--color-base-00": {
+      "light": "#ffffff",
+      "dark": "#1C1C1C"
+    },
+    "--color-base-05": {
+      "light": "#fcfcfc",
+      "dark": "#212121"
+    },
+    "--color-base-10": {
+      "light": "#fafafa",
+      "dark": "#232323"
+    },
+    "--color-base-100": {
+      "light": "#222222",
+      "dark": "#dadada"
+    },
+    "--color-base-20": {
+      "light": "#f6f6f6",
+      "dark": "#282828"
+    },
+    "--color-base-25": {
+      "light": "#efefef",
+      "dark": "#2e2e2e"
+    },
+    "--color-base-30": {
+      "light": "#e4e4e4",
+      "dark": "#333333"
+    },
+    "--color-base-35": {
+      "light": "#dadada",
+      "dark": "#3f3f3f"
+    },
+    "--color-base-40": {
+      "light": "#bdbdbd",
+      "dark": "#555555"
+    },
+    "--color-base-50": {
+      "light": "#ababab",
+      "dark": "#666666"
+    },
+    "--color-base-60": {
+      "light": "#707070",
+      "dark": "#999999"
+    },
+    "--color-base-70": {
+      "light": "#5c5c5c",
+      "dark": "#b3b3b3"
+    },
+    "--color-blue": {
+      "light": "#086ddd",
+      "dark": "#027aff"
+    },
+    "--color-cyan": {
+      "light": "#00bfbc",
+      "dark": "#53dfdd"
+    },
+    "--color-green": {
+      "light": "#08b94e",
+      "dark": "#44cf6e"
+    },
+    "--color-orange": {
+      "light": "#ec7500",
+      "dark": "#e9973f"
+    },
+    "--color-pink": {
+      "light": "#d53984",
+      "dark": "#fa99cd"
+    },
+    "--color-purple": {
+      "light": "#7852ee",
+      "dark": "#a882ff"
+    },
+    "--color-red": {
+      "light": "#e93147",
+      "dark": "#fb464c"
+    },
+    "--color-yellow": {
+      "light": "#e0ac00",
+      "dark": "#e0de71"
+    },
+    "--font-interface-theme": {
+      "light": "'??'",
+      "dark": "'??'"
+    },
+    "--font-monospace-theme": {
+      "light": "'??'",
+      "dark": "'??'"
+    },
+    "--font-text-theme": {
+      "light": "'??'",
+      "dark": "'??'"
+    },
+    "--font-ui-smaller": {
+      "light": "12px",
+      "dark": "12px"
+    },
+    "--h1-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--h2-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--h3-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--h4-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--h5-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--h6-color": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--highlight-background": {
+      "light": "var(--text-highlight-bg, var(--highlight-background-yellow))",
+      "dark": "var(--text-highlight-bg, var(--highlight-background-yellow))"
+    },
+    "--highlight-background-blue": {
+      "light": "color-mix(in oklch, var(--color-blue) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-blue) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-background-green": {
+      "light": "color-mix(in oklch, var(--color-green) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-green) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-background-orange": {
+      "light": "color-mix(in oklch, var(--color-orange) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-orange) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-background-purple": {
+      "light": "color-mix(in oklch, var(--color-purple) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-purple) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-background-red": {
+      "light": "color-mix(in oklch, var(--color-red) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-red) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-background-yellow": {
+      "light": "color-mix(in oklch, var(--color-yellow) var(--highlight-opacity), transparent)",
+      "dark": "color-mix(in oklch, var(--color-yellow) var(--highlight-opacity), transparent)"
+    },
+    "--highlight-opacity": {
+      "light": "30%",
+      "dark": "30%"
+    },
+    "--icon-color": {
+      "light": "var(--text-muted)",
+      "dark": "var(--text-muted)"
+    },
+    "--icon-color-active": {
+      "light": "var(--text-accent)",
+      "dark": "var(--text-accent)"
+    },
+    "--icon-color-hover": {
+      "light": "var(--text-muted)",
+      "dark": "var(--text-muted)"
+    },
+    "--interactive-accent": {
+      "light": "var(--color-accent-1)",
+      "dark": "var(--color-accent)"
+    },
+    "--interactive-accent-hover": {
+      "light": "var(--color-accent-2)",
+      "dark": "var(--color-accent-1)"
+    },
+    "--interactive-accent-hsl": {
+      "light": "var(--color-accent-hsl)",
+      "dark": "var(--color-accent-hsl)"
+    },
+    "--line-height-normal": {
+      "light": "1.5",
+      "dark": "1.5"
+    },
+    "--line-width": {
+      "light": null,
+      "dark": null
+    },
+    "--link-color": {
+      "light": "var(--text-accent)",
+      "dark": "var(--text-accent)"
+    },
+    "--link-color-hover": {
+      "light": "var(--text-accent-hover)",
+      "dark": "var(--text-accent-hover)"
+    },
+    "--mono-0": {
+      "light": "white",
+      "dark": "black"
+    },
+    "--mono-100": {
+      "light": "black",
+      "dark": "white"
+    },
+    "--nav-item-background-active": {
+      "light": "var(--background-modifier-hover)",
+      "dark": "var(--background-modifier-hover)"
+    },
+    "--nav-item-background-hover": {
+      "light": "var(--background-modifier-hover)",
+      "dark": "var(--background-modifier-hover)"
+    },
+    "--nav-item-color": {
+      "light": "var(--text-muted)",
+      "dark": "var(--text-muted)"
+    },
+    "--nav-item-color-active": {
+      "light": "var(--text-normal)",
+      "dark": "var(--text-normal)"
+    },
+    "--nav-item-color-hover": {
+      "light": "var(--text-normal)",
+      "dark": "var(--text-normal)"
+    },
+    "--pill-background": {
+      "light": "transparent",
+      "dark": "transparent"
+    },
+    "--pill-background-hover": {
+      "light": "transparent",
+      "dark": "transparent"
+    },
+    "--pill-color": {
+      "light": "var(--text-muted)",
+      "dark": "var(--text-muted)"
+    },
+    "--pill-color-hover": {
+      "light": "var(--text-normal)",
+      "dark": "var(--text-normal)"
+    },
+    "--pill-color-remove": {
+      "light": "var(--text-faint)",
+      "dark": "var(--text-faint)"
+    },
+    "--pill-color-remove-hover": {
+      "light": "var(--text-accent)",
+      "dark": "var(--text-accent)"
+    },
+    "--pill-padding-x": {
+      "light": "0.65em",
+      "dark": "0.65em"
+    },
+    "--pill-padding-y": {
+      "light": "0.25em",
+      "dark": "0.25em"
+    },
+    "--pill-radius": {
+      "light": "2em",
+      "dark": "2em"
+    },
+    "--pill-weight": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--shadow-s": {
+      "light": "0px 1px 2px rgba(0, 0, 0, 0.028), 0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 15px 30px rgba(0, 0, 0, 0.07)",
+      "dark": "0px 1px 2px rgba(0, 0, 0, 0.121), 0px 3.4px 6.7px rgba(0, 0, 0, 0.179), 0px 15px 30px rgba(0, 0, 0, 0.3)"
+    },
+    "--tag-background": {
+      "light": "color-mix(in oklch, var(--interactive-accent) 10%, transparent)",
+      "dark": "color-mix(in oklch, var(--interactive-accent) 10%, transparent)"
+    },
+    "--tag-background-hover": {
+      "light": "color-mix(in oklch, var(--interactive-accent) 20%, transparent)",
+      "dark": "color-mix(in oklch, var(--interactive-accent) 20%, transparent)"
+    },
+    "--tag-border-color": {
+      "light": "color-mix(in oklch, var(--interactive-accent) 15%, transparent)",
+      "dark": "color-mix(in oklch, var(--interactive-accent) 15%, transparent)"
+    },
+    "--tag-border-width": {
+      "light": "0px",
+      "dark": "0px"
+    },
+    "--tag-color": {
+      "light": "var(--text-accent)",
+      "dark": "var(--text-accent)"
+    },
+    "--tag-color-hover": {
+      "light": "var(--text-accent)",
+      "dark": "var(--text-accent)"
+    },
+    "--tag-padding-x": {
+      "light": "0.65em",
+      "dark": "0.65em"
+    },
+    "--tag-padding-y": {
+      "light": "0.25em",
+      "dark": "0.25em"
+    },
+    "--tag-radius": {
+      "light": "2em",
+      "dark": "2em"
+    },
+    "--tag-size": {
+      "light": "var(--font-smaller)",
+      "dark": "var(--font-smaller)"
+    },
+    "--tag-weight": {
+      "light": "inherit",
+      "dark": "inherit"
+    },
+    "--text-accent": {
+      "light": "var(--color-accent)",
+      "dark": "var(--color-accent-1)"
+    },
+    "--text-accent-hover": {
+      "light": "var(--color-accent-2)",
+      "dark": "var(--color-accent-2)"
+    },
+    "--text-faint": {
+      "light": "var(--color-base-50)",
+      "dark": "var(--color-base-50)"
+    },
+    "--text-muted": {
+      "light": "var(--color-base-70)",
+      "dark": "var(--color-base-70)"
+    },
+    "--text-normal": {
+      "light": "var(--color-base-100)",
+      "dark": "var(--color-base-100)"
+    },
+    "--text-on-accent": {
+      "light": "white",
+      "dark": "white"
+    },
+    "--text-selection": {
+      "light": "color-mix(in oklch, var(--interactive-accent) 20%, transparent)",
+      "dark": "color-mix(in oklch, var(--interactive-accent) 33%, transparent)"
+    }
+  }
+}

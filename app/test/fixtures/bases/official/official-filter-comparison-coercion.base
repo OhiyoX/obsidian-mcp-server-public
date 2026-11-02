@@ -1,0 +1,7 @@
+views:
+  - type: table
+    name: Main
+    filters: 'price == "3"'
+    order:
+      - file.name
+      - price

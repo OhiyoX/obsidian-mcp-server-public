@@ -1,0 +1,8 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [],
+  "note": "view 选择：显式 viewName 命中第二个视图；全局 filters 与 view.filters 以 AND 合并，所以 'Done' 视图在 not(status == done) 的全局过滤下是空集",
+  "flipIn": null
+}

@@ -1,0 +1,13 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Work/Project Four.md",
+    "Work/Project Three.md",
+    "Work/Project One.md",
+    "Work/Project Two.md"
+  ],
+  "note": "Maps 形状：hasTag 过滤 + file.asLink(if(title, title, file.name)) + status 排序（title 缺失走 file.name）",
+  "flipIn": null
+}

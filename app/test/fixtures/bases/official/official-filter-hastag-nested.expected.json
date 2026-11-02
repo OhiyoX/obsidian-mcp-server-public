@@ -1,0 +1,12 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Notes/Delta.md"
+  ],
+  "note": "已实现但有语义分歧：file.hasTag 只做精确匹配，不展开官方声明的嵌套标签（hasTag(\"work\") 不匹配 #work/nested）",
+  "flipIn": null
+}

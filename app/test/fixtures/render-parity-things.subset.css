@@ -1,0 +1,955 @@
+/* RENDER-PARITY-THEME-SUBSET v1
+ * Community theme subset for render-parity Phase 1-C: Things
+ * Source: D:/Obsidian/vault/.obsidian/themes/Things/theme.css
+ * Source sha256: 5f492760c8abfee737f2f9adfdd45bab6a52da28171575970ce955a3950b0887 (60046 bytes, 127 rules)
+ * Source theme: Things 2.1.20 by @colineckert -- license MIT
+ * Extracted 2026-10-05T22:02:38.806Z by app/scripts/extract-theme-subset.mjs v1.0.0
+ * ───────────────────────────────────────────────────────
+ * THINGS
+ * Version 2.1.20
+ * Created by @colineckert
+ * 
+ * Readme:
+ * https://github.com/colineckert/obsidian-things
+ * 
+ * Support my work:
+ * https://www.buymeacoffee.com/colineckert
+ * ──────────────────────────────────────────────────────
+ *
+ * Kept 29 of 127 rules: the canonical selector surface for the 24 Markdown
+ * kinds the render-parity gate asserts, plus the transitive chain of custom-property
+ * definitions they reference (123 tokens, 187 definitions). Light mode only:
+ * `.theme-dark`-scoped rules and selectors needing a class this host never renders are
+ * excluded, so this is NOT the complete theme. Re-extract with:
+ *   node scripts/extract-theme-subset.mjs <theme.css> --out <this file>
+ * The manifest pins provenance + the body hash: the gate fails when this body, the
+ * manifest and the app's computed paint disagree.
+ * MANIFEST-JSON-BEGIN
+ * {
+ *  "tool": "app/scripts/extract-theme-subset.mjs",
+ *  "toolVersion": "1.0.0",
+ *  "extractedAt": "2026-10-05T22:02:38.806Z",
+ *  "source": {
+ *   "path": "D:/Obsidian/vault/.obsidian/themes/Things/theme.css",
+ *   "sha256": "5f492760c8abfee737f2f9adfdd45bab6a52da28171575970ce955a3950b0887",
+ *   "bytes": 60046,
+ *   "name": "Things",
+ *   "version": "2.1.20",
+ *   "author": "@colineckert",
+ *   "license": "MIT",
+ *   "licenseSource": "github.com/colineckert/obsidian-things",
+ *   "licenseNotice": "───────────────────────────────────────────────────────\nTHINGS\nVersion 2.1.20\nCreated by @colineckert\n\nReadme:\nhttps://github.com/colineckert/obsidian-things\n\nSupport my work:\nhttps://www.buymeacoffee.com/colineckert\n──────────────────────────────────────────────────────"
+ *  },
+ *  "subset": {
+ *   "sha256": "519ea0cb9cacc7aaecaa3a478dec988851ed82eb044b006b9906e24dd23c815b",
+ *   "bytes": 8986,
+ *   "rules": 29,
+ *   "sourceRules": 127,
+ *   "droppedRules": 98,
+ *   "tokens": 123,
+ *   "rootTokens": 119,
+ *   "tokenDefinitions": 187,
+ *   "byReason": {
+ *    "base-tokens": 3,
+ *    "canonical": 26
+ *   }
+ *  },
+ *  "sentinel": {
+ *   "--base-h": "212",
+ *   "--base-s": "15%",
+ *   "--base-d": "13%",
+ *   "--base-l": "97%",
+ *   "--accent-h": "215",
+ *   "--accent-s": "75%"
+ *  },
+ *  "droppedSample": [
+ *   {
+ *    "selector": "body.fancy-code .markdown-preview-view.markdown-preview-view pre",
+ *    "props": [
+ *     "border",
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='!']:checked,\ninput[data-task='*']:checked,\ninput[data-task='-']:checked,\ninput[data-task='<']:checked,\ninput[data-task='>']:checked,\ninput[data-task='I']:checked,\ninput[data-task='b']:checked,\ninput[data-task='c']:checked,\n…",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "border",
+ *     "border-radius",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='>']:checked,\nli[data-task='>'] > input:checked,\nli[data-task='>'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='<']:checked,\nli[data-task='<'] > input:checked,\nli[data-task='<'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='?']:checked,\nli[data-task='?'] > input:checked,\nli[data-task='?'] > p > input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='/']:checked,\nli[data-task='/'] > input:checked,\nli[data-task='/'] > p > input:checked",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='/']:checked:after,\nli[data-task='/'] > input:checked:after,\nli[data-task='/'] > p > input:checked:after",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='!']:checked,\nli[data-task='!'] > input:checked,\nli[data-task='!'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='\"']:checked,\ninput[data-task='“']:checked,\nli[data-task='\"'] > input:checked,\nli[data-task='\"'] > p > input:checked,\nli[data-task='“'] > input:checked,\nli[data-task='“'] > p > input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='-']:checked,\nli[data-task='-'] > input:checked,\nli[data-task='-'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='*']:checked,\nli[data-task='*'] > input:checked,\nli[data-task='*'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='l']:checked,\nli[data-task='l'] > input:checked,\nli[data-task='l'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='i']:checked,\nli[data-task='i'] > input:checked,\nli[data-task='i'] > p > input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "background-color",
+ *     "border-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='S']:checked,\nli[data-task='S'] > input:checked,\nli[data-task='S'] > p > input:checked",
+ *    "props": [
+ *     "--checkbox-marker-color",
+ *     "border-color",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='I']:checked,\nli[data-task='I'] > input:checked,\nli[data-task='I'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='f']:checked,\nli[data-task='f'] > input:checked,\nli[data-task='f'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='k']:checked,\nli[data-task='k'] > input:checked,\nli[data-task='k'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='u']:checked,\nli[data-task='u'] > input:checked,\nli[data-task='u'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='d']:checked,\nli[data-task='d'] > input:checked,\nli[data-task='d'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='w']:checked,\nli[data-task='w'] > input:checked,\nli[data-task='w'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='p']:checked,\nli[data-task='p'] > input:checked,\nli[data-task='p'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='c']:checked,\nli[data-task='c'] > input:checked,\nli[data-task='c'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='b']:checked,\nli[data-task='b'] > input:checked,\nli[data-task='b'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='P']:checked,\nli[data-task='P'] > input:checked,\nli[data-task='P'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='M']:checked,\nli[data-task='M'] > input:checked,\nli[data-task='M'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "input[data-task='D']:checked,\nli[data-task='D'] > input:checked,\nli[data-task='D'] > p > input:checked",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p1 > input[type='checkbox']",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p1 > input[type='checkbox']:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p2 > input[type='checkbox']",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p2 > input[type='checkbox']:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p3 > input[type='checkbox']",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p3 > input[type='checkbox']:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p4 > input[type='checkbox']",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-p4 > input[type='checkbox']:hover",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-error p",
+ *    "props": [
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-error code",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-success p",
+ *    "props": [
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".checklist-plugin-main .classic .content > p",
+ *    "props": [
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__item-button-wrapper > button:hover",
+ *    "props": [
+ *     "color",
+ *     "background"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__item-input-actions button,\nbody:not(.no-kanban-styles) .kanban-plugin__lane-input-actions button",
+ *    "props": [
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles)\n  .kanban-plugin__lane-header-wrapper\n  .kanban-plugin__grow-wrap\n  > textarea,\nbody:not(.no-kanban-styles)\n  .kanban-plugin__lane-input-wrapper\n  .kanban-plugin__grow-wrap\n  > textarea",
+ *    "props": [
+ *     "background"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.fancy-highlight span.cm-highlight,\nbody.fancy-highlight .markdown-preview-view mark,\nbody.fancy-highlight span.search-result-file-matched-text",
+ *    "props": [
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.fancy-code .cm-s-obsidian div.HyperMD-codeblock-begin-bg",
+ *    "props": [
+ *     "background-color",
+ *     "border",
+ *     "border-top-right-radius",
+ *     "border-top-left-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.fancy-code .cm-line.HyperMD-codeblock .code-block-flair",
+ *    "props": [
+ *     "font-size",
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.is-mobile:not(.floating-button-off):not(.advanced-toolbar)\n  .view-action:nth-last-of-type(2),\nbody.is-mobile:not(.floating-button-off):not(.advanced-toolbar)\n  .view-action:nth-last-of-type(2)",
+ *    "props": [
+ *     "color",
+ *     "background-color",
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.is-mobile:not(.floating-button-off).advanced-toolbar\n  .view-action:nth-last-of-type(2),\nbody.is-mobile:not(.floating-button-off).advanced-toolbar\n  .view-action:nth-last-of-type(2)",
+ *    "props": [
+ *     "color",
+ *     "background-color",
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-project .todoist-project-title",
+ *    "props": [
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-section .todoist-section-title",
+ *    "props": [
+ *     "font-size",
+ *     "color",
+ *     "font-weight"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-error",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".todoist-success",
+ *    "props": [
+ *     "border",
+ *     "background-color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".checklist-plugin-main .title",
+ *    "props": [
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".checklist-plugin-main .container input.search",
+ *    "props": [
+ *     "font-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".checklist-plugin-main .toggle .checkbox",
+ *    "props": [
+ *     "border-radius"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin",
+ *    "props": [
+ *     "--dot-color",
+ *     "--dot-spacing",
+ *     "--dot-size"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__board",
+ *    "props": [
+ *     "border-top"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__item-form",
+ *    "props": [
+ *     "border-top"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__item-button-wrapper",
+ *    "props": [
+ *     "border-top"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body:not(.no-kanban-styles) .kanban-plugin__lane",
+ *    "props": [
+ *     "border"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".theme-dark .modal-container .suggestion-item.is-selected",
+ *    "props": [
+ *     "background"
+ *    ]
+ *   },
+ *   {
+ *    "selector": "body.fancy-code div.HyperMD-codeblock-bg:not(.HyperMD-codeblock-begin-bg)",
+ *    "props": [
+ *     "border-right"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.prolog",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.doctype",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.cdata",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.punctuation",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.plain-text",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.dom.variable",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.selector",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.dom.variable",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.parameter",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.class-name",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.maybe-class-name",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.property-access",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.constant",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.builtin",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.property",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.boolean",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.symbol",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.attr-name",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.deleted",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.char",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.attr-value",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.inserted",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.operator",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.entity",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.url",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".language-css .token.string",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".style .token.string",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.atrule",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.function",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.method",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   },
+ *   {
+ *    "selector": ".token.macro.property",
+ *    "props": [
+ *     "color"
+ *    ]
+ *   }
+ *  ],
+ *  "excludedMarkers": [
+ *   "buymeacoffee",
+ *   "kanban-plugin",
+ *   "dataview"
+ *  ]
+ * }
+ * MANIFEST-JSON-END
+ */
+
+body {
+  --base-h: 212;
+  --base-s: 15%;
+  --base-d: 13%;
+  --base-l: 97%;
+  --accent-h: 215;
+  --accent-s: 75%;
+  --accent-d: 70%;
+  --accent-l: 60%;
+  --blue: #2e80f2;
+  --pink: #ff82b2;
+  --green: #3eb4bf;
+  --yellow: #e5b567;
+  --orange: #e87d3e;
+  --red: #e83e3e;
+  --purple: #9e86c8;
+  --h1-color: var(--text-normal);
+  --h2-color: var(--text-normal);
+  --h3-color: var(--blue);
+  --h4-color: var(--yellow);
+  --h5-color: var(--red);
+  --h6-color: var(--text-muted);
+  --strong-color: var(--pink);
+  --em-color: var(--pink);
+  --quote-color: var(--green);
+  --tag-background-color-l: #bde1d3;
+  --tag-font-color-l: #1d694b;
+  --tag-background-color-d: #1d694b;
+  --tag-font-color-d: #ffffff;
+  --highlight-background-color--normal: hsl(50deg 100% 50% / 15%) !important;
+  --highlight-background-color-underline: hsl(50deg 100% 50% / 100%) !important;
+  --highlight-background-color--active: hsl(50deg 100% 50% / 20%) !important;
+  --progress-color-1: #ad5758;
+  --progress-color-2: #b87f4c;
+  --progress-color-3: #d2b874;
+  --progress-color-4: #b0c07e;
+  --progress-color-5: #768399;
+  --font-text-theme: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Inter, Ubuntu, sans-serif;
+  --font-editor-theme: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Inter, Ubuntu, sans-serif;
+  --font-monospace-theme: 'JetBrains Mono', 'Fira Code', Menlo, SFMono-Regular,
+    Consolas, 'Roboto Mono', monospace;
+  --font-interface-theme: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Inter, Ubuntu, sans-serif;
+  --font-editor: var(--font-editor-override), var(--font-text-override),
+    var(--font-editor-theme);
+  --h1-size: 1.7rem;
+  --h2-size: 1.5rem;
+  --h3-size: 1.2rem;
+  --h4-size: 1.1rem;
+  --h5-size: 1rem;
+  --h6-size: 0.9rem;
+  --checkbox-radius: 30%;
+  --link-external-decoration: underline;
+  --link-decoration: underline;
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 10px;
+  --radius-xl: 16px;
+  --line-width: 40rem;
+  --line-height: 1.5;
+  --max-width: 90%;
+  --max-col-width: 18em;
+  --icon-muted: 0.5;
+  --nested-padding: 1.1em;
+  --folding-offset: 10px;
+  --line-width-adaptive: var(--line-width);
+  --line-width-wide: calc(var(--line-width) + 12.5%);
+}
+
+.theme-light,
+body.theme-light.is-mobile {
+  --highlight-mix-blend-mode: darken;
+  --mono-rgb-0: 255, 255, 255;
+  --mono-rgb-100: 0, 0, 0;
+  --color-red-rgb: 228, 55, 75;
+  --color-red: #e4374b;
+  --color-green-rgb: 12, 181, 79;
+  --color-green: #0cb54f;
+  --color-orange: #d96c00;
+  --color-yellow: #bd8e37;
+  --color-cyan: #2db7b5;
+  --color-blue: #086ddd;
+  --color-purple: #876be0;
+  --color-pink: #c32b74;
+  --color-base-00: #ffffff;
+  --color-base-05: #fcfcfc;
+  --color-base-10: #f6f7f8;
+  --color-base-20: #f6f7f8;
+  --color-base-25: #f0f0f0;
+  --color-base-30: #ebedf0;
+  --color-base-35: #d4d4d4;
+  --color-base-40: #bdbdbd;
+  --color-base-50: #ababab;
+  --color-base-60: #707070;
+  --color-base-70: #5a5a5a;
+  --color-base-100: #222222;
+  --color-accent-hsl: var(--accent-h), var(--accent-s), var(--accent-l);
+  --color-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --color-accent-1: hsl(
+    var(--accent-h),
+    var(--accent-s),
+    calc(var(--accent-l) + 2.5%)
+  );
+  --color-accent-2: hsl(
+    var(--accent-h),
+    var(--accent-s),
+    calc(var(--accent-l) + 5%)
+  );
+  --background-modifier-hover: #e2e5e9;
+  --background-secondary-alt: var(--color-base-05);
+  --background-modifier-box-shadow: rgba(0, 0, 0, 0.1);
+  --background-modifier-cover: rgba(220, 220, 220, 0.4);
+  --text-highlight-bg-l: rgba(255, 208, 0, 0.4);
+  --text-highlight-bg: var(--text-highlight-bg-l);
+  --text-highlight-bg-active: rgba(255, 128, 0, 0.4);
+  --input-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 2px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 1.5px 0 rgba(0, 0, 0, 0.03),
+    0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 0 0 0 transparent;
+  --input-shadow-hover: inset 0 0 0 1px rgba(0, 0, 0, 0.17),
+    0 2px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 1.5px 0 rgba(0, 0, 0, 0.03),
+    0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 0 0 0 transparent;
+  --shadow-s: 0px 1px 2px rgba(0, 0, 0, 0.028),
+    0px 3.4px 6.7px rgba(0, 0, 0, 0.042), 0px 15px 30px rgba(0, 0, 0, 0.07);
+  --shadow-l: 0px 1.8px 7.3px rgba(0, 0, 0, 0.071),
+    0px 6.3px 24.7px rgba(0, 0, 0, 0.112), 0px 30px 90px rgba(0, 0, 0, 0.2);
+  --tag-background: var(--tag-background-color-l);
+  --tag-color: var(--tag-font-color-l);
+  --text-muted: hsl(
+    var(--base-h),
+    calc(var(--base-s) - 5%),
+    calc(var(--base-l) - 60%)
+  );
+  --text-faint: hsl(
+    var(--base-h),
+    calc(var(--base-s) - 5%),
+    calc(var(--base-l) - 30%)
+  );
+  --text-formatted: hsl(
+    var(--base-h),
+    calc(var(--base-s) - 5%),
+    calc(var(--base-l) - 35%)
+  );
+  --text-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --text-accent-hover: hsl(
+    var(--accent-h),
+    var(--accent-s),
+    calc(var(--accent-l) - 10%)
+  );
+  --atom-gray-1: #383a42;
+  --atom-gray-2: #383a42;
+  --atom-red: #e75545;
+  --atom-green: #4ea24c;
+  --atom-blue: #3d74f6;
+  --atom-purple: #a625a4;
+  --atom-aqua: #0084bc;
+  --atom-yellow: #e35649;
+  --atom-orange: #986800;
+}
+
+body:not(.default-font-color) .markdown-preview-view blockquote,
+body:not(.default-font-color) span.cm-quote.cm-quote-1 {
+  color: var(--quote-color);
+}
+
+body:not(.default-font-color) strong,
+body:not(.default-font-color) span:not(.cm-highlight).cm-strong {
+  color: var(--strong-color);
+}
+
+body:not(.default-font-color) em,
+body:not(.default-font-color) span:not(.cm-highlight).cm-em {
+  color: var(--em-color);
+}
+
+body:not(.default-font-color) mark strong,
+body:not(.default-font-color) mark em {
+  color: var(--text-normal);
+}
+
+.cm-formatting-strong,
+.cm-formatting-em,
+.cm-formatting.cm-formatting-quote {
+  color: var(--text-formatted) !important;
+  font-weight: var(--normal-weight);
+}
+
+.markdown-preview-view ul > li.task-list-item.is-checked,
+.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task='x'],
+.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task='X'],
+.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task='M'] {
+  text-decoration: none;
+  color: var(--text-faint);
+}
+
+img {
+  border-radius: 4px;
+}
+
+.cm-inline-code,
+.cm-s-obsidian .HyperMD-codeblock,
+.markdown-preview-view.markdown-preview-view :is(pre, code) {
+  --codeblock-border: var(--color-base-30);
+  --codeblock-roundness: var(--radius-s);
+  --code-block-alt-bg: var(--color-base-30);
+  --slight-code-roundish: var(--radius-xs);
+}
+
+.theme-light .token.comment .theme-light .cm-comment {
+  color: #ababab;
+}
+
+.cm-hmd-codeblock.cm-bracket {
+  color: var(--atom-gray-2);
+}
+
+code[class*='language-'],
+.cm-tag,
+.token.tag,
+.cm-def,
+.cm-property,
+.cm-qualifier {
+  color: var(--atom-red);
+}
+
+.cm-variable-2,
+.cm-type,
+.cm-atom,
+code .cm-tag {
+  color: var(--atom-yellow);
+}
+
+.token.number,
+.cm-attribute,
+.cm-number,
+.cm-property.cm-string {
+  color: var(--atom-orange);
+}
+
+.token.string,
+.cm-hmd-codeblock.cm-string,
+.cm-hmd-codeblock.cm-string-2 {
+  color: var(--atom-green);
+}
+
+.cm-operator {
+  color: var(--atom-aqua);
+}
+
+.token.keyword,
+.cm-keyword {
+  color: var(--atom-purple);
+}
+
+.cm-variable {
+  color: var(--atom-blue);
+}
+
+body:not(.tasks)
+  .markdown-preview-view
+  ul
+  li[data-task='-'].task-list-item.is-checked,
+body:not(.tasks)
+  .markdown-source-view.mod-cm6
+  .HyperMD-task-line[data-task]:is([data-task='-']),
+body:not(.tasks) li[data-task='-'].task-list-item.is-checked {
+  color: var(--text-faint);
+  text-decoration: line-through solid var(--text-faint) 1px;
+}
+
+body:not(.tasks) li[data-task='>'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='<'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='b'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='i'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='*'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='!'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='S'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='?'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='/'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='"'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='l'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='I'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='p'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='c'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='f'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='k'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='w'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='u'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='d'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='P'].task-list-item.is-checked,
+body:not(.tasks) li[data-task='D'].task-list-item.is-checked {
+  color: var(--text-normal);
+}
+
+.task-metadata {
+  font-size: var(--font-todoist-metadata-size);
+  color: #7a88cf;
+}
+
+.task-date.task-overdue {
+  color: rgba(255, 152, 164, 0.75) !important;
+}

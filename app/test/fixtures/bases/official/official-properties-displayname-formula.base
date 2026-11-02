@@ -1,0 +1,11 @@
+formulas:
+  label: file.asLink(file.name)
+properties:
+  formula.label:
+    displayName: Label
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - formula.label

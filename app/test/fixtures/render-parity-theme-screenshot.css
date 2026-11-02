@@ -1,0 +1,110 @@
+/*
+ * Render-parity Phase 1 SCREENSHOT theme (test data, not a Web theme).
+ *
+ * Unlike render-parity-theme-fixture.css (unnatural sentinels for probing), this
+ * file declares readable, generic colours through the same canonical Obsidian
+ * selector surface so the coordinator can eyeball structure, hierarchy and
+ * spacing in Reader and Live under both colour modes. It is NOT a copy of any
+ * Vault theme (Things / Minimal / AnuPpuccin); it exists only for screenshots.
+ */
+body {
+  --rp-heading: #2b4bd8;
+  --rp-strong: #146c43;
+  --rp-em: #6b3fd4;
+  --rp-strike: #8a8f98;
+  --rp-hl-bg: #fde68a;
+  --rp-hl-fg: #4a3b00;
+  --rp-link: #0b6fc4;
+  --rp-link-internal: #7a3fd4;
+  --rp-tag: #0f7b6c;
+  --rp-tag-bg: #e0f3f0;
+  --rp-code-fg: #b1305e;
+  --rp-code-bg: #eef1f5;
+  --rp-codeblock-fg: #e8eaee;
+  --rp-codeblock-bg: #2b3038;
+  --rp-quote: #2f6f6b;
+  --rp-quote-border: #9ec9c5;
+  --rp-list: #3a4150;
+  --rp-hr: #c8ccd2;
+  --text-muted: #6b7280;
+  --code-background: #eef1f5;
+  --background-modifier-border: #d5d9df;
+  --table-text-color: #2b2f36;
+  --table-border-color: #c8ccd2;
+  --blockquote-color: #2f6f6b;
+  --blockquote-border-color: #9ec9c5;
+  --blockquote-border-thickness: 3px;
+}
+
+.theme-dark body {
+  --rp-heading: #9db4ff;
+  --rp-strong: #7ee2b8;
+  --rp-em: #c9aaff;
+  --rp-strike: #8a8f98;
+  --rp-hl-bg: #8a6d1f;
+  --rp-hl-fg: #fff4d6;
+  --rp-link: #7cc0ff;
+  --rp-link-internal: #c9aaff;
+  --rp-tag: #7fe3d2;
+  --rp-tag-bg: #1d3b38;
+  --rp-code-fg: #ff9dc0;
+  --rp-code-bg: #22262d;
+  --rp-codeblock-fg: #e8eaee;
+  --rp-codeblock-bg: #14171c;
+  --rp-quote: #8fd6d0;
+  --rp-quote-border: #3f6f6b;
+  --rp-list: #d4d8e0;
+  --rp-hr: #454b55;
+  --text-muted: #9aa2ad;
+  --code-background: #22262d;
+  --background-modifier-border: #3a3f47;
+  --table-text-color: #e6e8ec;
+  --table-border-color: #454b55;
+  --blockquote-color: #8fd6d0;
+  --blockquote-border-color: #3f6f6b;
+}
+
+.markdown-preview-view h1,
+.markdown-source-view.mod-cm6.is-live-preview .HyperMD-header-1 { color: var(--rp-heading); font-weight: 700; }
+
+.markdown-preview-view strong, .cm-strong { color: var(--rp-strong); font-weight: 700; }
+.markdown-preview-view em, .cm-em { color: var(--rp-em); }
+.markdown-preview-view :is(s, del), .cm-strikethrough { color: var(--rp-strike); }
+
+.markdown-preview-view mark, .cm-highlight { background-color: var(--rp-hl-bg); color: var(--rp-hl-fg); }
+
+.markdown-preview-view a.external-link, .cm-link { color: var(--rp-link); }
+.markdown-preview-view a.internal-link, .cm-obsidian-link { color: var(--rp-link-internal); }
+
+.markdown-preview-view a.tag, .cm-hashtag {
+  color: var(--rp-tag);
+  background-color: var(--rp-tag-bg);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.markdown-preview-view code, .cm-inline-code {
+  color: var(--rp-code-fg);
+  background-color: var(--rp-code-bg);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.markdown-preview-view pre, .HyperMD-codeblock {
+  color: var(--rp-codeblock-fg);
+  background-color: var(--rp-codeblock-bg);
+  border-radius: 8px;
+}
+
+.markdown-preview-view blockquote, .HyperMD-quote {
+  color: var(--rp-quote);
+  border-left: 3px solid var(--rp-quote-border);
+  padding-left: 0.9em;
+}
+
+.markdown-preview-view li, .HyperMD-list-line { color: var(--rp-list); }
+.markdown-preview-view .task-list-item, .HyperMD-task-line { color: var(--rp-list); }
+
+.markdown-preview-view td, .HyperMD-table-row, .cm-table-cell { color: var(--table-text-color); border-color: var(--table-border-color); }
+
+.markdown-preview-view hr, .HyperMD-hr { border-top-color: var(--rp-hr); }

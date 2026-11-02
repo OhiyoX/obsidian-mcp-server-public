@@ -1,0 +1,10 @@
+filters:
+  and:
+    - file.ctime >= "2026-01-01T00:00:00Z"
+    - file.size > 300
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name
+      - file.size

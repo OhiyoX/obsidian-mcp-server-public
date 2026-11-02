@@ -1,0 +1,5 @@
+views:
+  - type: bogus
+    name: Bogus
+    order:
+      - file.name

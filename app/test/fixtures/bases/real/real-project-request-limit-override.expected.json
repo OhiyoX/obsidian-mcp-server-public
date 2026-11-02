@@ -1,0 +1,10 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Work/Project Four.md"
+  ],
+  "note": "请求级 limit 覆盖 view.limit（limit || view?.limit || sorted.length）：view.limit 3 + 请求 limit 1 → 1 行",
+  "flipIn": null
+}

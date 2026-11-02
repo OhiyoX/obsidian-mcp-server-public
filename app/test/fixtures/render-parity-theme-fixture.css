@@ -1,0 +1,184 @@
+/*
+ * Render-parity Phase 1 theme inheritance fixture.
+ *
+ * This file is written into an isolated test Vault at
+ * `.obsidian/themes/RenderParityTheme/theme.css` and is served unchanged
+ * through the production `/api/web/v1/theme.css` endpoint, exactly like a real
+ * community theme. It plays the role of the Vault's authoritative theme.css.
+ *
+ * Every declaration uses a canonical Obsidian selector (the surface that
+ * Things / Minimal / AnuPpuccin actually target) and a distinctive sentinel
+ * value that the Web fallback layers never use. A probe that reads the
+ * declared sentinel therefore proves the paint came from this file's cascade,
+ * not from app.css or a late-injected `EditorView.theme`.
+ *
+ * Do not copy these sentinel values into production CSS. This file is test
+ * data only. `scripts/render-parity-*-theme*` derives its expectations from
+ * these declarations and fails when the two drift apart.
+ *
+ * Canonical selector provenance: TODO - 统一 Markdown 语义渲染服务
+ * (2026-09-26 inventory of Things / Minimal / AnuPpuccin).
+ */
+
+/* paragraph / plain body text. Body colour is declared on the scroll container
+   so structural lines (quote/list/task/code/heading) can override it with a
+   canonical line class, exactly as a real theme does. */
+.markdown-preview-view p,
+.markdown-source-view.mod-cm6.is-live-preview .cm-content { color: rgb(21, 22, 23); }
+
+/* heading */
+.markdown-preview-view h1,
+.markdown-source-view.mod-cm6.is-live-preview .HyperMD-header-1 { color: rgb(11, 12, 13); font-size: 31px; }
+
+/* strong / emphasis / strikethrough */
+.markdown-preview-view strong, .cm-strong { color: rgb(31, 32, 33); font-weight: 641; }
+.markdown-preview-view em, .cm-em { color: rgb(41, 42, 43); }
+.markdown-preview-view :is(s, del), .cm-strikethrough { color: rgb(51, 52, 53); }
+
+/* highlight */
+.markdown-preview-view mark, .cm-highlight { background-color: rgb(61, 62, 63); color: rgb(71, 72, 73); }
+
+/* external and internal links */
+.markdown-preview-view a.external-link, .cm-link { color: rgb(81, 82, 83); }
+.markdown-preview-view a.internal-link, .cm-obsidian-link { color: rgb(91, 92, 93); }
+
+/* tag */
+.markdown-preview-view a.tag, .cm-hashtag { color: rgb(101, 102, 103); }
+
+/* inline code */
+.markdown-preview-view code, .cm-inline-code {
+  color: rgb(111, 112, 113);
+  background-color: rgb(121, 122, 123);
+  border-radius: 13px;
+}
+
+/* code block */
+.markdown-preview-view pre, .HyperMD-codeblock {
+  color: rgb(131, 132, 133);
+  background-color: rgb(141, 142, 143);
+  border-radius: 9px;
+}
+
+/* code syntax tokens. Canonical Obsidian token class faces: the Live editor
+   emits `.cm-*` (Desktop app.css "Syntax highlighting" block) and the Reader
+   highlights a rendered code block with `.token *`, so ONE theme rule paints
+   both surfaces. `code-keyword` deliberately uses the BARE selector shape a real
+   theme uses (`Things/theme.css:584` `.cm-keyword { ... }`) so the gate proves a
+   (0,1,0) theme selector still out-specifies the zero-specificity `:where()`
+   fallback in app.css; the other three use the longer >= (0,2,0) shape. */
+.cm-keyword, .token.keyword { color: rgb(231, 232, 233); }
+.markdown-source-view.mod-cm6.is-live-preview .cm-string,
+.markdown-preview-view .token.string { color: rgb(241, 242, 243); }
+.markdown-source-view.mod-cm6.is-live-preview .cm-comment,
+.markdown-preview-view .token.comment { color: rgb(251, 252, 253); }
+.markdown-source-view.mod-cm6.is-live-preview .cm-number,
+.markdown-preview-view .token.number { color: rgb(215, 216, 217); }
+
+/* quote */
+.markdown-preview-view blockquote, .HyperMD-quote { color: rgb(161, 162, 163); }
+
+/* callout. The BARE `.callout` shape is what AnuPpuccin really ships
+   (`AnuPpuccin/theme.css:4373 .callout:not([data-callout-metadata*=revert])`),
+   so this rule also proves the app.css fallback for the block stayed at zero
+   specificity. Desktop's canonical callout surface is
+   `div.callout[data-callout] > div.callout-title > div.callout-title-inner` +
+   `div.callout-content`; the Web emits it in Reader AND in the Live callout
+   widget. */
+.callout { color: rgb(45, 46, 47); background-color: rgb(35, 36, 37); }
+
+/* embed. Minimal (`Minimal/theme.css`) and AnuPpuccin both key on
+   `.internal-embed` / `.markdown-embed`. The Web Reader keeps its navigable
+   `a.internal-link.internal-embed.note-embed` anchor (app.css), so this rule is
+   asserted against the Live in-place embed chrome
+   (`.internal-embed.markdown-embed.inline-embed`) by the block-surface probe. */
+.markdown-embed { color: rgb(65, 66, 67); }
+
+/* embed image — the Reader element carries the canonical `internal-embed`
+   `image-embed` face. A real theme has to out-specify app.css `.preview img`
+   (0,1,1), so this selector is the shape that actually wins; it covers the
+   Desktop `span.internal-embed > img` wrapper too. */
+.markdown-preview-view img.internal-embed,
+.markdown-preview-view .internal-embed img {
+  border-radius: 12px;
+}
+
+/* embed image — Live keeps `![[…]]` as in-place wiki chrome (never an atomic
+   image widget), so the theme's container radius has to reach the canonical
+   `.internal-embed` span with the same sentinel the Reader rule declares. */
+.markdown-source-view.mod-cm6.is-live-preview .internal-embed { border-radius: 12px; }
+
+/* footnote: the rendered reference face Desktop declares at
+   `app.css:12184 .footnote-ref` … */
+.markdown-preview-view .footnote-ref { color: rgb(55, 56, 57); }
+
+/* … and the Live definition-line face at `app.css:12199`
+   (`.cm-s-obsidian .cm-line.HyperMD-footnote`). The gate asserts the theme's
+   font-size reaches the Live line; the colour sentinel is asserted by the
+   block-surface probe. */
+.cm-s-obsidian .cm-line.HyperMD-footnote { color: rgb(55, 56, 57); font-size: 21px; }
+
+/* list (unordered and ordered items share the canonical line class in Live) */
+.markdown-preview-view li, .HyperMD-list-line { color: rgb(171, 172, 173); }
+
+/* task */
+.markdown-preview-view .task-list-item, .HyperMD-task-line { color: rgb(191, 192, 193); }
+
+/* task — completed state. Obsidian Desktop paints the completed Reader item and
+   Live line with `--checklist-done-decoration` (default `line-through`) and
+   `--checklist-done-color`; Things overrides the same surface through
+   `.markdown-preview-view ul > li.task-list-item.is-checked` and
+   `.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task='x']`.
+   The declarations below therefore use those two canonical selector shapes so
+   the gate proves the Web exposes BOTH, on BOTH surfaces, for a real theme. */
+.markdown-preview-view ul > li.task-list-item.is-checked,
+.markdown-preview-view ul > li.task-list-item[data-task="x"] {
+  color: rgb(201, 202, 203);
+  text-decoration-line: line-through;
+}
+/* Live completed line in the `data-task` state Things / Obsidian Desktop target. */
+.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task="x"],
+.markdown-source-view.mod-cm6 .HyperMD-task-line[data-task="X"] {
+  background-color: rgb(221, 222, 223);
+}
+/* Live completed line in the canonical state class. Obsidian Desktop sets
+   `is-checked` on the Live line next to `data-task`, the same class Reader's
+   completed `li` carries; a theme may key on it instead of the data attribute. */
+.markdown-source-view.mod-cm6.is-live-preview .HyperMD-task-line.is-checked {
+  color: rgb(201, 202, 203);
+  text-decoration-line: line-through;
+}
+
+/* table: real themes drive the Obsidian table surface through these tokens,
+   which app.css consumes for both Reader and the Live table widget. */
+body {
+  --table-text-color: rgb(31, 42, 53);
+  --table-border-color: rgb(63, 74, 85);
+}
+.markdown-preview-view td, .HyperMD-table-row, .cm-table-cell {
+  color: var(--table-text-color);
+  border-color: var(--table-border-color);
+}
+
+/* horizontal rule */
+.markdown-preview-view hr, .HyperMD-hr { border-top-color: rgb(95, 106, 117); }
+
+/* callout — canonical Desktop surface: `.callout[data-callout="…"]` plus the
+   `--callout-*` family app.css declares once. Obsidian Desktop and the community
+   themes in the TODO inventory both key on the data attribute, never on a
+   `callout-<type>` class. U15 owns this Reader kind; the Live callout block
+   widget renders the same DOM through the shared Reader renderer, so the gate
+   asserts it on both hosts. */
+.callout[data-callout="note"] {
+  color: rgb(231, 232, 233);
+  --callout-color: rgb(231, 232, 233);
+  --callout-radius: 11px;
+  --callout-border-width: 3px;
+}
+
+/* footnote — Desktop app.css 12181 (`footnotes` font-size) is the Reader
+   surface of this kind; the Live definition line is declared above. */
+.markdown-preview-view .footnotes {
+  font-size: 21px;
+  color: rgb(181, 182, 183);
+}
+

@@ -1,0 +1,11 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Beta.md",
+    "Archive/Gamma.md"
+  ],
+  "note": "比较运算符 != >= < == 与 note.<prop> 前缀过滤都在现行 filter 子集内（数值比较无类型检查）",
+  "flipIn": null
+}

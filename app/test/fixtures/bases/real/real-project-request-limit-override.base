@@ -1,0 +1,10 @@
+filters: 'file.hasTag("project")'
+views:
+  - type: table
+    name: Main
+    limit: 3
+    order:
+      - file.name
+    sort:
+      - property: file.name
+        direction: ASC

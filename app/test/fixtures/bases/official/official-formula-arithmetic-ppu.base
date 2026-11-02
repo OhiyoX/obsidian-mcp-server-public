@@ -1,0 +1,7 @@
+formulas:
+  ppu: "(price / age).toFixed(2)"
+views:
+  - type: table
+    name: Main
+    order:
+      - formula.ppu

@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "官方示例 ppu: (price / age).toFixed(2) 的算术+字符串方法被 fail closed 拒绝（unsupported）",
+  "flipIn": null
+}

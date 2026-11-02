@@ -1,0 +1,6 @@
+views:
+  - type: table
+    name: Main
+    filters: 'constructor == "x"'
+    order:
+      - file.name

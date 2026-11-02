@@ -1,0 +1,8 @@
+{
+  "outcome": "reject",
+  "code": "unsupported",
+  "supportedSubset": false,
+  "rowPaths": [],
+  "note": "内置全局函数（link()）出现在公式里被 fail closed 拒绝，未执行任何函数",
+  "flipIn": null
+}

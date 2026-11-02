@@ -1,0 +1,7 @@
+formulas:
+  x: file.asLink(this.file.name)
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

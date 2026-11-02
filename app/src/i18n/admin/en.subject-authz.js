@@ -1,0 +1,23 @@
+// Admin plane — the subject drawer's scheduled-access section (2026-10-31) — English copy.
+export default Object.freeze({
+  "adm.subjectAuthz.title": "Scheduled access",
+  "adm.subjectAuthz.help": "This only adds a restriction on top of the access this subject already has; it never widens it, and the admin plane itself is not governed by policies.",
+  "adm.subjectAuthz.unrestricted": "Not restricted by scheduled access · no policy names this subject, so it keeps its existing access",
+  "adm.subjectAuthz.stateAllowed": "allowed now",
+  "adm.subjectAuthz.stateRestricted": "restricted now",
+  "adm.subjectAuthz.stateDisabled": "disabled",
+  "adm.subjectAuthz.edit": "edit",
+  "adm.subjectAuthz.applyLabel": "Scheduled-access rule to apply",
+  "adm.subjectAuthz.applyChoose": "Pick an existing rule…",
+  "adm.subjectAuthz.apply": "Apply",
+  "adm.subjectAuthz.applyHelp": "This only adds the subject to the chosen rule; its window, restricted capabilities and outside-the-window behaviour stay exactly as stored. To undo it, edit the rule's subjects.",
+  "adm.subjectAuthz.applyEmpty": "No other rule can be applied here; create one below.",
+  "adm.subjectAuthz.newRule": "New rule",
+  "adm.subjectAuthz.done": "The subject was added to the chosen rule",
+  "adm.subjectAuthz.errUnknownPolicy": "That rule no longer exists (someone may have deleted it). Reload and pick again.",
+  "adm.subjectAuthz.errStale": "The rule was changed by someone else before this submit, so nothing was written. Reload and apply again.",
+  "adm.subjectAuthz.errUnknownSubject": "That subject is not in the current credential snapshot; nothing was written.",
+  "adm.subjectAuthz.errUnavailable": "The policy store is unavailable right now; nothing was written.",
+  "adm.subjectAuthz.errInvalid": "The submission could not be read; nothing was written.",
+  "adm.subjectAuthz.errGeneric": "Nothing was written: the server refused this change.",
+});

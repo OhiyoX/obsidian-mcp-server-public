@@ -1,0 +1,32 @@
+{
+  "name": "Obsidian Web",
+  "short_name": "Obsidian Web",
+  "description": "NAS Obsidian 工作区（Web 应用壳）",
+  "id": "/app/",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/app/assets/icon-192.png?v=c6d4f0cb1086cb0b",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app/assets/icon-512.png?v=1bc35de3f73e4a25",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app/assets/icon-maskable-512.png?v=478bf735e44af170",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+filters: 'file.zzz("x")'
+views:
+  - type: table
+    name: Main
+    order:
+      - file.name

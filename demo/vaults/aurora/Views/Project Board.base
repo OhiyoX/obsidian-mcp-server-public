@@ -1,0 +1,27 @@
+filters:
+  and:
+    - file.hasTag("project")
+formulas:
+  link:
+    file.asLink(if(alias, alias, file.name))
+views:
+  - type: table
+    name: Active projects
+    filters:
+      and:
+        - status == "active"
+    order:
+      - file.name
+      - status
+      - priority
+      - updated
+      - formula.link
+    sort:
+      - property: priority
+        direction: DESC
+  - type: table
+    name: All project notes
+    order:
+      - file.name
+      - status
+      - updated

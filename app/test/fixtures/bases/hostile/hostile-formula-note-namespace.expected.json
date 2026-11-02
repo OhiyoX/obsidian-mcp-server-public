@@ -1,0 +1,15 @@
+{
+  "outcome": "accept",
+  "code": null,
+  "supportedSubset": true,
+  "rowPaths": [
+    "Notes/Alpha.md",
+    "Notes/Beta.md",
+    "Archive/Gamma.md",
+    "Notes/Delta.md",
+    "Notes/Nested/Deep.md"
+  ],
+  "note": "INT-A 接线后：公式内 note.<prop> 与裸 property 等价，不再 fail closed（reject→accept 于 INT-A 翻转）",
+  "flipIn": null,
+  "flippedIn": "INT-A"
+}
