@@ -35,7 +35,6 @@ import {
 const appRoot = path.resolve(import.meta.dirname, "..");
 const NEGATIVE_ENV = "P278_D_MIGRATION_NEGATIVE";
 const VAULT = "default";
-const STATE_VERSION_V2 = 2;
 
 function parseArgs(argv) {
   const options = { list: false, json: false, output: "", cases: [] };
@@ -99,7 +98,7 @@ delete process.env.WEB_VAULTS_ROOT;
 
 // Imported only after the environment above, because `src/config.js` snapshots it.
 const { PublishService } = await import("../src/publish/service.js");
-const { PUBLISH_LIFECYCLE } = await import("../src/publish/lifecycle.js");
+const { PUBLISH_LIFECYCLE, STATE_VERSION_TARGET: STATE_VERSION_PERSISTED } = await import("../src/publish/lifecycle.js");
 
 // ------------------------------------------------------------------ helpers
 
@@ -182,7 +181,7 @@ const CASES = {
       "Notes/Legacy-NonMarkdown.canvas",
     ]);
     const persisted = await readState(file);
-    assert.equal(persisted.version, STATE_VERSION_V2, "the first observation persists the state as v2");
+    assert.equal(persisted.version, STATE_VERSION_PERSISTED, "the first observation persists the state at the current version");
     const lifecycle = lifecycleById(persisted);
     assert.equal(lifecycle[ids["Notes/Legacy-Markdown.md"]], PUBLISH_LIFECYCLE.ACTIVE, "an existing Markdown target becomes active");
     assert.equal(lifecycle[ids[PUBLISH_MIGRATION_MISSING_PATH]], PUBLISH_LIFECYCLE.ORPHANED, "a missing legacy target fails closed to orphaned");
@@ -190,7 +189,7 @@ const CASES = {
     for (const record of persisted.records) {
       assert.deepEqual(
         Object.keys(record).sort(),
-        ["createdAt", "createdBy", "id", "lifecycle", "path", "updatedAt", "vaultId"],
+        ["createdAt", "createdBy", "id", "kind", "lifecycle", "path", "updatedAt", "vaultId"],
         "unknown v1 keys (publicUrl / retrievalHint) must not be carried forward",
       );
     }
@@ -240,8 +239,8 @@ const CASES = {
     }
     const persisted = await readState(file);
     // Adopting an `unknown` record is a persisted transition, so the migrated state is
-    // written as v2 here — and a save must never carry a raw v1 entry forward.
-    assert.equal(persisted.version, STATE_VERSION_V2, "observing an unknown record persists the migrated state as v2");
+    // written at the current version here — and a save must never carry a raw v1 entry forward.
+    assert.equal(persisted.version, STATE_VERSION_PERSISTED, "observing an unknown record persists the migrated state at the current version");
     assert.ok(
       persisted.records.every((record) => record && typeof record.path === "string"),
       `no unmigrated v1 entry may survive a save: ${JSON.stringify(persisted.records)}`,
@@ -304,7 +303,7 @@ const CASES = {
     const service = new PublishService({ file });
     await service.ready;
     await service.publish(VAULT, "Notes/Atomic.md");
-    assert.equal((await readState(file)).version, STATE_VERSION_V2, "the published state is persisted as v2");
+    assert.equal((await readState(file)).version, STATE_VERSION_PERSISTED, "the published state is persisted at the current version");
     await assertNoTempResidue(directory, "save-atomicity (clean save)");
 
     // Block the directory so the *next* save cannot write: it must reject and leave no
@@ -338,7 +337,7 @@ async function runRejectionCase(ctx, needle) {
   if (ctx.negative) {
     await service.ready; // pre-fix: the broken file loaded and was silently repaired
     const repaired = await readState(file);
-    assert.equal(repaired.version, STATE_VERSION_V2, "pre-fix: a broken state file is tolerated and rewritten as an empty v2 state");
+    assert.equal(repaired.version, STATE_VERSION_PERSISTED, "pre-fix: a broken state file is tolerated and rewritten as an empty state");
     return;
   }
 

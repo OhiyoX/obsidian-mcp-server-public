@@ -11,10 +11,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { environment, cleanupEnvironment } from './web-regression/env.mjs';
 import { results, check, sleep } from './web-regression/recorder.mjs';
+import { waitForHealthz } from './web-regression/readiness.mjs';
 import { openBrowserSession } from './web-regression/session.mjs';
 import { registerExplorerChecks } from './web-regression/explorer.mjs';
 import { registerSearchChecks } from './web-regression/search.mjs';
 import { registerChromeChecks } from './web-regression/chrome.mjs';
+// #622: computed values for the reader property pills (the arithmetic nails live in the node suite).
+import { registerDesignValueChecks } from './web-regression/design-values.mjs';
 // Issue #408 (audit Cut C): the tab-strip check. Its own module for the line budget; it
 // must stay registered directly after chrome.mjs to keep the original execution order.
 import { registerTabChecks } from './web-regression/tabs.mjs';
@@ -91,7 +94,7 @@ import { registerDrawerBleedChecks } from './web-regression/drawer-bleed.mjs';
 const { appRoot, outputRoot, root, vault, base, child, serverErrors, fixture, expectedHeadings, propertiesFixture, chromium } = environment;
 let session;
 try {
-  for(let n=0;n<150;n++) {try {if((await fetch(`${base}/healthz`)).ok)break;}catch{} if(child.exitCode!==null)throw Error('Test server exited');await sleep(100);}
+  await waitForHealthz({ base, child, serverErrors, label: 'Web regression test server' });
   session = await openBrowserSession({ chromium, chromiumExecutable: environment.chromiumExecutable, base, password: environment.password, sleep });
   const { browser, page, errors, dialogs, open, mode, value, requestedAsset, assetGlobals } = session;
   const context = { check, sleep, page, errors, dialogs, open, mode, value, vault, base, outputRoot, fixture, expectedHeadings, propertiesFixture, root, appRoot, browser, serverErrors, requestedAsset, assetGlobals, password: environment.password };
@@ -171,6 +174,8 @@ try {
   // surface over a Base view. Own fixture Vault/server + own phone context (it never touches
   // the shared page), so it runs here after the other own-context scenes.
   await registerDrawerBleedChecks(context);
+  // #622: computed values for the reader property pills (opens its own note; order-independent).
+  await registerDesignValueChecks(context);
   await fs.writeFile(path.join(outputRoot,'results.json'),JSON.stringify({results,errors,serverErrors:serverErrors.filter(e=>/error|failed/i.test(e))},null,2));
 } finally {
   await session?.browser?.close();

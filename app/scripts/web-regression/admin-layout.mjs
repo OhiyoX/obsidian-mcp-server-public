@@ -26,24 +26,26 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { startAdminLayoutFixture } from './admin-layout-fixture.mjs';
+import { seedParityPolicies } from '../proto-parity/seed.mjs';
 import { protoUrl as protoFileUrl, registerProtoParityChecks } from '../proto-parity/gate.mjs';
 import { PARITY_PAGES } from '../proto-parity/spec.mjs';
 import { registerMidwordChecks } from './admin-layout-midword.mjs';
-import { registerCapabilityPickerCheck } from './admin-layout-capq.mjs';
 import { registerPendingAuthorCheck } from './admin-layout-author.mjs';
 import { registerInteractionChecks } from './admin-layout-interaction.mjs';
 import { registerProtoShapeChecks } from '../proto-parity/shape-gate.mjs';
 import { registerSecurityChecks } from './admin-layout-security.mjs';
 import { registerNoScriptChecks } from './admin-layout-noscript.mjs';
 import { registerDesignChecks } from './admin-layout-design.mjs';
+import { registerConstraintPageChecks } from './admin-layout-constraints.mjs';
 import { registerDocumentScrollChecks } from './admin-layout-scroll.mjs';
 
 const VAULTS_URL = '/admin/auth/vault-git';
-const AUTHZ_URL = '/admin/auth/access-policy';
 
 export async function registerAdminLayoutChecks(ctx) {
   const { check, sleep, browser, root, appRoot, serverErrors, outputRoot } = ctx;
-  const fixture = await startAdminLayoutFixture({ root, appRoot, serverErrors });
+  // The access policies are planted in the store file before the process starts: every legacy write
+  // route is frozen (409), so a policy cannot be created over HTTP any more.
+  const fixture = await startAdminLayoutFixture({ root, appRoot, serverErrors, prepareData: seedParityPolicies });
   const trace = { startedAt: new Date().toISOString(), fixture: { gitRepo: fixture.gitRepo, gitReason: fixture.gitReason }, phases: [] };
   const tracePhase = (name, data) => { trace.phases.push({ name, at: new Date().toISOString(), ...data }); };
 
@@ -65,27 +67,18 @@ export async function registerAdminLayoutChecks(ctx) {
     await page.evaluate('document.fonts ? document.fonts.ready : true');
     await sleep(80);
   };
-  /** POST a real HTML form body (Playwright's `form` helper cannot send repeated keys). */
-  const postForm = async (url, fields) => {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(fields || {})) {
-      for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item ?? ''));
-    }
-    return page.request.post(`${base}${url}`, {
-      data: params.toString(),
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      maxRedirects: 0,
-    });
-  };
-
   try {
+    // The fixture boots `node server.js` from this checkout, which can live on a slow network mount: a
+    // concurrent `npm run check` (or a parallel suite) starves the boot past 20 s and the verdict then
+    // describes the machine, not the tree. 60 s of patience, and the child's own stderr in the message
+    // is what tells a real boot failure from a slow one.
     let ready = false;
-    for (let attempt = 0; attempt < 200; attempt += 1) {
+    for (let attempt = 0; attempt < 600; attempt += 1) {
       try { if ((await fetch(`${base}/healthz`)).ok) { ready = true; break; } } catch { /* keep waiting */ }
       if (fixture.child.exitCode !== null) break;
       await sleep(100);
     }
-    assert.ok(ready, 'the Admin layout fixture server must become ready');
+    assert.ok(ready, `the Admin layout fixture server must become ready (exit ${fixture.child.exitCode}): ${serverErrors.join('').slice(0, 400)}`);
     const login = await page.request.post(`${base}/admin/auth/login`, { form: { password: fixture.password }, maxRedirects: 0 });
     assert.equal(login.status(), 303, 'the Admin layout fixture login must succeed');
 
@@ -105,7 +98,6 @@ export async function registerAdminLayoutChecks(ctx) {
       page, goto, gotoProto, tracePhase,
       tablePages: PARITY_PAGES.filter((entry) => entry.table).map((entry) => ({ id: entry.id, live: entry.live, proto: entry.proto })),
     });
-    await registerCapabilityPickerCheck(ctx, { page, goto, postForm, tracePhase, authzListUrl: AUTHZ_URL });
     await registerPendingAuthorCheck(ctx, {
       page, goto, sleep, tracePhase, base, apiKey: fixture.apiKey,
       gitRepo: fixture.gitRepo, gitReason: fixture.gitReason, vaultsUrl: VAULTS_URL,
@@ -119,10 +111,13 @@ export async function registerAdminLayoutChecks(ctx) {
     // select and the narrow-screen menu) plus the preview-card height fix. Kept in their own scene so
     // the parity criteria are not asked to judge something the prototype deliberately does not have.
     await registerDesignChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot, tracePhase });
+    // Ruling R9's payback: the two criteria Task 3 retired with the frozen legacy editor, measured
+    // again on the per-Vault constraint editor (its own module: the scene file's line budget).
+    await registerConstraintPageChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot });
     // 2026-10-31 production defect: the shell is 100vh and only `.content` scrolls, so any control laid
     // out outside that container (an absolutely positioned clipped select) pushed the document open.
     await registerDocumentScrollChecks({ ...ctx, page, goto, tracePhase });
-    await registerSecurityChecks(ctx, { browser, fixture, outputRoot, tracePhase });
+    await registerSecurityChecks(ctx, { browser, fixture, outputRoot, tracePhase, root, appRoot });
     await registerNoScriptChecks(ctx, { browser, fixture, root, appRoot, serverErrors, outputRoot, tracePhase });
 
     // 4. teardown is itself a criterion (a leaked child, port or scratch dir is cross-scene noise).

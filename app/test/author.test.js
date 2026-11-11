@@ -94,3 +94,30 @@ test("real clients like codex keep their own agent even when MCP_DEFAULT_AUTHOR_
     else process.env.MCP_DEFAULT_AUTHOR_AGENT = previous;
   }
 });
+
+test("a stateless request does not take the server-wide env author", () => {
+  const previousAgent = process.env.MCP_DEFAULT_AUTHOR_AGENT;
+  const previousModel = process.env.MCP_DEFAULT_AUTHOR_MODEL;
+  process.env.MCP_DEFAULT_AUTHOR_AGENT = "cursor";
+  process.env.MCP_DEFAULT_AUTHOR_MODEL = "composer";
+  try {
+    const noInitialize = { getClientVersion: () => ({}) };
+    const placeholder = { getClientVersion: () => ({ name: "mcp-client" }) };
+    const extra = { _meta: {}, requestInfo: { headers: { "user-agent": "undici" } } };
+    // No initialize: the env default names a different agent, so the placeholder wins.
+    assert.deepEqual(resolveRequestAuthor(noInitialize, extra), {
+      agent: "mcp-client",
+      model: "unspecified",
+    });
+    // A host that did initialize with a generic name keeps the documented env fallback.
+    assert.deepEqual(resolveRequestAuthor(placeholder, extra), {
+      agent: "cursor",
+      model: "composer",
+    });
+  } finally {
+    if (previousAgent === undefined) delete process.env.MCP_DEFAULT_AUTHOR_AGENT;
+    else process.env.MCP_DEFAULT_AUTHOR_AGENT = previousAgent;
+    if (previousModel === undefined) delete process.env.MCP_DEFAULT_AUTHOR_MODEL;
+    else process.env.MCP_DEFAULT_AUTHOR_MODEL = previousModel;
+  }
+});

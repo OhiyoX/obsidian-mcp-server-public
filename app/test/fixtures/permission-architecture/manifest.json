@@ -1,0 +1,778 @@
+{
+  "schema": "obsidian-permission-baseline/v1",
+  "baseline": {
+    "commit": "a65767d1785245dba07e42aeff9f32f6f686e981",
+    "repoTree": "c5d2774074dd982355be9a7ada5030886deda592",
+    "appTree": "776dd1a9af1cba00e8bfcd38e4df15540a0d480f"
+  },
+  "environment": {
+    "node": "v26.12.1",
+    "platform": "linux"
+  },
+  "coverage": [
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /access-policy"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /assets/:file"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /audit/export.csv"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /language"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /login"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /vault-git"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/create"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/delete"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/preview"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/repair"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/subjects"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/toggle"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /access-policy/update"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /api-key/create"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /api-key/default-vault"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /api-key/delete"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /api-key/scopes"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /audit/clear"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN GET /authz"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /authz/create"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /authz/delete"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /authz/plane"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /authz/toggle"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /authz/update"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /login"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /logout"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/client/default-vault"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/client/delete"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/client/revoke"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/token/cleanup"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/token/revoke"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/create"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/default-vault"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/delete"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/password"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/scopes"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /oauth/user/toggle"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /publish/revoke"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /theme"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /vault-git/refresh"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /vault-git/repair"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /vault-git/save"
+    },
+    {
+      "kind": "admin-action",
+      "id": "ADMIN POST /vault-git/verify"
+    },
+    {
+      "kind": "direct-upload",
+      "id": "* /uploads/:uploadId"
+    },
+    {
+      "kind": "direct-upload",
+      "id": "PATCH /uploads/:uploadId"
+    },
+    {
+      "kind": "direct-upload",
+      "id": "PUT /uploads/:uploadId"
+    },
+    {
+      "kind": "oauth-endpoint",
+      "id": "GET /oauth/authorize"
+    },
+    {
+      "kind": "oauth-endpoint",
+      "id": "POST /oauth/decision"
+    },
+    {
+      "kind": "oauth-endpoint",
+      "id": "POST /oauth/register"
+    },
+    {
+      "kind": "oauth-endpoint",
+      "id": "POST /oauth/revoke"
+    },
+    {
+      "kind": "oauth-endpoint",
+      "id": "POST /oauth/token"
+    },
+    {
+      "kind": "resource",
+      "id": "obsidian://agent/memory-policy"
+    },
+    {
+      "kind": "resource",
+      "id": "obsidian://vault/graph"
+    },
+    {
+      "kind": "resource",
+      "id": "obsidian://vault/index"
+    },
+    {
+      "kind": "resource",
+      "id": "obsidian://vault/tags"
+    },
+    {
+      "kind": "tool",
+      "id": "agent_bootstrap"
+    },
+    {
+      "kind": "tool",
+      "id": "append_to_note"
+    },
+    {
+      "kind": "tool",
+      "id": "apply_note_plan"
+    },
+    {
+      "kind": "tool",
+      "id": "cancel_file_upload"
+    },
+    {
+      "kind": "tool",
+      "id": "compare_note_versions"
+    },
+    {
+      "kind": "tool",
+      "id": "create_archive"
+    },
+    {
+      "kind": "tool",
+      "id": "create_base_entry"
+    },
+    {
+      "kind": "tool",
+      "id": "create_from_template"
+    },
+    {
+      "kind": "tool",
+      "id": "daily_note"
+    },
+    {
+      "kind": "tool",
+      "id": "delete_file"
+    },
+    {
+      "kind": "tool",
+      "id": "delete_note"
+    },
+    {
+      "kind": "tool",
+      "id": "delete_trash_entry"
+    },
+    {
+      "kind": "tool",
+      "id": "delete_version"
+    },
+    {
+      "kind": "tool",
+      "id": "extract_archive"
+    },
+    {
+      "kind": "tool",
+      "id": "file_upload_status"
+    },
+    {
+      "kind": "tool",
+      "id": "find_related"
+    },
+    {
+      "kind": "tool",
+      "id": "get_backlinks"
+    },
+    {
+      "kind": "tool",
+      "id": "get_base"
+    },
+    {
+      "kind": "tool",
+      "id": "get_canvas"
+    },
+    {
+      "kind": "tool",
+      "id": "get_deadends"
+    },
+    {
+      "kind": "tool",
+      "id": "get_file"
+    },
+    {
+      "kind": "tool",
+      "id": "get_graph"
+    },
+    {
+      "kind": "tool",
+      "id": "get_metadata"
+    },
+    {
+      "kind": "tool",
+      "id": "get_note"
+    },
+    {
+      "kind": "tool",
+      "id": "get_note_context"
+    },
+    {
+      "kind": "tool",
+      "id": "get_note_plan"
+    },
+    {
+      "kind": "tool",
+      "id": "get_note_version"
+    },
+    {
+      "kind": "tool",
+      "id": "get_orphans"
+    },
+    {
+      "kind": "tool",
+      "id": "get_publish_status"
+    },
+    {
+      "kind": "tool",
+      "id": "get_unresolved_links"
+    },
+    {
+      "kind": "tool",
+      "id": "git_commit"
+    },
+    {
+      "kind": "tool",
+      "id": "git_diff"
+    },
+    {
+      "kind": "tool",
+      "id": "git_log"
+    },
+    {
+      "kind": "tool",
+      "id": "git_pull"
+    },
+    {
+      "kind": "tool",
+      "id": "git_push"
+    },
+    {
+      "kind": "tool",
+      "id": "git_status"
+    },
+    {
+      "kind": "tool",
+      "id": "graph_health"
+    },
+    {
+      "kind": "tool",
+      "id": "index_status"
+    },
+    {
+      "kind": "tool",
+      "id": "inspect_archive"
+    },
+    {
+      "kind": "tool",
+      "id": "list_aliases"
+    },
+    {
+      "kind": "tool",
+      "id": "list_base_views"
+    },
+    {
+      "kind": "tool",
+      "id": "list_bases"
+    },
+    {
+      "kind": "tool",
+      "id": "list_files"
+    },
+    {
+      "kind": "tool",
+      "id": "list_notes"
+    },
+    {
+      "kind": "tool",
+      "id": "list_properties"
+    },
+    {
+      "kind": "tool",
+      "id": "list_recent"
+    },
+    {
+      "kind": "tool",
+      "id": "list_tags"
+    },
+    {
+      "kind": "tool",
+      "id": "list_tasks"
+    },
+    {
+      "kind": "tool",
+      "id": "list_templates"
+    },
+    {
+      "kind": "tool",
+      "id": "list_trash"
+    },
+    {
+      "kind": "tool",
+      "id": "list_versions"
+    },
+    {
+      "kind": "tool",
+      "id": "manage_folders"
+    },
+    {
+      "kind": "tool",
+      "id": "manage_frontmatter"
+    },
+    {
+      "kind": "tool",
+      "id": "manage_publish"
+    },
+    {
+      "kind": "tool",
+      "id": "manage_tags"
+    },
+    {
+      "kind": "tool",
+      "id": "memory_capture"
+    },
+    {
+      "kind": "tool",
+      "id": "memory_recall"
+    },
+    {
+      "kind": "tool",
+      "id": "move_note"
+    },
+    {
+      "kind": "tool",
+      "id": "patch_base"
+    },
+    {
+      "kind": "tool",
+      "id": "patch_note"
+    },
+    {
+      "kind": "tool",
+      "id": "plan_delete_note"
+    },
+    {
+      "kind": "tool",
+      "id": "plan_move_note"
+    },
+    {
+      "kind": "tool",
+      "id": "plan_note_changes"
+    },
+    {
+      "kind": "tool",
+      "id": "plan_restore_from_trash"
+    },
+    {
+      "kind": "tool",
+      "id": "plan_restore_version"
+    },
+    {
+      "kind": "tool",
+      "id": "pull_file"
+    },
+    {
+      "kind": "tool",
+      "id": "pull_note_file"
+    },
+    {
+      "kind": "tool",
+      "id": "query_base"
+    },
+    {
+      "kind": "tool",
+      "id": "read_archive_entry"
+    },
+    {
+      "kind": "tool",
+      "id": "recall"
+    },
+    {
+      "kind": "tool",
+      "id": "reindex_vault"
+    },
+    {
+      "kind": "tool",
+      "id": "rename_property"
+    },
+    {
+      "kind": "tool",
+      "id": "replace_in_note"
+    },
+    {
+      "kind": "tool",
+      "id": "restore_from_trash"
+    },
+    {
+      "kind": "tool",
+      "id": "restore_version"
+    },
+    {
+      "kind": "tool",
+      "id": "search_notes"
+    },
+    {
+      "kind": "tool",
+      "id": "server_info"
+    },
+    {
+      "kind": "tool",
+      "id": "set_property_type"
+    },
+    {
+      "kind": "tool",
+      "id": "skill_export"
+    },
+    {
+      "kind": "tool",
+      "id": "skill_import"
+    },
+    {
+      "kind": "tool",
+      "id": "skill_list"
+    },
+    {
+      "kind": "tool",
+      "id": "skill_match"
+    },
+    {
+      "kind": "tool",
+      "id": "skill_validate"
+    },
+    {
+      "kind": "tool",
+      "id": "start_direct_upload"
+    },
+    {
+      "kind": "tool",
+      "id": "start_file_upload"
+    },
+    {
+      "kind": "tool",
+      "id": "suggest_links"
+    },
+    {
+      "kind": "tool",
+      "id": "update_task"
+    },
+    {
+      "kind": "tool",
+      "id": "upload_file_chunk"
+    },
+    {
+      "kind": "tool",
+      "id": "write_base"
+    },
+    {
+      "kind": "tool",
+      "id": "write_canvas"
+    },
+    {
+      "kind": "tool",
+      "id": "write_file"
+    },
+    {
+      "kind": "tool",
+      "id": "write_note"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/asset"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/base"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/base/raw"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/canvas"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/events"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/link/resolve"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/note"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/note-context/incoming"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/note-context/outgoing"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/note-context/unlinked"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/notes"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/publish"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/session"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/tags"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/theme-asset"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/theme.css"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/themes"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v1/vaults"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v2/search"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /api/web/v2/tree"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app/"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app/base/*"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app/canvas/*"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app/language"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /app/note/*"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /auth/login"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /auth/theme-asset"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /auth/theme.css"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /publish/:id"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /publish/d/:id"
+    },
+    {
+      "kind": "web-route",
+      "id": "GET /publish/d/:id/n/:token"
+    },
+    {
+      "kind": "web-route",
+      "id": "PATCH /api/web/v1/base"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/asset"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/delete"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/folder"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/note"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/publish"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/rename"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/vault"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /api/web/v1/vault/select"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /auth/login"
+    },
+    {
+      "kind": "web-route",
+      "id": "POST /auth/logout"
+    }
+  ]
+}

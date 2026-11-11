@@ -191,6 +191,15 @@ export function createWebCatalogRuntime({ vault, store, source, now, logger = co
 const runtimes = new Map();
 let runtimeFactory = createDefaultRuntime;
 
+// Note-read observer (one per process). `server.js` sets it once; the catalog never
+// imports the publish registry, so indexing stays independent of it. A null observer
+// means the catalog behaves exactly as before.
+let catalogNoteReadObserver = null;
+
+export function setCatalogNoteReadObserver(fn) {
+  catalogNoteReadObserver = typeof fn === "function" ? fn : null;
+}
+
 function createDefaultRuntime(vault) {
   const location = resolveWebCatalogLocation(vault);
   const store = openWebCatalogStore({ file: location.file });
@@ -209,6 +218,7 @@ function createDefaultRuntime(vault) {
     readNote: (absolute, options) => readNoteInRoot(vault.root, absolute, options),
     readBase: (absolute) => readBaseInRoot(vault.root, absolute),
     toVaultPath: (absolute) => toRootRelative(vault.root, absolute),
+    onNoteRead: (read) => catalogNoteReadObserver?.(vault, read),
   });
   return createWebCatalogRuntime({ vault, store, source });
 }

@@ -115,7 +115,7 @@ test("issue #415: memory_capture refuses a missing parent folder with zero side 
 // ② A title containing `/` without an explicit `path` still produces one flat filename.
 test("issue #415: a title containing '/' without an explicit path stays a flat filename", async () => {
   const beforeDirs = (await snapshot(VAULT)).filter((entry) => entry.startsWith("D "));
-  const title = "记忆身份复查法：…（修正 ZCode/Claude 身份借用）";
+  const title = "身份复查法：…（修正 ZCode/Claude 身份借用）";
   // The frozen `safeFilename` cleaning: `[\\/:*?"<>|]` → space, whitespace collapsed.
   const expectedName = title.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
   let captured;

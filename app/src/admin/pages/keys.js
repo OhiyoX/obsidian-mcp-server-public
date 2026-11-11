@@ -145,7 +145,7 @@ function keyDrawer(ctx, key) {
     [t("adm.keys.kv.authz"), policyCell(ctx, key)],
     [t("adm.keys.kv.agent"), `<span class="muted">${esc(t("adm.accounts.notSet"))}</span> ${fut("#285")}<div class="help">${esc(t("adm.keys.agentWhy"))}</div>`, 'class="futonly"'],
   ])}</div>
-  ${renderSubjectAuthzSection(ctx, { subject: `api-key:${key.id}`, tab: "keys", subjectId: key.id })}
+  ${renderSubjectAuthzSection(ctx, { subject: `api-key:${key.id}` })}
   <form class="dsec" method="post" action="/admin/auth/api-key/scopes">
     <h3>${esc(t("adm.keys.scopeVaultSection"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">

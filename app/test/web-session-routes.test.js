@@ -295,3 +295,58 @@ test("a removed write scope denies the write route and a removed vault cannot be
     await app.close();
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Account default Vault (owner decision 2026-11-05, option B): the login session opens the
+// account's default Vault when one is set. A Vault the person picks in the UI still wins, because
+// the session records that choice. The account default only decides where a session starts and
+// where it falls back when its Vault stops being allowed.
+
+test("login opens the account default Vault", async () => {
+  const userRef = { user: makeUser({ defaultVaultId: "research" }) };
+  const app = await boot({ userRef });
+  try {
+    const { cookie } = await app.login();
+    assert.ok(cookie);
+    const probe = await boundedFetch(`${app.base}/api/web/v1/session`, { headers: { Cookie: cookie } });
+    assert.equal(probe.status, 200);
+    assert.equal((await probe.json()).vaultId, "research", "the account default decides the first screen");
+  } finally {
+    await app.close();
+  }
+});
+
+test("a Vault picked in the UI survives the account default", async () => {
+  const userRef = { user: makeUser({ defaultVaultId: "research" }) };
+  const app = await boot({ userRef });
+  try {
+    const { cookie, csrf } = await app.login();
+    const selected = await boundedFetch(`${app.base}/api/web/v1/vault/select`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json", "X-CSRF-Token": csrf },
+      body: JSON.stringify({ id: "main" }),
+    });
+    assert.equal(selected.status, 200);
+    const probe = await boundedFetch(`${app.base}/api/web/v1/session`, { headers: { Cookie: cookie } });
+    assert.equal((await probe.json()).vaultId, "main", "an explicit pick is user state, not an inherited default");
+  } finally {
+    await app.close();
+  }
+});
+
+test("a session whose Vault stops being allowed falls back to the account default, not the first allowed Vault", async () => {
+  const userRef = { user: makeUser({ defaultVaultId: "research" }) };
+  const app = await boot({ userRef });
+  try {
+    const { cookie } = await app.login();
+    assert.ok(cookie);
+    // A session from an older configuration that names a Vault nobody allows any more.
+    const raw = cookie.split("=").slice(1).join("=");
+    await app.store.mutateSession(raw, (record) => ({ ...record, vaultId: "ghost" }));
+    const probe = await boundedFetch(`${app.base}/api/web/v1/session`, { headers: { Cookie: cookie } });
+    assert.equal(probe.status, 200);
+    assert.equal((await probe.json()).vaultId, "research", "the account default outranks allowedVaults[0] (which is main)");
+  } finally {
+    await app.close();
+  }
+});

@@ -23,6 +23,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { startAdminLayoutFixture } from './admin-layout-fixture.mjs';
 import { REPAIR_CONFIRM_TEXT } from '../../src/admin/pages/vaults.js';
+import { waitForHealthz } from './readiness.mjs';
 
 const VIEWPORT = { width: 1440, height: 900 };
 const FORM_HEADERS = { 'content-type': 'application/x-www-form-urlencoded' };
@@ -191,25 +192,19 @@ export async function registerNoScriptChecks(ctx, deps) {
   let state;
   try {
     await noJsLogin(setupContext, base, fixture.password);
-    const csrf = await adminCsrf(setupContext.request, base);
     const clientName = `l4-noscript-client-${stamp}`;
     const clientId = await registerClient(base, clientName);
     await grantTokens({ base, clientId, username: 'layout-gate', password: fixture.password });
     const publishPath = `notes/l4-noscript-publish-${stamp}.md`;
     await mcpCall({ base, apiKey: fixture.apiKey, name: 'write_note', args: { path: publishPath, overwrite: true, content: '# no-JS publish probe\n' } });
     await mcpCall({ base, apiKey: fixture.apiKey, name: 'manage_publish', args: { action: 'publish', path: publishPath } });
-    const policyLabel = `l4-noscript-policy-${stamp}`;
-    const policyCreated = await postForm(setupContext.request, base, '/admin/auth/access-policy/create', {
-      csrf, label: policyLabel, mode: 'suspend', enabled: 'false', timezone: 'Asia/Shanghai',
-      startsAt: '', expiresAt: '', subjects: ['api-key:configured-env'], capabilities: 'scope:obsidian.read',
-      weekly: 'mon 00:00-24:00', dateRanges: '',
-    });
-    assert.equal(policyCreated.status(), 303, '场景自己创建的一次性策略必须成功');
-    state = { clientName, clientId, publishPath, policyLabel, account: `l4-noscript-${stamp}`, keyLabel: `无 JS Key ${stamp}` };
+    // The legacy policy writes are frozen, so this scene creates no policy: it reads the two the
+    // fixture planted in the store before boot (`seedParityPolicies`) and asserts the frozen surface.
+    state = { clientName, clientId, publishPath, account: `l4-noscript-${stamp}`, keyLabel: `无 JS Key ${stamp}` };
   } finally {
     await setupContext.close().catch(() => {});
   }
-  trace.state = { clientName: state.clientName, clientId: state.clientId, publishPath: state.publishPath, policyLabel: state.policyLabel, account: state.account };
+  trace.state = { clientName: state.clientName, clientId: state.clientId, publishPath: state.publishPath, account: state.account };
 
   const context = await browser.newContext({ viewport: VIEWPORT, javaScriptEnabled: false });
   const page = await context.newPage();
@@ -230,6 +225,40 @@ export async function registerNoScriptChecks(ctx, deps) {
       const present = await rowPresent(page, { base, url: '/admin/auth?tab=accounts', needle: state.account });
       assert.ok(present, `创建后账户列表（表格行）里没有 ${state.account}`);
       trace.categories.push({ id: 'accounts', ok: true, account: state.account });
+    });
+
+    await check('admin-nojs: 账户 — 新密码为空时重置按钮不可点击，填入 12 位后才可点', async () => {
+      // The claim is CSS-only: `required minlength=12` makes the field invalid, and :has() drops the
+      // pointer on that form's submit button. No script runs in this scene, so this is the no-JS path.
+      await open(page, `${base}/admin/auth?tab=accounts`);
+      // The row link carries the id; read it from the rendered list (the account was created above).
+      const accountId = await page.evaluate((username) => {
+        const link = [...document.querySelectorAll('a[href*="tab=accounts"][href*="id="]')]
+          .find((a) => a.textContent.includes(username));
+        return link ? new URL(link.href, location.origin).searchParams.get("id") : null;
+      }, state.account);
+      assert.ok(accountId, `账户列表里找不到 ${state.account} 的 ?id= 链接`);
+      await open(page, `${base}/admin/auth?tab=accounts&id=${encodeURIComponent(accountId)}&mode=pw`);
+      const form = '#account-password, form.dsec';
+      const before = await page.evaluate((selector) => {
+        const input = [...document.querySelectorAll(`${selector} input[name=password]`)][0];
+        const button = input?.closest("form")?.querySelector("button[type=submit]");
+        if (!input || !button) return null;
+        const style = getComputedStyle(button);
+        return { invalid: input.checkValidity() === false, pointer: style.pointerEvents, opacity: style.opacity };
+      }, form);
+      assert.ok(before, "密码表单或提交按钮没有渲染出来");
+      assert.equal(before.invalid, true, "空密码时输入框应当是 invalid（required）");
+      assert.equal(before.pointer, "none", `空密码时按钮仍可点击：pointer-events=${before.pointer}`);
+      await page.fill("form.dsec input[name=password]", "abcdefghijkl");
+      const after = await page.evaluate((selector) => {
+        const input = [...document.querySelectorAll(`${selector} input[name=password]`)][0];
+        const button = input?.closest("form")?.querySelector("button[type=submit]");
+        const style = getComputedStyle(button);
+        return { valid: input.checkValidity(), pointer: style.pointerEvents };
+      }, form);
+      assert.equal(after.valid, true, "填入 12 位后输入框应当合法");
+      assert.notEqual(after.pointer, "none", "填入 12 位后按钮仍不可点击");
     });
 
     await check('admin-nojs: Key — 无脚本仍能创建真实 Key（明文一次性展示）', async () => {
@@ -325,28 +354,22 @@ export async function registerNoScriptChecks(ctx, deps) {
       trace.categories.push({ id: 'audit', ok: true, before, after });
     });
 
-    await check('admin-nojs: 策略 — 无脚本仍能删除策略（服务端校验策略名）', async () => {
+    await check('admin-nojs: 策略 — 无脚本时列表只读（无写入口），冻结的写入端点仍拒绝真实表单提交', async () => {
       await open(page, `${base}/admin/auth/access-policy`);
-      const row = rows(page, state.policyLabel).first();
-      assert.ok(await row.count(), `前置策略（${state.policyLabel}）没有出现在列表里`);
-      await row.locator('details.mn > summary').first().click();
-      const link = row.locator('a[href*="confirm=delete"]').first();
-      assert.ok(await link.count(), '策略行菜单里没有删除入口');
-      await Promise.all([page.waitForLoadState('load'), link.click()]);
-      await assertRealPostForm(page, { selector: '.modal form', action: '/admin/auth/access-policy/delete', typed: 'confirm' });
-      await page.locator('.modal input[name=confirm]').fill('错的策略名');
-      await Promise.all([page.waitForLoadState('load'), page.locator('.modal button[type=submit]').click()]);
-      assert.ok(await rowPresent(page, { base, url: '/admin/auth/access-policy', needle: state.policyLabel }), '确认文本错误时策略不应被删除');
-      await open(page, `${base}/admin/auth/access-policy`);
-      const rowAgain = rows(page, state.policyLabel).first();
-      await rowAgain.locator('details.mn > summary').first().click();
-      await Promise.all([page.waitForLoadState('load'), rowAgain.locator('a[href*="confirm=delete"]').first().click()]);
-      await page.locator('.modal input[name=confirm]').fill(state.policyLabel);
-      await Promise.all([page.waitForLoadState('load'), page.locator('.modal button[type=submit]').click()]);
-      const stillThere = await rowPresent(page, { base, url: '/admin/auth/access-policy', needle: state.policyLabel });
-      const serverSaid = await page.locator('.result').first().textContent().catch(() => '');
-      assert.ok(!stillThere, `输入正确策略名后策略仍然在列表里（确认值必须随表单提交；删除页返回：${String(serverSaid).replace(/\s+/g, ' ').slice(0, 160)}）`);
-      trace.categories.push({ id: 'policies', ok: true, label: state.policyLabel });
+      const listed = await page.locator('.main .tbl tbody tr').count();
+      assert.ok(listed > 0, '前置策略（fixture 在启动前播种的两条）没有出现在列表里');
+      assert.ok(await page.locator('.banner[data-frozen]').count(), '策略页必须带冻结横幅（data-frozen）');
+      // The frozen surface offers nothing that could write: no form posts to the policy routes, and
+      // no delete / new / copy link is rendered.
+      assert.equal(await page.locator('.main form[action*="access-policy"]').count(), 0, '冻结的策略页不应渲染任何写入表单');
+      assert.equal(await page.locator('.main a[href*="confirm=delete"], .main a[href*="new=1"], .main a[href*="?copy="]').count(), 0, '冻结的策略页不应渲染删除/新建/复制入口');
+      // A real form submission (valid session + CSRF) still gets the honest refusal, not a 404 and
+      // not a silent no-op.
+      // The token has to come from THIS context's session (the setup context is closed already).
+      const refused = await postForm(context.request, base, '/admin/auth/access-policy/delete', { csrf: await adminCsrf(context.request, base), id: 'any', confirm: 'any' });
+      assert.equal(refused.status(), 409, `冻结的删除端点必须拒绝（实际 ${refused.status()}）`);
+      assert.equal((await refused.json()).error, 'access_policy_frozen', '拒绝必须带 access_policy_frozen 代码');
+      trace.categories.push({ id: 'policies', ok: true, readOnly: listed });
     });
 
     await check('admin-nojs: 无脚本时页面没有 page error，且脚本没有运行', async () => {
@@ -369,10 +392,7 @@ export async function registerNoScriptChecks(ctx, deps) {
     });
     const repairContext = await browser.newContext({ viewport: VIEWPORT, javaScriptEnabled: false });
     try {
-      for (let attempt = 0; attempt < 200; attempt += 1) {
-        try { if ((await fetch(`${fixtureB.base}/healthz`)).ok) break; } catch { /* wait */ }
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
+      await waitForHealthz({ base: fixtureB.base, child: fixtureB.child, serverErrors, label: 'Git repair fixture server' });
       await noJsLogin(repairContext, fixtureB.base, fixtureB.password);
       const repairPage = await repairContext.newPage();
       const dataRoot = path.join(fixtureB.fixtureRoot, 'data');

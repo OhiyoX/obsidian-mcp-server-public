@@ -136,10 +136,15 @@ test("suspend outside the window denies content, keeps discovery/metadata, and a
 
 test("broken policy fails closed on content but keeps startup and the metadata plane", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "wave-c-broken-"));
-  const port = await freePort();
   await seedVault(root);
+  // §7 step 2: the durable document is seeded once, from the legacy policy document, and a broken
+  // one refuses that seed (a document with no constraints would allow where legacy fails closed).
+  // So the first boot runs against an empty store; the corruption is introduced afterwards, and
+  // the already-installed document is what keeps this boot up — the post-cutover case.
+  const seeding = await startServer(serverEnv({ port: await freePort(), root, extra: { AUTHZ_ENABLED: "true" } }));
+  await stopChild(seeding.child);
   await writeCorruptPolicy(root);
-  const env = serverEnv({ port, root, extra: { AUTHZ_ENABLED: "true" } });
+  const env = serverEnv({ port: await freePort(), root, extra: { AUTHZ_ENABLED: "true" } });
   const { child, base } = await startServer(env);
   try {
     const health = await fetch(`${base}/healthz`);

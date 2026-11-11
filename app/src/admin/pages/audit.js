@@ -4,8 +4,10 @@
 // Seven fixed columns (时间 / 结果 / 动作 / 凭据 / Agent / 来源 / 展开), failed rows in the
 // prototype's `.fail` tint, and the row detail as a native `<details>` disclosure — the prototype
 // expands it with script (`S.uaOpen`), so the disclosure is the browser's, not ours. Filters are
-// GET query parameters (`outcome/action/credential/origin/source/q/page/pageSize`) so a filtered
-// view is linkable; the prototype applied them from memory.
+// GET query parameters (`outcome/action/credential/client/apiKey/token/origin/source/q/page/pageSize`)
+// so a filtered view is linkable; the prototype applied them from memory. The three identity filters
+// (`client`/`apiKey`/`token`, #518) compare the recorded id **exactly** — the credential column shows
+// a readable name, so a name-shaped filter could never pin one credential.
 //
 // Field mapping (the prototype's mock vocabulary → the fields the services actually record):
 //   `a.src`             → `source` (+ `sourceKind`/`sourcePeer`/`forwardedChain` from
@@ -17,7 +19,7 @@
 // A value the row does not carry renders as `—`, never as 成功 / 正常.
 import { pageBar, emptyState, table, mcards, moreMenu, esc, ic } from "../ui.js";
 import { actionCategory, actionLabel, credentialKindLabel } from "../presentation/labels.js";
-import { fmt, fmtFull } from "../presentation/format.js";
+import { fmt, fmtFull, shortId } from "../presentation/format.js";
 import { t } from "../../i18n/context.js";
 import { readSort, sortRows } from "../table-sort.js";
 
@@ -37,6 +39,10 @@ const CREDENTIAL_OPTIONS = Object.freeze([
 const CREDENTIAL_EXTRA = Object.freeze({ "admin-session": "adm.label.credential.admin-session", "web-session": "adm.label.credential.web-session", "oauth-code": "adm.label.credential.oauth-code", none: "adm.label.credential.none" });
 /** `request-attribution.js` `AGENT_SOURCE_PRIORITY` → what the recorded Agent value actually is. */
 const AGENT_SOURCE = Object.freeze({ clientInfo: "adm.audit.agentSource.clientInfo", meta: "adm.audit.agentSource.meta", session: "adm.audit.agentSource.session", apiKeyLabel: "adm.audit.agentSource.apiKeyLabel", ua: "adm.audit.agentSource.ua" });
+/** The credential types whose `credentialId` is a token record (#518). */
+const TOKEN_KINDS = Object.freeze(["oauth-access", "oauth-refresh"]);
+/** Every filter a link, the pager or the export must carry to describe the same view. */
+const FILTER_KEYS = Object.freeze(["outcome", "action", "credential", "client", "apiKey", "token", "origin", "source", "q"]);
 
 function text(value, max = 160) {
   return String(value ?? "").replace(/[\r\n\0]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
@@ -60,6 +66,9 @@ function readFilters(query = {}) {
     outcome: OUTCOMES.some(([key]) => key === String(query.outcome || "")) ? String(query.outcome || "") : "",
     action: text(query.action, 80),
     credential: text(query.credential, 80),
+    client: text(query.client, 200),
+    apiKey: text(query.apiKey, 200),
+    token: text(query.token, 200),
     origin: text(query.origin, 160),
     source: text(query.source, 80),
     q: text(query.q, 120),
@@ -71,7 +80,7 @@ function readFilters(query = {}) {
 function auditHref(filters, overrides = {}) {
   const merged = { ...filters, ...overrides };
   const search = new URLSearchParams({ tab: TAB });
-  for (const key of ["outcome", "action", "credential", "origin", "source", "q"]) {
+  for (const key of FILTER_KEYS) {
     if (merged[key]) search.set(key, merged[key]);
   }
   if (merged.pageSize !== 25) search.set("pageSize", String(merged.pageSize));
@@ -164,6 +173,12 @@ function matches(ctx, row, filters) {
     if (action !== filters.action && actionCategory(action) !== filters.action && !action.startsWith(filters.action)) return false;
   }
   if (filters.credential && String(row?.credentialType || "") !== filters.credential) return false;
+  // Identity filters (#518): the recorded id, compared exactly. A row without the field never matches
+  // a selected identity — guessing the owner from the time or the client is exactly what the issue
+  // forbids.
+  if (filters.client && String(row?.clientId || "") !== filters.client) return false;
+  if (filters.apiKey && !(String(row?.credentialType || "") === "api-key" && String(row?.credentialId || "") === filters.apiKey)) return false;
+  if (filters.token && !(TOKEN_KINDS.includes(String(row?.credentialType || "")) && String(row?.credentialId || "") === filters.token)) return false;
   if (filters.origin && !text(row?.origin, 240).toLowerCase().includes(filters.origin.toLowerCase())) return false;
   if (filters.source && !text(row?.source, 120).toLowerCase().includes(filters.source.toLowerCase())) return false;
   if (filters.q && !searchText(ctx, row).includes(filters.q.toLowerCase())) return false;
@@ -241,10 +256,51 @@ function cardHtml(ctx, row) {
   return `<div class="mc ${failed ? "fail" : ""}"><div class="b"><div class="nm"><b>${esc(action.label)}</b><span class="sub2">${esc(credentialName(ctx, row))}</span></div><div class="meta">${failed ? `<span class="st danger"><span class="dot"></span>${esc(t("adm.audit.status.failed"))}</span>` : `<span class="st ok"><span class="dot"></span>${esc(t("adm.audit.status.ok"))}</span>`}<span>${esc(fmt(at))}</span><span class="mono">${esc(row?.source || "—")}</span>${tool ? `<span class="mono">${esc(tool)}</span>` : ""}</div>${reason ? `<span class="help" style="color:var(--danger)">${esc(reason)}</span>` : ""}</div></div>`;
 }
 
-function toolbar(filters) {
+/**
+ * The identities the toolbar can pin (#518), read from the audit rows themselves: an option exists
+ * only for an id that a row actually recorded, so a filter can never select a credential with no
+ * history behind it. Labels are the names the 凭据 column already shows; the value is the raw id.
+ */
+function identityOptions(ctx) {
+  const audit = Array.isArray(ctx?.snapshot?.audit) ? ctx.snapshot.audit : [];
+  const clients = new Map();
+  const apiKeys = new Map();
+  const tokens = new Map();
+  for (const row of audit) {
+    const kind = String(row?.credentialType || "");
+    const id = String(row?.credentialId || "");
+    const clientId = String(row?.clientId || "");
+    if (clientId && !clients.has(clientId)) {
+      // API-key records carry `clientId: "api-key:<keyId>"` (`src/oauth-provider.js`); the client model
+      // cannot resolve that, and the Key has its own filter — so only a resolvable client is offered.
+      const client = ctx?.model?.client ? ctx.model.client(clientId) : null;
+      if (client) clients.set(clientId, ctx.model.clientName(client));
+    }
+    if (kind === "api-key" && id && !apiKeys.has(id)) apiKeys.set(id, credentialName(ctx, row));
+    // Two tokens of one client and account read identically, so the short id keeps them apart.
+    if (TOKEN_KINDS.includes(kind) && id && !tokens.has(id)) tokens.set(id, `${credentialName(ctx, row)} · ${shortId(id)}`);
+  }
+  return { clients, apiKeys, tokens };
+}
+
+/**
+ * One identity `<select>`: 所有… first, then one option per recorded id. The active id is appended
+ * when no row carries it any more, so a deep link that matches nothing still shows which filter is
+ * in force (and the reset link stays visible) instead of silently reading as 所有.
+ */
+function identitySelect(name, labelKey, allKey, options, current) {
+  const entries = [...options];
+  if (current && !entries.some(([value]) => value === current)) entries.push([current, current]);
+  const label = esc(t(labelKey));
+  const items = [["", t(allKey)], ...entries].map(([value, text]) => `<option value="${esc(value)}"${value === current ? " selected" : ""}>${esc(text)}</option>`);
+  return `<select class="sel sm" name="${name}" aria-label="${label}" title="${label}">${items.join("")}</select>`;
+}
+
+function toolbar(ctx, filters) {
   const segItems = OUTCOMES.map(([key, labelKey]) => ({ label: t(labelKey), href: auditHref(filters, { outcome: key }), on: filters.outcome === key }));
-  const nonDefault = Boolean(filters.action || filters.credential || filters.origin || filters.source || filters.q || filters.outcome || filters.pageSize !== 25);
+  const nonDefault = Boolean(filters.action || filters.credential || filters.client || filters.apiKey || filters.token || filters.origin || filters.source || filters.q || filters.outcome || filters.pageSize !== 25);
   const selected = (value, current) => (value === current ? " selected" : "");
+  const identities = identityOptions(ctx);
   // Prototype `renderAudit` filters row: seg + two selects + two inputs + the search box + 重置.
   // The page-size control belongs to the PAGER (that is where the prototype renders 每页), so it is
   // not repeated here. The one control the prototype does not have is the explicit 筛选 submit:
@@ -255,6 +311,9 @@ function toolbar(filters) {
 ${segItems.length ? `<div class="seg">${segItems.map((item) => `<a href="${esc(item.href)}"${item.on ? ' class="on" aria-current="page"' : ""}>${esc(item.label)}</a>`).join("")}</div>` : ""}
 <select class="sel sm" name="action" aria-label="${esc(t("adm.audit.filter.action"))}" title="${esc(t("adm.audit.filter.action"))}">${ACTION_OPTIONS.map(([value, labelKey]) => `<option value="${esc(value)}"${selected(value, filters.action)}>${esc(t(labelKey))}</option>`).join("")}</select>
 <select class="sel sm" name="credential" aria-label="${esc(t("adm.audit.filter.credential"))}" title="${esc(t("adm.audit.filter.credential"))}">${CREDENTIAL_OPTIONS.map(([value, labelKey]) => `<option value="${esc(value)}"${selected(value, filters.credential)}>${esc(t(labelKey))}</option>`).join("")}</select>
+${identitySelect("client", "adm.audit.filter.client", "adm.audit.filter.allClients", identities.clients, filters.client)}
+${identitySelect("apiKey", "adm.audit.filter.apiKey", "adm.audit.filter.allKeys", identities.apiKeys, filters.apiKey)}
+${identitySelect("token", "adm.audit.filter.token", "adm.audit.filter.allTokens", identities.tokens, filters.token)}
 <input class="inp sm hide-m" name="origin" placeholder="${esc(t("adm.audit.filter.origin"))}" value="${esc(filters.origin)}" style="width:150px" aria-label="${esc(t("adm.audit.filter.origin"))}">
 <input class="inp sm hide-m" name="source" placeholder="${esc(t("adm.audit.filter.sourceIp"))}" value="${esc(filters.source)}" style="width:120px" aria-label="${esc(t("adm.audit.filter.sourceIp"))}">
 <label class="search">${ic("search")}<input name="q" placeholder="${esc(t("adm.audit.filter.query"))}" value="${esc(filters.q)}" aria-label="${esc(t("adm.audit.filter.query"))}"><kbd>/</kbd></label>
@@ -389,7 +448,7 @@ export function auditCsv(ctx, query = {}) {
 /** The list URL for the current filter view — the base every sort link is built from. */
 function auditBaseQuery(filters) {
   const params = new URLSearchParams({ tab: "audit" });
-  for (const key of ["outcome", "action", "credential", "origin", "source", "q"]) {
+  for (const key of FILTER_KEYS) {
     const value = String(filters[key] ?? "");
     if (value) params.set(key, value);
   }
@@ -399,7 +458,7 @@ function auditBaseQuery(filters) {
 /** Export href for the current filter view (page/pageSize belong to the page, not the file). */
 function exportHref(filters) {
   const params = new URLSearchParams();
-  for (const key of ["outcome", "action", "credential", "origin", "source", "q"]) {
+  for (const key of FILTER_KEYS) {
     const value = String(filters[key] ?? "");
     if (value) params.set(key, value);
   }
@@ -437,7 +496,7 @@ export function renderAuditPage(ctx) {  const query = ctx.query || {};
   const actions = `${exportLink}${moreMenu([{ href: `${AUDIT_BASE}&confirm=clear`, label: t("adm.audit.clearMenu"), icon: "trash", danger: true }])}`;
 
   const content = `${pageBar({ title: t("adm.nav.audit"), actions })}<div class="content scroll"><div class="page wide">
-${toolbar(filters)}
+${toolbar(ctx, filters)}
 ${table([[t("adm.audit.column.time"), "92px", "", "time"], [t("adm.audit.column.result"), "76px", "", "result"], [t("adm.audit.column.action"), "22%", "", "action"], [t("adm.audit.column.credential"), "22%", "", "credential"], [t("adm.audit.column.agent"), "15%", "", "agent"], [t("adm.audit.column.source"), "13%", "", "source"], ["", "", "act"]], slice.map((row) => rowHtml({ ...ctx, focus }, row)), emptyState("filter", t("adm.audit.emptyTitle"), t("adm.audit.emptyHint"), `<a class="btn" href="${AUDIT_BASE}">${esc(t("adm.audit.emptyReset"))}</a>`), { ...sort, base: auditBaseQuery(filters) })}${mcards(slice.map((row) => cardHtml(ctx, row)))}
 ${listed.length ? pagerRow(listed.length, failCount, page, filters.pageSize, filters) : ""}
 </div></div>`;

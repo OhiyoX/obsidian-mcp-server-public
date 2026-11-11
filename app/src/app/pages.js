@@ -427,6 +427,10 @@ function safeJson(value) {
   return JSON.stringify(value).replaceAll("<", "\\u003c").replaceAll("&", "\\u0026").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029");
 }
 
+// The one browser theme-color tag that both publish page kinds share, so the folder index and
+// the document page stay in step instead of carrying two copies.
+const PUBLISH_THEME_COLOR_META = '<meta name="theme-color" content="#ffffff">';
+
 export function publishPage({ title, content, publishedAt, locale = DEFAULT_LOCALE }) {
   const { t, htmlLang: lang } = createTranslator(locale);
   return `<!doctype html>
@@ -434,7 +438,7 @@ export function publishPage({ title, content, publishedAt, locale = DEFAULT_LOCA
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#ffffff">
+${PUBLISH_THEME_COLOR_META}
 <meta name="robots" content="noindex,nofollow,noarchive">
 <title>${html(title)} · Published note</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -451,6 +455,38 @@ export function publishPage({ title, content, publishedAt, locale = DEFAULT_LOCA
 <script id="publish-data" type="application/json">${safeJson({ title, content })}</script>
 <script src="${assetUrl("reader.js")}" data-mermaid-src="${assetUrl("mermaid.js")}" defer></script>
 <script src="${assetUrl("publish.js")}" defer></script>
+</body>
+</html>`;
+}
+
+// The index of one published folder (design 2026-11-08, "Routes"). Each row is a link to the
+// note's token route, so no URL on this page names a path: `notes` carries `title` and `href`.
+export function publishFolderPage({ title, notes = [], publishedAt, locale = DEFAULT_LOCALE }) {
+  const { t, htmlLang: lang } = createTranslator(locale);
+  const items = notes
+    .map((note) => `<li><a href="${html(note.href)}">${html(note.title)}</a></li>`)
+    .join("");
+  return `<!doctype html>
+<html lang="${lang}" class="theme-light" data-color-mode="system" data-desktop-color-mode="system" data-icon-sprite="${assetUrl("icons.svg")}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+${PUBLISH_THEME_COLOR_META}
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>${html(title)} · ${html(t("publish.folder.title"))}</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="${assetUrl("theme-boot.js")}"></script>
+<link rel="stylesheet" href="${assetUrl("reader.css")}">
+<link rel="stylesheet" href="${assetUrl("app.css")}">
+<link rel="stylesheet" href="${assetUrl("publish.css")}">
+</head>
+<body>
+<main class="publish-shell">
+<header class="publish-head"><div class="publish-heading"><h1>${html(title)}</h1><div class="publish-meta">${html(t("publish.folder.meta", { time: publishedAt || "" }))}</div></div></header>
+<nav aria-label="${html(t("publish.folder.list"))}">
+${items ? `<ul class="publish-folder-list">${items}</ul>` : `<p class="publish-meta">${html(t("publish.folder.empty"))}</p>`}
+</nav>
+</main>
 </body>
 </html>`;
 }

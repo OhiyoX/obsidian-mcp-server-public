@@ -91,6 +91,10 @@ test("§34-7/§34-9: the Vault list is the caller allowlist ∩ registry, never 
   assert.deepEqual(unrestricted.structuredContent.vaults.map((vault) => vault.id), [PRIMARY, ...SECONDARY]);
 });
 
+// A registrar decision needs the verified credential identity every real request carries;
+// `IDENTITY` states it for the synthetic authInfo used below.
+const IDENTITY = { type: "oauth", clientId: "matrix-credential" };
+
 test("§34-3/§34-4: the default Vault is the primary fixture, real inventory included", async () => {
   const handlers = new Map();
   const registrar = createVaultScopeRegistrar({
@@ -99,11 +103,11 @@ test("§34-3/§34-4: the default Vault is the primary fixture, real inventory in
   });
   registrar.registerTool("get_note", { inputSchema: {} }, () => requestContext());
 
-  const primaryOnly = await handlers.get("get_note").handler({}, { authInfo: { allowedVaults: [PRIMARY] } });
+  const primaryOnly = await handlers.get("get_note").handler({}, { authInfo: { ...IDENTITY, allowedVaults: [PRIMARY] } });
   assert.equal(primaryOnly.vaultId, PRIMARY);
   assert.equal(primaryOnly.vaultRuntime?.primary, true);
 
-  const secondaryOnly = await handlers.get("get_note").handler({}, { authInfo: { allowedVaults: [SECONDARY[0]] } });
+  const secondaryOnly = await handlers.get("get_note").handler({}, { authInfo: { ...IDENTITY, allowedVaults: [SECONDARY[0]] } });
   assert.equal(secondaryOnly.isError, true, "a secondary-only credential may not reach the default Vault");
   assert.deepEqual(secondaryOnly.structuredContent, { code: "vault_access_denied", vaultId: PRIMARY });
 });
@@ -114,13 +118,13 @@ test("§34-9: an authorized but nonexistent Vault is a generic unavailable refus
     registerTool(name, config, handler) { handlers.set(name, { config, handler }); },
     getClientVersion: () => ({ name: "", version: "" }),
   }).registerTool("get_note", { inputSchema: {} }, () => requestContext());
-  const ghost = await handlers.get("get_note").handler({ vaultId: "ghost" }, { authInfo: { allowedVaults: ["ghost"] } });
+  const ghost = await handlers.get("get_note").handler({ vaultId: "ghost" }, { authInfo: { ...IDENTITY, allowedVaults: ["ghost"] } });
   assert.equal(ghost.isError, true);
   assert.deepEqual(ghost.structuredContent, { code: "vault_unavailable", vaultId: "ghost" });
   assert.doesNotMatch(ghost.content[0].text, /root|path|ENOENT/i, "no filesystem detail may leak");
 
   // A registered secondary is admitted and gets its own id — never the primary runtime (SEC-MV06).
-  const beta = await handlers.get("get_note").handler({ vaultId: SECONDARY[0] }, { authInfo: { allowedVaults: [SECONDARY[0]] } });
+  const beta = await handlers.get("get_note").handler({ vaultId: SECONDARY[0] }, { authInfo: { ...IDENTITY, allowedVaults: [SECONDARY[0]] } });
   assert.equal(beta.vaultId, SECONDARY[0]);
   assert.equal(beta.vaultRuntime, undefined);
 });
@@ -131,7 +135,7 @@ test("§34-2/§34-8: the refusal shape does not depend on whether the Vault exis
     registerTool(name, config, handler) { handlers.set(name, { config, handler }); },
     getClientVersion: () => ({ name: "", version: "" }),
   }).registerTool("get_note", { inputSchema: {} }, () => requestContext());
-  const allowed = { authInfo: { allowedVaults: [PRIMARY] } };
+  const allowed = { authInfo: { ...IDENTITY, allowedVaults: [PRIMARY] } };
   const existing = await handlers.get("get_note").handler({ vaultId: SECONDARY[0] }, allowed);
   const ghost = await handlers.get("get_note").handler({ vaultId: "ghost" }, allowed);
   // The refusal echoes only the id the caller itself sent (no inventory fact), so the two responses

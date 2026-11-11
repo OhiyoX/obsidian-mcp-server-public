@@ -32,6 +32,9 @@ const { WRITE_ROUTE_CALLS, callRoute, startWebWriteSurface } = await import("./h
 const READ_ONLY_READOUTS = {
   "POST /api/web/v1/note": { status: 500, body: { error: "Request failed" } },
   "POST /api/web/v1/folder": { status: 403, body: { error: "Server is read-only" } },
+  // No Vault runtime is wired in this harness, so both routes answer 503 before any I/O.
+  "POST /api/web/v1/rename": { status: 503, body: { error: "Vault runtime unavailable", code: "vault_unavailable" } },
+  "POST /api/web/v1/delete": { status: 503, body: { error: "Vault runtime unavailable", code: "vault_unavailable" } },
   "POST /api/web/v1/asset": { status: 500, body: { error: "Request failed" } },
   "POST /api/web/v1/vault": { status: 500, body: { error: "Request failed" } },
   "POST /api/web/v1/publish": { status: 400, body: { error: "Unsupported publish action" } },

@@ -33,6 +33,7 @@ import { MCP_TOOL_SCOPE_REQUIREMENTS } from "./scopes.js";
 import { emitAuditLine } from "./audit-sink.js";
 import { requestContext, withRequestContext } from "./request-context.js";
 import { primaryRuntime } from "./vault.js";
+import { createUploadAuthz, createUploadLocator } from "./direct-upload-authz.js";
 import {
   DIRECT_UPLOAD_MODE,
   UPLOAD_DESTINATION_EXISTS,
@@ -49,8 +50,9 @@ import {
   createTransferRuntime,
 } from "./vault-runtime/transfer-runtime.js";
 import { capabilitiesForTool } from "./access-policy/capabilities.js";
-import { subjectsFromMcpAuth } from "./access-policy/subjects.js";
-
+import { MCP_LEGACY_VERDICTS, mcpAuthorizationRequest, observeDirectUploadAuthorization } from "./authorization/adapters/mcp.js";
+import { AUTHORIZATION_DECISION_CODES } from "./authorization/evaluate.js";
+import { createAuthorizationSeam } from "./authorization/runtime.js";
 /** Data-plane mount point. Kept here so the control-plane answer and the router cannot drift. */
 export const DIRECT_UPLOAD_PATH_PREFIX = "/uploads";
 /** Rollback gate (contract §6 "回滚"): turning this off leaves the legacy MCP chunk path intact. */
@@ -260,8 +262,10 @@ function allowedVaultIds(auth) {
   return unique.length ? unique : [];
 }
 
-export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRuntime: resolveVault = null, provider = null, enabled = DIRECT_UPLOAD_ENABLED, writable = true, limiter = null, minFreeBytes = DIRECT_UPLOAD_MIN_FREE_BYTES, statfs = null, idleTimeoutMs = DIRECT_UPLOAD_IDLE_TIMEOUT_MS, maxDurationMs = DIRECT_UPLOAD_MAX_DURATION_MS } = {}) {
+export function createDirectUploadRouter({ auth, accessRuntime = null, authorization = null, resolveRuntime: resolveVault = null, provider = null, enabled = DIRECT_UPLOAD_ENABLED, writable = true, limiter = null, minFreeBytes = DIRECT_UPLOAD_MIN_FREE_BYTES, statfs = null, idleTimeoutMs = DIRECT_UPLOAD_IDLE_TIMEOUT_MS, maxDurationMs = DIRECT_UPLOAD_MAX_DURATION_MS, authorizationShadow = null } = {}) {
   const router = express.Router();
+  // P3: the runtime decides the continuation right, as it decides the tool call.
+  const decide = createAuthorizationSeam({ authorization, accessRuntime });
   if (!enabled) return router;
   if (typeof auth !== "function") throw new Error("[direct_upload_invalid] createDirectUploadRouter requires the server's auth middleware");
   // One admission state machine per mounted router (= per server process). Tests may inject their
@@ -274,30 +278,15 @@ export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRu
     rateChargeTtlMs: TRANSFER_TTL_MS,
   });
 
-  function resolveRuntime(vaultId) {
-    const resolved = typeof resolveVault === "function" ? resolveVault(vaultId) : null;
-    if (resolved) return resolved;
-    return vaultId === primaryRuntime.id ? primaryRuntime : null;
-  }
+  // Vault-runtime fallback + continuation observer live in their own module.
+  const { resolveRuntime, observeUpload } = createUploadAuthz({
+    resolveVault,
+    primaryRuntime,
+    authorizationShadow,
+  });
 
   /** Find the owning Vault handle among the caller's allowed Vaults only (no cross-Vault probe). */
-  async function locate(uploadId, allowed) {
-    for (const vaultId of allowed) {
-      const vaultRuntime = resolveRuntime(vaultId);
-      if (!vaultRuntime) continue;
-      let metadata;
-      try {
-        metadata = await runtimeFor(vaultRuntime).peekDirectUpload(uploadId);
-      } catch (error) {
-        if (error?.code === UPLOAD_NOT_FOUND || /Invalid uploadId/.test(error?.message || "")) continue;
-        throw error;
-      }
-      const bound = metadata?.vaultId ?? (vaultRuntime.primary === true ? vaultId : null);
-      if (bound !== vaultId) continue;
-      return { vaultRuntime, vaultId, metadata };
-    }
-    return null;
-  }
+  const locate = createUploadLocator({ resolveRuntime, runtimeFor, notFoundCode: UPLOAD_NOT_FOUND });
 
   /**
    * Issue #725 — an admission refusal reclaims the handle it refused.
@@ -341,30 +330,39 @@ export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRu
     res.status(405).json({ error: "method_not_allowed", code: "method_not_allowed", message: "Direct uploads accept a single PUT of the whole body or contiguous PATCH chunks with Upload-Offset" });
   }
 
-  /**
-   * Authorization gate shared by both data-plane writers (`PUT` whole body, `PATCH` chunk). Lifted
-   * from the Wave A PUT body without changing its order or its messages: a PATCH can never reach a
-   * stage the PUT is not allowed to reach (contract §2.3).
-   */
+  /** Both data-plane writers (`PUT` body, `PATCH` chunk): a PATCH can never reach a stage the PUT may not reach (contract §2.3). */
   function authorizeCaller(req, reject) {
     const caller = req.auth;
     if (!caller || typeof caller !== "object") { reject(403, "credential_required", "This endpoint requires an authenticated credential"); return null; }
-    const granted = Array.isArray(caller.scopes) ? caller.scopes : [];
-    const missing = DIRECT_UPLOAD_SCOPES.filter((scope) => !granted.includes(scope));
-    if (missing.length) { reject(403, "insufficient_scope", `Missing scope: ${missing.join(" ")}`); return null; }
-
-    // Same temporal gate the MCP tool goes through (INTERFACE §10.1): re-evaluated per request so a
-    // window that closed after the handle was created blocks the write (contract §2.3.2).
-    if (accessRuntime && typeof accessRuntime.evaluate === "function") {
-      const subjects = subjectsFromMcpAuth(caller);
-      const capabilities = capabilitiesForTool(CONTROL_TOOL);
-      const decision = accessRuntime.evaluate({ subjects, capabilities });
-      if (decision && decision.allowed === false) {
-        const broken = decision.reason === "policy_unavailable";
-        const explained = broken ? null : accessRuntime.explain?.({ subjects, capabilities }) ?? null;
-        reject(403, broken ? "policy_unavailable" : "outside_window", "The current authorization window does not allow this write", { nextAllowedAt: explained?.nextAllowedAt ?? null });
+    // One decision per write by the runtime: the upload's Scope rule and the MCP tool's temporal
+    // gate, re-asked per request so a window that closed after handle creation still blocks. An
+    // unnamed principal keeps the old writer answer, which read Scopes and that gate only.
+    const request = mcpAuthorizationRequest({
+      authInfo: caller,
+      name: CONTROL_TOOL,
+      args: {},
+      primaryVaultId: primaryRuntime.id,
+      actorOptional: true,
+      legacy: {
+        phase: "upload",
+        scopes: Array.isArray(caller.scopes) ? [...caller.scopes] : [],
+        requiredScopes: [...DIRECT_UPLOAD_SCOPES],
+        capabilities: capabilitiesForTool(CONTROL_TOOL),
+      },
+    });
+    if (request === null) { reject(403, "credential_required", "This endpoint requires an authenticated credential"); return null; }
+    const decision = decide.authorize(request);
+    if (decision.allowed !== true) {
+      const code = decision.code;
+      if (code === AUTHORIZATION_DECISION_CODES.INSUFFICIENT_SCOPE) {
+        const granted = Array.isArray(caller.scopes) ? caller.scopes : [];
+        const missing = DIRECT_UPLOAD_SCOPES.filter((scope) => !granted.includes(scope));
+        reject(403, "insufficient_scope", `Missing scope: ${missing.join(" ")}`);
         return null;
       }
+      const broken = code === AUTHORIZATION_DECISION_CODES.POLICY_UNAVAILABLE;
+      reject(403, broken ? "policy_unavailable" : "outside_window", "The current authorization window does not allow this write", { nextAllowedAt: decision.nextAllowedAt ?? null });
+      return null;
     }
     if (!writable) { reject(403, "read_only", "This server is running read-only"); return null; }
     return caller;
@@ -520,6 +518,7 @@ export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRu
       }
       if (!located) return reject(404, "upload_not_found", "Unknown uploadId");
       const { vaultRuntime, vaultId, metadata } = located;
+      observeUpload(req, vaultId);
 
       // Pre-stream state checks so a 409/410/413 never has to consume the body. The runtime repeats all
       // of them authoritatively inside the write.
@@ -660,6 +659,7 @@ export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRu
       }
       if (!located) return reject(404, "upload_not_found", "Unknown uploadId");
       const { vaultRuntime, vaultId, metadata } = located;
+      observeUpload(req, vaultId);
 
       if (metadata?.mode !== DIRECT_UPLOAD_MODE) return reject(409, UPLOAD_MODE_CONFLICT, `upload ${uploadId} was created for base64 chunks; use upload_file_chunk`, { vaultId });
       // Located and owned: the continuation of this upload never pays the rate a second time.
@@ -787,11 +787,8 @@ export function createDirectUploadRouter({ auth, accessRuntime = null, resolveRu
   return router;
 }
 
-/**
- * `server.js` call site for the data plane (Wave F keeps that file shrinking). With
- * `DIRECT_UPLOAD_ENABLED=false` nothing is mounted, so the rollback leaves only the legacy MCP chunk
- * tools (contract §6).
- */
+// `server.js` call site for the data plane. `DIRECT_UPLOAD_ENABLED=false` mounts nothing, so a
+// rollback leaves only the legacy MCP chunk tools (contract §6).
 export function mountDirectUpload(app, options = {}) {
   if (options.enabled === false) return null;
   const router = createDirectUploadRouter(options);

@@ -8,7 +8,7 @@ import test from "node:test";
 import { EditorState } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
-import { highlightSpans, idleChromeRange, isHiddenIdleMark } from "../frontend/app/features/editor/extensions/live-decorations.js";
+import { blockMarkApplies, highlightSpans, idleChromeRange, isHiddenIdleMark } from "../frontend/app/features/editor/extensions/live-decorations.js";
 import { excludedSyntaxRanges } from "../frontend/app/features/editor/extensions/match-decorations.js";
 
 function stateOf(doc) {
@@ -165,4 +165,29 @@ test("#484 only closed, non-empty spans count (no half-scanned delimiters)", () 
   assert.equal(spansOf("a ==hi b\n").spans.length, 0, "an unclosed pair is plain text");
   assert.equal(spansOf("a ==== b\n").spans.length, 0, "an empty span is not a highlight");
   assert.equal(spansOf("a ==a== ==b== c\n").spans.length, 2);
+});
+
+test("an empty block mark stays the literal text typed until its construct applies", () => {
+  // `###` with nothing after it is still being typed. The parser emits a HeaderMark for the
+  // empty heading, so the mark's own line decides, and the marker stays visible text.
+  assert.equal(blockMarkApplies("HeaderMark", ""), false);
+  assert.equal(blockMarkApplies("HeaderMark", "\n"), false);
+  assert.equal(blockMarkApplies("HeaderMark", " "), true);
+  assert.equal(blockMarkApplies("HeaderMark", "\t"), true);
+  // The same rule covers the other line marks that can be empty: `>` alone and `-` alone.
+  assert.equal(blockMarkApplies("QuoteMark", ""), false);
+  assert.equal(blockMarkApplies("ListMark", ""), false);
+  // A mark with content keeps the parser's verdict: `>x` is a quote in the Reader too, and
+  // Reader/Live parity outranks this rule.
+  assert.equal(blockMarkApplies("QuoteMark", "x"), true);
+  assert.equal(blockMarkApplies("ListMark", " "), true);
+  // Marks this rule does not own are untouched.
+  assert.equal(blockMarkApplies("EmphasisMark", ""), true);
+  assert.equal(blockMarkApplies("StrongMark", ""), true);
+
+  // Idle chrome follows the same answer, so `###` never disappears when the caret leaves.
+  assert.equal(idleChromeRange("HeaderMark", 0, 3, "ATXHeading3", "", ""), null);
+  assert.deepEqual(idleChromeRange("HeaderMark", 0, 3, "ATXHeading3", "", " "), { from: 0, to: 3, local: false });
+  assert.equal(idleChromeRange("QuoteMark", 0, 1, "Blockquote", "", ""), null);
+  assert.equal(idleChromeRange("ListMark", 0, 1, "ListItem", "", ""), null);
 });

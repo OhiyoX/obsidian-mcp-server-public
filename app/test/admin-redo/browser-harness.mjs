@@ -123,9 +123,20 @@ export class Page {
     await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", buttons: 0, clickCount: 1 });
   }
 
-  /** Real typing: `Input.insertText` runs through the browser's editing pipeline, character by character. */
+  /**
+   * Real typing: a `char` key event runs through the browser's editing pipeline, character by
+   * character.
+   *
+   * Not `Input.insertText`: on some inputs at a narrow viewport Chrome resets the caret to 0 after
+   * each insert (no page script involved — it happens with script execution disabled), so the text
+   * arrives reversed. A `char` event keeps the caret where the operator's would be.
+   * shortcut: no IME composition is modelled, and a page of its own is not; upgrade when a case
+   * needs composition events.
+   */
   async type(text) {
-    for (const character of String(text)) await this.send("Input.insertText", { text: character });
+    for (const character of String(text)) {
+      await this.send("Input.dispatchKeyEvent", { type: "char", text: character, key: character, unmodifiedText: character });
+    }
   }
 
   async pressKey(key, code, virtualKeyCode, modifiers = 0) {

@@ -223,7 +223,7 @@ function clientDrawer(ctx, client) {
     [t("adm.clients.kv.registered"), esc(fmtFull(client.createdAt))],
     [t("adm.clients.kv.lastUsed"), client.lastUsedAt ? `${esc(fmtFull(client.lastUsedAt))} <span class="muted mono">· ${esc(client.lastSource || "—")}</span>` : `<span class="muted">${esc(t("adm.clients.neverUsed"))}</span>`],
   ])}</div>
-  ${renderSubjectAuthzSection(ctx, { subject: `oauth-client:${client.clientId}`, tab: "clients", subjectId: client.clientId })}
+  ${renderSubjectAuthzSection(ctx, { subject: `oauth-client:${client.clientId}` })}
   <div class="dsec"><h3>${esc(t("adm.clients.callbacks", { count: uris.length }))}</h3>${callbacks}<span class="help">${esc(t("adm.clients.callbacksHelp"))}</span></div>
   <form class="dsec" method="post" action="/admin/auth/oauth/client/default-vault">
     <h3>${esc(t("adm.keys.defaultVault"))}</h3>

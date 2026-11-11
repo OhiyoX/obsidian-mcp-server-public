@@ -72,6 +72,7 @@ class GitRuntime {
   #ops;
   #timers = null;
   #operationQueue = Promise.resolve();
+  #onAuthorizeTask = null;
   #lastSweep = null;
   #push = null;
   #repoState = null;
@@ -92,6 +93,7 @@ class GitRuntime {
     const authorEmail = options.authorEmail ?? DEFAULTS.authorEmail;
     if (!isValidAuthorEmail(authorEmail)) throw new TypeError("authorEmail must be a plain email address");
     this.#authorization = createGitAuthorization(options.authorization);
+    this.#onAuthorizeTask = typeof options.onAuthorizeTask === "function" ? options.onAuthorizeTask : null;
     this.#vaultId = vaultId;
     this.#root = root;
     this.#configProvider = configProvider;
@@ -237,6 +239,7 @@ class GitRuntime {
     const startedAt = this.#pending.since;
     this.#pending.since = null;
     this.#pending.clear();
+    // An automatic commit that also pushes must pass both tasks independently.
     return this.#enqueue(async () => {
       const commits = [];
       let completed = 0;
@@ -257,7 +260,7 @@ class GitRuntime {
         this.#armCommitTimers();
         throw error;
       }
-    });
+    }, config.autoPush ? ["commit", "push"] : ["commit"]);
   }
 
   /** Whole-tree sweep (W0-D §6): distinct author/message, consumes pending batches. */
@@ -289,7 +292,7 @@ class GitRuntime {
         this.#log("warn", `Git sweep committed ${String(result.hash).slice(0, 7)} (working-tree commit by auto-sweep; may include pending MCP writes)`);
       }
       return result;
-    });
+    }, config.autoPush ? ["commit", "push"] : ["commit"]);
   }
 
   manualCommit(options = {}) {
@@ -469,9 +472,29 @@ class GitRuntime {
     this.#timers.forgetImminent();
   }
 
-  #enqueue(operation) {
+  /**
+   * P2: one authorization unit per background Git task, recorded when the queued task
+   * really STARTS. A task the queue never runs (a revoked lease, an empty batch) records
+   * nothing. The hook is observation only: the lease and the old gates below decide.
+   */
+  #authorizeTasks(tasks) {
+    const hook = this.#onAuthorizeTask;
+    if (typeof hook !== "function") return;
+    for (const task of tasks) {
+      try {
+        hook({ task, vaultId: this.#vaultId });
+      } catch {
+        // A diagnostic failure never changes Git behaviour.
+      }
+    }
+  }
+
+  #enqueue(operation, tasks = []) {
     // Queueing is not starting: the same generation must still be authorized at execution.
-    const staged = this.#authorization.stage(operation, () => this.leaseGuard, () => this.#block());
+    const staged = this.#authorization.stage(() => {
+      this.#authorizeTasks(tasks);
+      return operation();
+    }, () => this.leaseGuard, () => this.#block());
     const result = this.#operationQueue.then(staged, staged);
     this.#operationQueue = result.then(() => {}, () => {});
     return result;

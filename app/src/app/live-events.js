@@ -328,7 +328,7 @@ function waitForWatcherReady(vaultId, timeoutMs = WATCHER_READY_TIMEOUT_MS) {
   ]);
 }
 
-export async function openVaultEventStream({ req, res, session, vault, revalidate }) {
+export async function openVaultEventStream({ req, res, session, vault, revalidate, authorizeDelivery = null }) {
   if (teardown.isShuttingDown()) return res.status(503).json({ error: "Live updates are shutting down" });
   if (!LIVE_UPDATES) return res.status(404).json({ error: "Live updates are disabled" });
   const admission = broker.canRegister(session.id);
@@ -364,6 +364,7 @@ export async function openVaultEventStream({ req, res, session, vault, revalidat
     sessionId: session.id,
     acquiredWatcher,
     deferLive: true,
+    authorizeDelivery,
   });
   // Register before the first write and readiness await: the client may leave
   // while the watcher is still starting.

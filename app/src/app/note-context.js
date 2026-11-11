@@ -24,6 +24,7 @@ import { extractLinks } from "../obsidian.js";
 import { createLinkResolver } from "../vault-index.js";
 import { readNoteInRoot } from "./web-catalog/note-reader.js";
 import { getWebCatalogRuntime } from "./web-catalog/runtime.js";
+import { chainWith, webReadRouteGate } from "./access-policy.js";
 import { NOTE_KIND } from "./web-catalog/vault-source.js";
 import { buildUnlinkedMentions } from "./note-context-unlinked.js";
 import { resolveWebNoteLink, resolveWebVaultPath } from "./vault-registry.js";
@@ -285,14 +286,15 @@ function sendNoteContextResult(res, result) {
   return res.json(result.body);
 }
 
-export function registerNoteContextRoute(router, { requireApi, currentVault }) {
+export function registerNoteContextRoute(router, { requireApi, currentVault, policy = null, authorizationShadow = null }) {
   const handlers = {
     outgoing: buildOutgoingLinks,
     incoming: buildIncomingLinks,
     unlinked: buildUnlinkedMentions,
   };
   for (const [name, build] of Object.entries(handlers)) {
-    router.get(`/api/web/v1/note-context/${name}`, requireApi, async (req, res, next) => {
+    const readGate = webReadRouteGate(policy, `GET /api/web/v1/note-context/${name}`, { shadow: authorizationShadow });
+    router.get(`/api/web/v1/note-context/${name}`, chainWith(requireApi, readGate), async (req, res, next) => {
       try {
         const vault = await currentVault(req);
         sendNoteContextResult(res, await build(vault, req.query.path));

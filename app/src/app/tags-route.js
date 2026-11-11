@@ -8,11 +8,13 @@
 // The shared `/api/web/v1` error handler lives at the end of routes.js and does not
 // know the catalog contract codes, so this route maps WebCatalogHttpError itself.
 import { getWebCatalogRuntime } from "./web-catalog/runtime.js";
+import { chainWith, webReadRouteGate } from "./access-policy.js";
 import { WebCatalogHttpError } from "./web-catalog/tree-api.js";
 import { resolveTags } from "./tags-api.js";
 
-export function registerTagsRoute(router, { requireApi, currentVault }) {
-  router.get("/api/web/v1/tags", requireApi, async (req, res, next) => {
+export function registerTagsRoute(router, { requireApi, currentVault, policy = null, authorizationShadow = null }) {
+  const readGate = webReadRouteGate(policy, "GET /api/web/v1/tags", { shadow: authorizationShadow });
+  router.get("/api/web/v1/tags", chainWith(requireApi, readGate), async (req, res, next) => {
     try {
       const vault = await currentVault(req);
       const payload = await resolveTags({ vault, query: req.query, getRuntime: getWebCatalogRuntime });

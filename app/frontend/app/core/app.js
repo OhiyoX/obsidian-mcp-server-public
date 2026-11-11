@@ -196,6 +196,12 @@ const { explorer, loadNotes, searchControls } = initializeExplorerWiring({
   openNote,
   onOpenBase: ({ path } = {}) => baseNavigation.openBase({ path }),
   createNote: (folderPath, name) => createNote(folderPath, name),
+  // A safe delete of the open note closes it through the same welcome transition the tab
+  // strip uses; the thunk is called long after this line has run.
+  enterWelcome: () => welcomeTransition.enterWelcome(),
+  // A rename moved the open file on disk. Follow it in the document session, so the next save
+  // posts the new path; `state.path` was already updated by the controller.
+  pathMoved: (from, to) => moveOpenDocument(from, to),
   searchInput,
   searchClear,
   searchCase,
@@ -247,10 +253,30 @@ function applyOpenCommit(result, { refreshOutline = true } = {}) {
   return true;
 }
 
-async function openNote(path, { historyMode = "push", fragment = "" } = {}) {
+// The open document is the same file at a new path. Nothing is reloaded: the text, the base
+// revision and the cursor stay, and only the identity moves. `to` is the entry that moved, so
+// the editor and the header follow the session's own note path, never the folder.
+function moveOpenDocument(from, to) {
+  // A Base has no note session to move: it keeps its own path and header.
+  if (state.documentKind !== "note") return false;
+  if (!session.rebasePath(from, to)) return false;
+  const path = session.path;
+  if (!path) return false;
+  markdownEditor.setSourcePath?.(path, state.vaultId);
+  pathBreadcrumb.render(path);
+  // The tab strip and the address bar carry the old path as well.
+  tabs.syncFromSession({ path, documentKind: "note" });
+  documentTabRow.sync(tabs.getState().tabs);
+  documentNavigation?.commit?.({ route: `/app/note/${encodeURI(path.replace(/\.md$/i, ""))}`, path, vaultId: state.vaultId ?? session.vaultId, documentKind: "note" }, "replace");
+  return true;
+}
+
+async function openNote(path, { historyMode = "push", fragment = "", reason = "" } = {}) {
   if (vaultLifecycle.switching) return false;
   baseNavigation?.invalidate?.();
-  if (!confirmDiscardChanges({ session, message: dirtyDiscardMessage("打开其他笔记吗？") })) return false;
+  if (!confirmDiscardChanges({ session, message: dirtyDiscardMessage(reason === "moved"
+    ? "这个笔记刚被改名，它的链接已在磁盘上重写。重新载入会丢弃未保存的输入。"
+    : "打开其他笔记吗？") })) return false;
   openAbort?.abort();
   openAbort = new AbortController();
   vaultEventsController?.abortRefresh();

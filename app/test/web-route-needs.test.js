@@ -73,6 +73,15 @@ const AUTHORISED_READOUTS = {
     assert.equal(r.status, 201);
     assert.equal(r.json.path, "NewFolder");
   },
+  // No Vault runtime is wired here, so the route refuses before any I/O.
+  "POST /api/web/v1/rename": (r) => {
+    assert.equal(r.status, 503);
+    assert.deepEqual(r.json, { error: "Vault runtime unavailable", code: "vault_unavailable" });
+  },
+  "POST /api/web/v1/delete": (r) => {
+    assert.equal(r.status, 503);
+    assert.deepEqual(r.json, { error: "Vault runtime unavailable", code: "vault_unavailable" });
+  },
   "POST /api/web/v1/asset": (r) => {
     assert.equal(r.status, 201);
     assert.ok(String(r.json.path).endsWith(".png"), `asset path: ${r.json.path}`);
@@ -114,6 +123,8 @@ function fakeRuntime(decision = ALLOW) {
 
 const session = (overrides = {}) => ({
   id: "web-session-1",
+  // A real session always carries its non-secret credential id (resolveWebSession).
+  credentialId: "web-session:fixture-hash",
   userId: "u1",
   vaultId: "default",
   allowedVaults: ["default"],

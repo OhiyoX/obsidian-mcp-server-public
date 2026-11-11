@@ -336,6 +336,46 @@ test("the Publishes filter and the document Publish state agree over HTTP", asyn
   }
 });
 
+test("a folder record whose path no longer resolves drops only its own members", async () => {
+  // The lifecycle keeps a folder record active when its target cannot be observed
+  // (`resolve_active_unverifiable`), so the candidate set can hold a record whose directory the
+  // folder walk cannot resolve. That record must not fail the whole filter: it contributes no
+  // member, the failure is logged, and a healthy folder beside it is still listed.
+  const stamp = "2026-01-01T00:00:00.000Z";
+  const file = path.join(data, "publish", "broken-folder.json");
+  const brokenId = "B".repeat(43);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify({
+    version: 3,
+    records: [
+      // `Notes/a.md` is a note, so `Sub` under it never resolves: the stat is ENOTDIR, the
+      // observation is unverifiable, and the record stays active exactly as the lifecycle says.
+      { id: brokenId, kind: "folder", vaultId: defaultWebVaultId(), path: "Notes/a.md/Sub", lifecycle: "active", createdAt: stamp, updatedAt: stamp, createdBy: "test" },
+      // The healthy record of the same Vault, walked after the broken one.
+      { id: "C".repeat(43), kind: "folder", vaultId: defaultWebVaultId(), path: "Notes", lifecycle: "active", createdAt: stamp, updatedAt: stamp, createdBy: "test" },
+    ],
+  }, null, 2), "utf8");
+  const service = new PublishService({ file });
+  await service.ready;
+  const reported = [];
+  const originalError = console.error;
+  console.error = (...args) => reported.push(args.map(String).join(" "));
+  const app = await startAuthedApp("broken-folder", { injectedPublishService: service });
+  try {
+    const response = await boundedFetch(`${app.base}/api/web/v2/search?q=published:true`, { headers: { Cookie: app.cookie } });
+    assert.equal(response.status, 200, "one broken folder record must not fail the filter");
+    const body = await response.json();
+    const returned = new Set(body.items.map((item) => item.path));
+    assert.equal(returned.has("Notes/c.md"), true, "the healthy folder's members are still listed");
+    assert.equal(returned.has("Notes/a.md"), true, "and the folder covers every visible note in it");
+  } finally {
+    console.error = originalError;
+    await app.close();
+  }
+  assert.equal(reported.length, 1, "the broken record is reported once, not swallowed");
+  assert.match(reported[0], new RegExp(brokenId), "the log line names the record");
+});
+
 test("the search route refuses a published: filter when the registry is unavailable", async () => {
   const app = await startAuthedApp("published-filter-broken", {
     injectedPublishService: { list: async () => { throw new Error("state file corrupt"); } },

@@ -164,37 +164,9 @@ test("unknown policy ids are reported and writes never happen", async (t) => {
   assert.equal(store.snapshot().revision, 0);
 });
 
-test("previewForSubject reports the current decision and the next opening", async (t) => {
-  const { store } = await makeStore(t);
-  const clock = fakeClock(MONDAY_INSIDE);
-  const runtime = createAccessPolicyRuntime({ enabled: true, store, now: clock.now });
-  await runtime.ready;
-  const admin = createAccessPolicyAdmin({ store, runtime, now: clock.now });
-  const created = await admin.createPolicy(suspendDraft());
-  assert.equal(created.ok, true);
-
-  const inside = await admin.previewForSubject("oauth-user:u1");
-  assert.equal(inside.subject, "oauth-user:u1");
-  assert.equal(inside.decision.allowed, true);
-  assert.equal(inside.timezone, "Asia/Shanghai");
-  assert.equal(inside.nextAllowedAt, new Date(MONDAY_INSIDE).toISOString(), "inside the window the current instant is allowed");
-  assert.equal(inside.now, new Date(MONDAY_INSIDE).toISOString());
-
-  clock.set(MONDAY_OUTSIDE);
-  const outside = await admin.previewForSubject("oauth-user:u1");
-  assert.equal(outside.decision.allowed, false);
-  assert.equal(outside.decision.mode, "suspend");
-  assert.equal(outside.decision.reason, "outside_window");
-  assert.equal(outside.decision.denyPolicyId, created.policy.id);
-  assert.deepEqual(outside.decision.matchedPolicyIds, [created.policy.id]);
-  assert.equal(outside.nextAllowedAt, TUESDAY_OPEN);
-  assert.equal(typeof outside.nextChangeAt, "string");
-
-  const other = await admin.previewForSubject("oauth-user:nobody");
-  assert.equal(other.decision.allowed, true);
-  assert.equal(other.decision.reason, "no_matching_policy");
-  assert.equal(other.timezone, null);
-});
+// This service holds no preview: the frozen runtime is not a source of truth, and a preview taken
+// from it would be a second verdict that could disagree. The one preview left is the constraint
+// page's read-only card (`adm.authz2.preview.readonly`), rendered from the stored document.
 
 test("orphaned subjects are flagged for the operator but never block a save", async (t) => {
   const { store } = await makeStore(t);
@@ -293,12 +265,8 @@ test("the Admin service is not gated by its own suspend/revoke policies", async 
   assert.equal(disabled.ok, true);
   assert.equal(disabled.revision, 3);
 
-  // The service reports (not enforces) the revoke: the preview is denied while
-  // the policy is still present.
-  const preview = await admin.previewForSubject("oauth-user:admin");
-  assert.equal(preview.decision.allowed, false);
-  assert.equal(preview.decision.mode, "revoke");
-
+  // The policy's own effect while it is present is not this service's answer any more: the preview
+  // moved to the per-Vault decision function (see the note above `orphaned subjects`).
   const removed = await admin.deletePolicy(block.policy.id, 3);
   assert.equal(removed.ok, true);
   assert.equal(removed.revision, 4);

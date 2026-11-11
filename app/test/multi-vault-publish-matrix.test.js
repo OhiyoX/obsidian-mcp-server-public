@@ -205,7 +205,7 @@ test("§1.3 dual-Vault: a secondary publish/status/revoke touches only the secon
 
     // On-disk truth: exactly one record, bound to the secondary Vault.
     const store = await rawStore();
-    assert.equal(store.version, 2);
+    assert.equal(store.version, 3);
     assert.equal(store.records.length, 1, "a secondary publish must add exactly one record");
     assert.equal(store.records[0].vaultId, SECONDARY);
     assert.equal(store.records[0].path, "Notes/same.md");

@@ -12,6 +12,14 @@
 // hash-routed single file, the Admin plane is server-rendered under `/admin/auth`.
 
 /** The nine Admin pages the lane brief names. `id` is the name used in reports. */
+//
+// The prototype's policy EDITOR (`#/authz/new`) is deliberately NOT paired: Task 3 froze the legacy
+// write surface, so the plane has no editor form, no draft round trip and no save — `?new=1` renders
+// the frozen list. Comparing the prototype's form against a page that can never hold one would force
+// the gate to waive every control of that page (`.chk`, `.chip`, `.fld`, `fieldset.fs`, `.btn.primary`,
+// `.ped-foot`), which is exactly what a parity gate must not do. The surviving surfaces of the same
+// data are still paired: `authz` (the list, the `?id=` drawer vocabulary) and the read-only `?edit=`
+// view, which the no-JS and design scenes assert.
 export const PARITY_PAGES = Object.freeze([
   Object.freeze({
     id: "overview",
@@ -76,18 +84,38 @@ export const PARITY_PAGES = Object.freeze([
     live: "/admin/auth/access-policy",
     table: true,
     drawer: null,
-  }),
-  Object.freeze({
-    id: "authz-editor",
-    title: "定时授权 · 策略编辑器",
-    proto: "#/authz/new",
-    live: "/admin/auth/access-policy?new=1",
-    table: false,
-    drawer: null,
-    // The editor is a whole page in the prototype (`renderPolicyEditor`); the live route is the
-    // one the previous implementation already published (`?new=1`). A lane that moves it elsewhere
-    // must say so here — the gate names the alias it tried.
-    aliases: Object.freeze(["/admin/auth/access-policy?new=1"]),
+    /**
+     * Prototype elements this page deliberately does not render, each with the reason (printed as a
+     * note on every run, never dropped silently).
+     *
+     * Task 3 froze the legacy write surface (design §7 step 2 + step 5): the 当前状态预览 card was a
+     * POST form to the frozen `/preview` route — with the script running it fetched the verdict for a
+     * chosen subject and adopted it in place — and 新建策略 created a policy in the frozen document.
+     * Rendering either would be a promise the route refuses with 409. Everything else on the page
+     * (the table, its columns, the window cells, the `?id=` drawer vocabulary, the banners) is still
+     * compared verbatim, and the same verdicts/revision are still readable on the `?edit=` view
+     * (`.ped-side`: 现在（…）判定, the 7-day timeline and the summary).
+     */
+    omitted: Object.freeze([
+      Object.freeze({
+        selector: ".main .sect",
+        reason: "「当前状态预览」区域的容器：它是一张 POST 到已冻结 /preview 路由的表单（Task 3 冻结了全部旧写入端点）。"
+          + "只读视图（?edit=）里的 .ped-side 仍显示同一份现在判定与 7 天时间轴。",
+      }),
+      Object.freeze({
+        selector: ".main .sect-h",
+        reason: "同一区域的分区标题：「当前状态预览」的 h2 行随那张已冻结的 POST 表单一起移除，单独保留一个空标题只会是死链接。",
+      }),
+      Object.freeze({
+        selector: ".main .card",
+        reason: "同一区域的内容卡片：卡片里的主体 select 与「查看」提交按钮就是那张已冻结的 POST 表单，卡片本身没有别的用途。",
+      }),
+      Object.freeze({
+        selector: ".main .btn.primary",
+        reason: "「新建策略」是创建入口：旧策略文档已冻结（409 access_policy_frozen），只读页面不能提供它；"
+          + "按 Vault 的定时约束在新的定时授权页面（/admin/auth/authz）创建。",
+      }),
+    ]),
   }),
   Object.freeze({
     id: "vaults",
@@ -209,8 +237,9 @@ export const ELEMENT_CANDIDATES = Object.freeze([
 export const ELEMENT_EQUIVALENTS = Object.freeze({
   '.main .switch': Object.freeze({
     accept: Object.freeze(['.main .chk', '.main input[type=checkbox]']),
-    reason: '原型用 `<button class="switch">`（脚本翻状态）；SSR 无脚本、无 CSP 例外，开关只能由真实表单控件承担，'
-      + '原生 checkbox（`.chk` 标签）提交同一状态字段，是同一个控件的等价表达（`authz-editor.js` 的 状态 字段）。',
+    reason: '原型用 `<button class="switch">`（脚本翻状态）；SSR 无脚本、无 CSP 例外，一个要提交状态的开关只能由真实表单控件承担。'
+      + '这条替换让“页面必须有这个控件”在那种写法下仍然成立，而不是把控件豁免掉。当前没有页面用到它（Vault 的开关是提交按钮，'
+      + '定时授权的总开关是 `role="img"` 的只读指示），保留是为了让下一个这样的页面不必新增豁免。',
   }),
 });
 

@@ -12,6 +12,9 @@
 // > Phase 3A 契约前置决策（冻结，2026-10-04）
 import path from "node:path";
 import { allTagsForNote } from "../../obsidian.js";
+import { listVisibleNotes } from "../../publish/folder-listing.js";
+import { PUBLISH_RECORD_KINDS } from "../../publish/lifecycle.js";
+import { resolveCanonicalVault } from "../vault-registry.js";
 import { evaluateObsidianQuery, expandOccurrenceSnippets, expandTagSnippets } from "../../search/evaluator.js";
 import { parseObsidianQuery } from "../../search/obsidian-query.js";
 import { recallFromSnapshot } from "../../retrieval.js";
@@ -60,7 +63,25 @@ export function extractPublishFilter(rawQuery) {
 // Both the v2 search route and the deprecated v1 notes route call this helper.
 export async function resolvePublishedPaths(publishService, vaultId) {
   const records = await publishService.list({ vaultIds: [vaultId] });
-  return new Set(records.map((item) => item.path));
+  const paths = new Set(records.map((item) => item.path));
+  // A folder record publishes what its index lists, so `published:true` must match a folder
+  // member too. The walk is the folder's own (`listVisibleNotes`), so the filter and the public
+  // index can never disagree.
+  for (const record of records) {
+    if (record.kind !== PUBLISH_RECORD_KINDS.FOLDER) continue;
+    try {
+      const vault = await resolveCanonicalVault(record.vaultId);
+      const { notes } = await listVisibleNotes({ vault, folderPath: record.path, folderId: record.id });
+      for (const note of notes) paths.add(note.path);
+    } catch (error) {
+      // One broken record must not decide the whole filter: the lifecycle keeps a record active
+      // when its target cannot be observed (`resolve_active_unverifiable`), and a path that no
+      // longer resolves throws here. That record contributes no member and the search continues;
+      // the failure is reported once per record, never silently dropped.
+      console.error(`Web Catalog published-folder walk failed (${record.id}):`, error?.message || error);
+    }
+  }
+  return paths;
 }
 
 // Public limit contract: default 50, 1..200, decimal integers only; anything else is

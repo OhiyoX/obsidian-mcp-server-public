@@ -19,7 +19,6 @@ const PAGES = Object.freeze([
   ["publishes", "?tab=publishes"],
   ["audit", "?tab=audit"],
   ["authz", "access-policy"],
-  ["authz-editor", "access-policy?new=1"],
   ["vaults", "vault-git"],
 ]);
 
@@ -42,8 +41,20 @@ export async function registerDocumentScrollChecks(ctx) {
   const { check, page, goto, tracePhase } = ctx;
 
   await check("admin-layout: 页面本身不滚动（100vh 外壳），只有 .content 内部滚动", async () => {
+    const pages = [...PAGES];
+    // The legacy editor is a read-only `?edit=` view now (`?new=1` renders the frozen list: there is no
+    // form to open), and a policy id is generated, so the first stored row names it. Its `.ped` grid is
+    // the second surface the 2026-10-31 defect came from, so it is scanned instead of dropped.
+    await goto("/admin/auth/access-policy");
+    const editRoute = await page.evaluate(`(() => {
+      const link = [...document.querySelectorAll('.main a[href*="?id="]')].find((node) => /\\?id=/.test(node.getAttribute('href') || ''));
+      if (!link) return null;
+      const url = new URL(link.getAttribute('href'), location.origin);
+      return url.pathname.replace('/admin/auth/', '') + url.search.replace('?id=', '?edit=');
+    })()`);
+    if (editRoute) pages.push(["authz-view", editRoute]);
     const report = [];
-    for (const [id, route] of PAGES) {
+    for (const [id, route] of pages) {
       await goto(`/admin/auth/${route}`);
       const m = await measure(page);
       report.push({ id, ...m });

@@ -84,8 +84,8 @@ const contracts = {
   skill_validate: ["valid errors warnings", "path title version trusted risk triggers"],
   skill_export: ["path skill schema format entries entryCount fileCount compressedBytes uncompressedBytes sha256 revision executionAuthorized"],
   skill_import: ["archivePath destination skill schema dryRun files warnings executionAuthorized", "imported validation revision"],
-  get_publish_status: ["vaultId path privatePath privateUrl published", "publicPath publicUrl publishedAt"],
-  manage_publish: ["vaultId path privatePath privateUrl published changed", "publicPath publicUrl publishedAt"],
+  get_publish_status: ["vaultId path privatePath privateUrl published", "kind publicPath publicUrl publishedAt"],
+  manage_publish: ["vaultId path privatePath privateUrl published changed", "kind publicPath publicUrl publishedAt"],
   plan_note_changes: ["planId planHash createdAt expiresAt changed changes warnings"],
   plan_move_note: ["planId planHash createdAt expiresAt changed changes warnings"],
   plan_delete_note: ["planId planHash createdAt expiresAt changed changes warnings"],
@@ -101,7 +101,7 @@ const arrayFields = new Set("tools workflow boundaries acceptedExtensions entrie
 const booleanFields = new Set("ok versionHistoryEnabled readOnly truncated created complete overwrite acceptedOnly cancelled backupRemoved recursive valid supportedSubset committed pulled pushed force embeddings queuedFollowUp semanticRequested semanticUsed hybridUsed fallbackUsed executionAuthorized trusted dryRun exists changed removed idempotentReplay clean published sha256Required".split(" "));
 const numberFields = new Set("maxVersionsPerFile maxReadBytes byteLength previousSizeInBytes currentSizeInBytes totalCount totalScanned totalMatched totalCandidates uploadedBytes totalBytes nextOffset size recommendedChunkBytes entryCount fileCount compressedBytes uncompressedBytes extracted imported notes chunks embeddedChunks links line shrinkRatio maxBytes".split(" "));
 const objectFields = new Set("writes entrypoints routing nextRead compatibility index onboarding cache stat range canvas summary frontmatter moved configuration author push semantic indexJob counts orphans deadends base configuredTypes block writeAuthor validation".split(" "));
-const nullableFields = new Set("backup completedAt expectedSha256 semanticError branch path updatedAt embeddingModel view type reason finishedAt publicPath publicUrl publishedAt preWriteVersionId defaultView".split(" "));
+const nullableFields = new Set("kind backup completedAt expectedSha256 semanticError branch path updatedAt embeddingModel view type reason finishedAt publicPath publicUrl publishedAt preWriteVersionId defaultView".split(" "));
 
 const perToolFields = {
   patch_base: { changed: z.boolean() },

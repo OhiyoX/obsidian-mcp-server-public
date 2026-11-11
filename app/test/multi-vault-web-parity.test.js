@@ -277,9 +277,9 @@ test("Web surface has no history/trash/version/Git entry point (old-red 10 conte
   }
   const frozen = [...paths].sort();
   assert.deepEqual(frozen, [
-    "/api/web/v1", "/api/web/v1/asset", "/api/web/v1/base", "/api/web/v1/base/raw", "/api/web/v1/events", "/api/web/v1/folder",
+    "/api/web/v1", "/api/web/v1/asset", "/api/web/v1/base", "/api/web/v1/base/raw", "/api/web/v1/delete", "/api/web/v1/events", "/api/web/v1/folder",
     "/api/web/v1/link/resolve", "/api/web/v1/note", "/api/web/v1/note-context/", "/api/web/v1/notes",
-    "/api/web/v1/publish", "/api/web/v1/session", "/api/web/v1/tags", "/api/web/v1/theme-asset",
+    "/api/web/v1/publish", "/api/web/v1/rename", "/api/web/v1/session", "/api/web/v1/tags", "/api/web/v1/theme-asset",
     "/api/web/v1/theme.css", "/api/web/v1/themes", "/api/web/v1/vault", "/api/web/v1/vault/select",
     "/api/web/v1/vaults", "/api/web/v2", "/api/web/v2/search", "/api/web/v2/tree",
   ]);

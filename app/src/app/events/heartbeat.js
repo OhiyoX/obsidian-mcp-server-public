@@ -17,6 +17,15 @@ export function startSubscriberHeartbeat({ subscriber, broker, vaultId, revalida
         broker.close(subscriber, { end: true });
         return;
       }
+      // One row per heartbeat: the same delivery check the frames use, so a stream that
+      // loses its right between ticks is visible before the next frame.
+      if (typeof subscriber.authorizeDelivery === "function") {
+        const decision = subscriber.authorizeDelivery({ type: "heartbeat", vaultId });
+        if (decision && decision.allowed === false) {
+          broker.close(subscriber, { end: true });
+          return;
+        }
+      }
       if (subscriber.res?.writableEnded || subscriber.res?.ended) {
         broker.close(subscriber, { end: true });
         return;

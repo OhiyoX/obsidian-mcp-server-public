@@ -125,10 +125,12 @@ export const DEFAULT_VAULT_ID = process.env.WEB_VAULTS_ROOT
 
 | 面 | 现状 | 位置 |
 | --- | --- | --- |
-| 存储 schema | 明文 JSON（`DATA_PATH` 下 OAuth 持久化文件，`mode 0o600`）：`oauthUsers[id].allowedVaults`、`apiKeys[digest].allowedVaults`、`accessTokens[digest].allowedVaults`、`refreshTokens[digest].allowedVaults` | `oauth/persistence-methods.js:29-45`、`oauth/protocol-methods.js:136-143` |
+| 存储 schema | 明文 JSON（`DATA_PATH` 下 OAuth 持久化文件，`mode 0o600`）：`oauthUsers[id].allowedVaults`、`apiKeys[digest].allowedVaults`、`accessTokens[digest].allowedVaults`、`refreshTokens[digest].allowedVaults`；默认库偏好另存为 `oauthUsers[id].defaultVaultId` / `apiKeys[digest].defaultVaultId` / `clientUsage[clientId].defaultVaultId`（缺字段＝继承上层，不带 schema 版本） | `oauth/persistence-methods.js:29-45`、`oauth/protocol-methods.js:136-143` |
 | 校验/归一 | `normalizedVaults()`：去重、trim、非空、≤80 字符、禁 `\ / \0`、禁 `.`/`..`；违反则 `InvalidRequestError` | `oauth/primitives.js:59-67` |
 | token 铸造时来源 | 授权码交换：取 `oauthUsers[userId].allowedVaults`（无 userId → `[DEFAULT_VAULT_ID]`）；refresh 沿用 `record.allowedVaults` | `oauth/protocol-methods.js:163`、`:190` |
 | 运行时读取 | `verifyAccessToken` 返回 `allowedVaults: [...record.allowedVaults]`；`verifyApiKey` 同理 | `oauth/protocol-methods.js:203`、`oauth-provider.js:137-145` |
+| 默认库解析（2026-11-05） | `verifyAccessToken` 每请求现算 `defaultVaultId = clientUsage[clientId].defaultVaultId ?? oauthUsers[userId].defaultVaultId ?? null`，并给出 `defaultVaultLayer: client|account|null`；`effectiveVaultId()` 仍只消费 `auth.defaultVaultId`，优先级 `显式 vaultId > 默认库 > primary` | `oauth/protocol-methods.js:247`、`default-vault.js`、`tools/info.js:132` |
+| Web 会话默认库（2026-11-05） | 登录建会话 `vaultId = oauthUsers[userId].defaultVaultId ?? allowedVaults[0] ?? defaultWebVaultId()`；会话记住的手选优先；记住的库失效时回落 `账号默认（若仍允许） → allowedVaults[0]` | `app/auth-routes.js:80`、`app/web-session-resolve.js:46` |
 | Admin 修改入口 | 建/改 api key：`selectedVaults(req.body)`（至少一个 Vault，否则报错）；改用户：`/admin/auth/oauth/user/scopes` 的 vault 勾选 | `admin/auth-center.js:387-401`、`:340`（用户行 `vaultOptions`） |
 | Admin 只读展示 | 凭据表列出 `allowedVaults`；`configured-env` 行的 allowlist 显示为 `vaults.filter(primary)` 且 `immutable: true` | `admin/auth-center.js:353`、`:317` |
 | **configured env API key** | **只有 primary**：`app/src/auth.js:220` 硬编码 `allowedVaults: [DEFAULT_VAULT_ID]`，且**不查库**。Admin 侧展示为 primary 列表并标 `immutable`（在受保护 `.env` 轮换） | `auth.js:220`、`admin/auth-center.js:317` |

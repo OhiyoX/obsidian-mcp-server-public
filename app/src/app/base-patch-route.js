@@ -56,9 +56,8 @@ import { encodeDocumentRoute } from "../publish/service.js";
 import { withRequestContext } from "../request-context.js";
 import { assertWritable } from "../vault.js";
 import { readBaseInRoot } from "./base-reader.js";
+import { createWebAuthorizationAsks, WEB_ROUTE_SCOPE_CHECKS, webReadRouteGate, webWriteRouteGate } from "./access-policy.js";
 import { preconditionRequiredBody, readPrecondition } from "./web-precondition.js";
-
-const passThrough = (_req, _res, next) => next();
 
 // §5.3: the request body is an increment, so the write budget is the Web editor
 // budget bounded by the read budget; the *target* document budget stays the
@@ -108,8 +107,9 @@ export function registerBasePatchRoute(router, deps = {}) {
   const {
     requireApi,
     requireCsrf,
-    readGate = passThrough,
-    writeGate = passThrough,
+    policy = null,
+    authorizationShadow = null,
+    authorizationAsks = null,
     currentVault,
     provider,
     readBase = readBaseInRoot,
@@ -119,6 +119,14 @@ export function registerBasePatchRoute(router, deps = {}) {
     source = () => "unknown",
   } = deps;
   if (typeof writeBasePatch !== "function") throw new Error("registerBasePatchRoute requires writeBasePatch");
+  // Each face states its own catalog boundary key; a direct caller may inject a gate
+  // (`deps.readGate`/`deps.writeGate`), which is how the route tests replace the
+  // temporal plane without touching the handler.
+  const readGate = deps.readGate
+    ?? webReadRouteGate(policy, "GET /api/web/v1/base/raw", { shadow: authorizationShadow });
+  const asks = authorizationAsks ?? createWebAuthorizationAsks({});
+  const writeGate = deps.writeGate
+    ?? webWriteRouteGate(policy, "PATCH /api/web/v1/base", { shadow: authorizationShadow });
 
   // The write-surface raw view: the document bytes the PATCH endpoint operates on,
   // as a CAS-addressable resource (same ETag/304 shape as `GET /api/web/v1/note`).
@@ -153,7 +161,8 @@ export function registerBasePatchRoute(router, deps = {}) {
     try {
       // Same write pipeline as `POST /api/web/v1/note`: scope -> read-only mode ->
       // Vault from the session (never from the body) -> audit.
-      if (!req.webSession.allowedScopes.includes("obsidian.write")) return res.status(403).json({ error: "Account does not have write permission" });
+      // The route's own Scope class, asked again of the same runtime (duplicate defence).
+      if (!(await asks.route(req.webSession, "PATCH /api/web/v1/base", WEB_ROUTE_SCOPE_CHECKS.write))) return res.status(403).json({ error: "Account does not have write permission" });
       assertWritable();
       const requested = req.body?.path;
       if (typeof requested !== "string" || requested === "") return res.status(400).json({ error: "invalid-path", code: "invalid-path" });

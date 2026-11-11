@@ -3,7 +3,9 @@ import { createExplorerPrefetchIntent } from "./prefetch.js";
 import { createExplorerTouchPrefetchIntent } from "./prefetch-touch.js";
 import { bindFolderTouchIntent } from "./prefetch-touch-bind.js";
 import { ancestorChain, treeRenderSignature } from "./lazy-model.js";
-import { createExplorerCreateEntries, hasActiveDraft, setDraftSettledHandler, settleActiveDraft } from "./create-draft.js";
+import { createExplorerCreateEntries, beginDraft, hasActiveDraft, setDraftSettledHandler, settleActiveDraft } from "./create-draft.js";
+import { ROW_SELECTOR, createExplorerContextMenu, targetFromRow } from "./context-menu.js";
+import { t } from "../../core/i18n.js";
 import { renderLazyExplorer } from "./tree.js";
 import { createSettledReveal } from "./reveal-visibility.js";
 import { isSameNotePath, normalizePath } from "./path-identity.js";
@@ -36,7 +38,7 @@ import { renderSearchResults, syncSearchChrome } from "../search/search-view.js"
 // its own list host, so both views are rendered from the same model and switching tabs
 // never has to refetch or rebuild the other one. `showView` only reports which panel a
 // user-driven change should bring to the front; the chrome owns the tab state itself.
-export function createExplorerController({ state, host, searchHost, statusHost, filesStatusHost, api, toast, escapeHtml, openNote, createNote, openBase, openFile, showView }) {
+export function createExplorerController({ state, host, searchHost, statusHost, filesStatusHost, api, toast, escapeHtml, openNote, createNote, openBase, openFile, showView, enterWelcome = null, confirm = null, pathMoved = null }) {
   const sortStorage = resolveExplorerSortStorage();
   // Strict global preference, read synchronously before the first Tree render.
   let requestedSort = normalizeSortSpec(readExplorerSort(sortStorage));
@@ -426,6 +428,150 @@ export function createExplorerController({ state, host, searchHost, statusHost, 
     return "新建文件夹失败，请重试";
   }
 
+  // Task 7 / #427: the context menu (right click, `ContextMenu`, `Shift+F10`) and `F2` are two
+  // entries into one rename draft; the delete item asks the injected confirm first.
+  const contextMenu = createExplorerContextMenu({
+    host,
+    onRename: (target) => rename(target),
+    onDelete: (target) => removeEntry(target),
+    onPublishFolder: (target) => setFolderPublished(target, "publish"),
+    onUnpublishFolder: (target) => setFolderPublished(target, "revoke"),
+  });
+  // The shell injects its confirm; without one the global is the only asker, and a missing
+  // global refuses instead of deleting unasked.
+  const confirmAction = typeof confirm === "function"
+    ? confirm
+    : (message) => Boolean(globalThis.confirm?.(message));
+
+  // The rendered row for a path, resolved through the same rule the menu uses.
+  function rowOf(path) {
+    const wanted = normalizePath(path);
+    return [...host.querySelectorAll(ROW_SELECTOR)].find((row) => {
+      const candidate = targetFromRow(row);
+      return Boolean(candidate) && normalizePath(candidate.path) === wanted;
+    }) ?? null;
+  }
+
+  // The destination of a rename stays in the source's folder: only the name changes.
+  function siblingPath(path, name) {
+    const rel = normalizePath(path);
+    const cut = rel.lastIndexOf("/");
+    return cut === -1 ? name : `${rel.slice(0, cut)}/${name}`;
+  }
+
+  function renameFailureMessage(error) {
+    if (error?.code === "DESTINATION_INSIDE_SOURCE") return t("explorer.rename.insideSource");
+    if (error?.status === 400) return t("explorer.rename.unsupported");
+    if (error?.status === 409) return t("explorer.error.conflict");
+    if (error?.status === 413) return t("explorer.error.tooLarge");
+    return t("explorer.rename.failed");
+  }
+
+  // A path inside the entry that just moved, so an open note never keeps a dead path.
+  function withinEntry(path, entryPath) {
+    return typeof path === "string" && path !== "" && (path === entryPath || path.startsWith(`${entryPath}/`));
+  }
+
+  // One rename: the draft row is the whole form (prefilled, Enter commits, Escape cancels) and
+  // the server answers the destination path (a typed "Home" on a note becomes "Home.md").
+  function rename(target) {
+    if (!target?.path) return false;
+    const row = rowOf(target.path);
+    // A row that is no longer rendered gets no draft, so a stale path is never written.
+    if (!row) return false;
+    return beginDraft({
+      host,
+      container: row.parentNode,
+      before: row,
+      mode: "rename",
+      kind: target.kind,
+      initialValue: String(target.path).split("/").pop(),
+      onCommit: async (name) => {
+        const to = siblingPath(target.path, name);
+        let data;
+        try {
+          data = await api("/api/web/v1/rename", {
+            method: "POST",
+            body: JSON.stringify({ path: target.path, to, mutationId: `web-rename:${crypto.randomUUID()}` }),
+          });
+        } catch (error) {
+          toast(renameFailureMessage(error), true);
+          // `false` hands the row back with the typed name and the focus, never a silent loss.
+          return false;
+        }
+        const destination = data?.to || to;
+        // A renamed folder carries every open note inside it; a renamed note is its own move.
+        // `state.path` is the display copy. The document session needs the entry's own pair
+        // (`from` the old entry, `to` the new entry) and appends the suffix itself.
+        if (withinEntry(state.path, target.path)) {
+          const next = target.kind === "folder" ? `${destination}${state.path.slice(target.path.length)}` : destination;
+          // A folder rename rewrites the links inside its notes, so an open note whose links
+          // changed must be reloaded: its bytes on disk differ from the ones on screen.
+          const rewritten = Array.isArray(data?.updatedLinksIn) && data.updatedLinksIn.includes(next);
+          state.path = next;
+          // The identity moves first, so the next save posts the new path even when the reload
+          // below is refused. A refused reload then leaves the old revision, and the save
+          // answers 409 — the honest signal that the screen and the disk differ.
+          pathMoved?.(target.path, destination);
+          if (rewritten) await openNote?.(next, { reason: "moved" });
+        }
+        // The level that held the old row is stale; refresh it, then repaint the chrome.
+        await tree.invalidate(target.path).catch(() => {});
+        render();
+        toast(t("explorer.rename.done", { to: data?.to || to }));
+        const count = Array.isArray(data?.updatedLinksIn) ? data.updatedLinksIn.length : 0;
+        if (count) toast(t("explorer.rename.links", { count }));
+        return true;
+      },
+    });
+  }
+
+  // Safe delete: the entry moves to the Vault Trash, so the confirm names the path and the
+  // consequence. The open note leaves the editor when it was the deleted one.
+  async function removeEntry(target) {
+    if (!target?.path) return false;
+    if (!confirmAction(t("explorer.delete.confirm", { name: target.path }))) return false;
+    let data;
+    try {
+      data = await api("/api/web/v1/delete", {
+        method: "POST",
+        body: JSON.stringify({ path: target.path, confirm: true }),
+      });
+    } catch {
+      toast(t("explorer.delete.failed"), true);
+      return false;
+    }
+    if (withinEntry(state.path, target.path)) enterWelcome?.();
+    await tree.invalidate(target.path).catch(() => {});
+    render();
+    toast(t("explorer.delete.done", { name: data?.deleted || target.path }));
+    return true;
+  }
+
+  // A folder has no document page, so the menu is the only place to publish one. The server
+  // owns the folder caps; a refusal arrives as a coded status and is reported, never swallowed.
+  async function setFolderPublished(target, action) {
+    if (!target?.path) return false;
+    try {
+      await api("/api/web/v1/publish", {
+        method: "POST",
+        body: JSON.stringify({ path: target.path, action, kind: "folder" }),
+      });
+    } catch (error) {
+      toast(publishFolderFailureMessage(error), true);
+      return false;
+    }
+    toast(action === "publish" ? t("explorer.publish.done") : t("explorer.publish.revoked"));
+    return true;
+  }
+
+  function publishFolderFailureMessage(error) {
+    if (error?.status === 413) return t("explorer.publish.tooLarge");
+    if (error?.status === 403) return t("explorer.publish.readOnly");
+    if (error?.status === 400) return t("explorer.publish.invalid");
+    return t("explorer.publish.failed");
+  }
+
   // Commit one root folder. The server is the authority (path validation + 409);
   // on success the root is refetched, the new folder is expanded and scrolled to.
   async function createFolderAtRoot(rawName) {
@@ -475,6 +621,9 @@ export function createExplorerController({ state, host, searchHost, statusHost, 
     ensureVisible,
     isQueryActive,
     setSort,
+    rename,
+    removeEntry,
+    destroy: () => contextMenu.destroy(),
     setMode: (next) => {
       // A browse-mode switch is a scope change: an uncommitted draft belongs to the view
       // it was opened in and is cancelled, never committed behind the new view.

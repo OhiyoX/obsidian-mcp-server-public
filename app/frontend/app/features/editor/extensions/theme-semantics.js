@@ -39,7 +39,7 @@ function visibleSemanticSpans(node) {
  * Marks cover only visible content, never hidden Markdown chrome, so the
  * semantic class survives the source-marker replacement decorations.
  */
-export function addObsidianSemanticClass(ranges, node, seen) {
+export function addObsidianSemanticClass(ranges, node, seen, { headingApplies = true } = {}) {
   const mapped = NODE_CLASS.get(node.name);
   if (mapped) {
     for (const span of visibleSemanticSpans(node)) {
@@ -49,6 +49,8 @@ export function addObsidianSemanticClass(ranges, node, seen) {
   }
 
   if (node.name === "HeaderMark") {
+    // `###` with nothing after it is not a heading yet: keep it the literal text typed.
+    if (!headingApplies) return;
     const context = node.node.parent || node.node;
     const level = /^ATXHeading([1-6])$/.exec(context.name)?.[1];
     if (!level) return;

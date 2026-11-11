@@ -75,7 +75,7 @@ function throwCode(operation, code) {
 test("accepts an existing Markdown path and returns the canonical target", async () => {
   const { calls, resolvePath } = vaultResolver();
   const target = await normalizePublishTarget("Notes/a.md", { resolvePath });
-  assert.deepEqual(target, { path: "Notes/a.md", absolute: "/vault/Notes/a.md" });
+  assert.deepEqual(target, { path: "Notes/a.md", absolute: "/vault/Notes/a.md", kind: "document" });
   assert.deepEqual(calls, [{ userPath: "Notes/a.md", options: { assumeMarkdown: true } }]);
   assert.ok(Object.isFrozen(target));
   assert.equal(assertPublishableMarkdownPath(target.path), "Notes/a.md");
@@ -110,7 +110,7 @@ test("treats a name whose extension is not .md as non-Markdown (same rule as ass
 test("canonicalizes a non-Markdown or missing target without gating it", async () => {
   const { resolvePath } = vaultResolver();
   const canvas = await normalizePublishTarget("Notes/a.canvas", { resolvePath });
-  assert.deepEqual(canvas, { path: "Notes/a.canvas", absolute: "/vault/Notes/a.canvas" });
+  assert.deepEqual(canvas, { path: "Notes/a.canvas", absolute: "/vault/Notes/a.canvas", kind: "document" });
   const missing = await normalizePublishTarget("Notes/gone", { resolvePath });
   assert.equal(missing.path, "Notes/gone.md");
 });
@@ -136,7 +136,7 @@ test("accepts nested, non-ASCII and backslash-separated Vault paths", async () =
 
 test("accepts a resolver that answers with a bare canonical path string", async () => {
   const target = await normalizePublishTarget("Notes/a.md", { resolvePath: async () => "Notes/a.md" });
-  assert.deepEqual(target, { path: "Notes/a.md", absolute: null });
+  assert.deepEqual(target, { path: "Notes/a.md", absolute: null, kind: "document" });
 });
 
 // --- §12.2 Reject ---------------------------------------------------------------
@@ -318,6 +318,8 @@ test("exports a frozen, duplicate-free error code set", () => {
     "publish_target_missing",
     "publish_target_not_a_file",
     "publish_target_too_large",
+    "publish_folder_too_large",
+    "publish_folder_too_deep",
   ]);
   assert.equal(MARKDOWN_EXTENSION, ".md");
 });

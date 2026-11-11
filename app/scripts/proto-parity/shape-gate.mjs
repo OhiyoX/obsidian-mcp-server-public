@@ -71,6 +71,29 @@ export const SHAPE_DRAWER_ASSERTED = false;
  *     improving must not turn the gate red).
  */
 export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
+  // 2026-11-09 (Task 3 fix round 1): the subject drawers’ 定时授权 section lost its legacy attach
+  // control with the freeze — no rule picker (`select.grow.sel`), no option group, no 「应用」 submit
+  // button — and gained the notice's link to the per-Vault page. Four signatures, all of them the
+  // reviewed consequence of design §7 step 2; the drawer ratchet therefore starts from this set.
+  "原型有、实现没有：select.grow.sel :: -",
+  "原型有、实现没有：↻ option :: T { }",
+  "原型有、实现没有：btn.btn.ghost.sm :: T",
+  // 2026-11-09 (Task 7 item D restore): that link is tokenised as `route:authz`, not as the literal
+  // `route:/admin/auth/authz` the same entry used to spell. The mapping landed in `shape.mjs` with
+  // 2319aba0 (the sidebar’s 定时授权 entry and the constraint page must compare as one destination)
+  // and re-tokenised this anchor with it; the drawer stopped rendering the anchor, so nothing failed
+  // and the literal spelling went stale. One entry replaced by one entry: the frozen set keeps 71.
+  "实现有、原型没有：a [href=route:authz] :: T",
+  // 2026-11-06: #437 shipped, so the drawer states the reconciliation service's own facts instead
+  // of the prototype's dashed "planned" box, and the planned scan button is gone.
+  "原型有、实现没有：btn.btn.futonly :: -",
+  "原型有、实现没有：div.dsec.futonly :: -",
+  "原型有、实现没有：div.futbox :: -",
+  "原型有、实现没有：div.help :: T",
+  "原型有、实现没有：span.fut :: T",
+  "实现有、原型没有：br :: -",
+  "结构位置的文案只在原型里：.btn = <v>",
+  "结构位置的文案只在原型里：.futbox b = <v>",
   "原型有、实现没有：btn.btn.primary :: T",
   "原型有、实现没有：div :: -",
   "原型有、实现没有：div.fld :: -",
@@ -124,7 +147,6 @@ export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
   // capture renders the whole page, so its label appears here too. Signatures only — the drawer's own
   // section inventory is compared exactly in `compareDrawer` and is unchanged.
   "结构位置的文案只在实现里：.btn = <v>",
-  "实现有、原型没有：span.hide-m :: T",
   // 2026-10-31: the 主体侧栏 定时授权 section (owner request: configure a subject's window from its own
   // drawer, applying an existing rule). Both trees carry it — the prototype (5-render.js/6-app.js and
   // the inlined index.html) grew `subjectAuthzSection()`, so the section inventory, the `.dsec>h3`
@@ -133,10 +155,10 @@ export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
   // one, and where the two trees word the same row (label link, window text) differently for the
   // same reason any other row does. Recording them here is the deliberate-change path: a new kind of
   // drift stays red, these exact lines are named, and each one must still occur or the gate fails.
-  "原型有、实现没有：span.mono :: T",
+  // 2026-11-09: the two `span.mono` signatures of the same section are gone with the legacy attach
+  // control (`subject-authz.js` renders stored rules only, no picker), so the ratchet drops them here.
   "实现有、原型没有：a [href=route:authz:detail] :: T",
   "实现有、原型没有：b :: -",
-  "实现有、原型没有：span.mono :: T",
   "实现有、原型没有：↻ div :: - { idc :: T span.muted :: T }",
   "实现有、原型没有：↻ div :: N { span.muted :: T }",
   // 2026-10-31: the list tables sort by clicking a header, so each list's first row is now the
@@ -345,7 +367,13 @@ export async function registerProtoShapeChecks(ctx) {
   const report = base;
   report.drawerFailures = drawerOnly.failures;
   report.drawerNotes = drawerOnly.notes;
-  const hygiene = [...waiverFindings(SHAPE_WAIVERS), ...labelWaiverFindings(SHAPE_LABEL_WAIVERS)];
+  // A waiver whose state is not in the registry excuses nothing and would rot silently: the state is
+  // gone (a frozen page, a retired pairing), so no comparison ever consumes the line.
+  const knownStates = new Set([...SHAPE_STATES.map((state) => state.id), ...SHAPE_DRAWER_PAGES.map((page) => `${page}-drawer`)]);
+  const unknownStateWaivers = [...SHAPE_WAIVERS, ...SHAPE_LABEL_WAIVERS]
+    .filter((waiver) => !knownStates.has(waiver.state))
+    .map((waiver) => `[${waiver.state}] 的豁免指向一个未注册的状态（${waiver.line ?? waiver.label}）：状态没了就删掉这条豁免`);
+  const hygiene = [...waiverFindings(SHAPE_WAIVERS), ...labelWaiverFindings(SHAPE_LABEL_WAIVERS), ...unknownStateWaivers];
 
   /**
    * R2's second half: the report must SAY which differences are data-driven. A difference is data
@@ -641,14 +669,15 @@ export async function registerProtoShapeChecks(ctx) {
       link.removeAttribute('href');
       return 1;
     })()`, /无 href/);
-    // Q3: the editor's switch keeps its `.switch` look but loses the real checkbox (the prototype's
-    // own spelling is a scripted `<button>`): the switch may not be a dead control.
-    await expectRed(problems, '把开关的真实 checkbox 换成脚本按钮', 'authz-editor', `(() => {
-      const label = [...document.querySelectorAll('label.switch')].find((node) => node.querySelector('input[type=checkbox]'));
-      if (!label) return 0;
-      const button = document.createElement('button');
-      button.className = label.className; button.type = 'button';
-      label.replaceWith(button);
+    // Q3: a switch that LOOKS pressable must be able to act without script (the prototype's own
+    // spelling is a scripted `<button class="switch">`). Anchored on the 定时授权 master switch: the
+    // plane renders it as an inert, explicitly non-interactive indicator (`role="img"`), so dropping
+    // that marking must turn the dead-control contract red. (The frozen legacy page that used to carry
+    // the `<label class="switch">` + checkbox spelling has no form at all any more.)
+    await expectRed(problems, '把只读指示开关的 role 去掉（看起来可点了）', 'authz', `(() => {
+      const indicator = document.querySelector('.main span.switch[role="img"]');
+      if (!indicator) return 0;
+      indicator.removeAttribute('role');
       return 1;
     })()`, /无脚本时不会生效的开关/);
     assert.deepEqual(problems, [], problems.join('\n'));
@@ -707,7 +736,7 @@ export async function registerProtoShapeChecks(ctx) {
     const fakeSubmit = waiverFindings([{ state: 'audit', line: 'div.sect :: -', side: 'live-only', kind: 'no-js-submit', reason: 'x'.repeat(48) }]);
     if (!fakeSubmit.some((line) => line.includes('no-js-submit'))) problems.push('把区域行声明成 no-js-submit 没有被拒绝');
     // Q3: a region is never “one datum differs” — `data` may not excuse a container line.
-    const regionAsData = waiverFindings([{ state: 'authz-editor', line: 'div.cap-g :: -', side: 'live-only', kind: 'data', reason: 'x'.repeat(48) }]);
+    const regionAsData = waiverFindings([{ state: 'audit', line: 'div.cap-g :: -', side: 'live-only', kind: 'data', reason: 'x'.repeat(48) }]);
     if (!regionAsData.some((line) => line.includes('目录区域') || line.includes('区域容器'))) problems.push('用 data 豁免区域容器没有被拒绝');
     // Q2: two entries naming the same (state, line, side) would hide each other's staleness.
     const duplicate = waiverFindings([

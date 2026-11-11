@@ -47,7 +47,7 @@ that is a source-level fact, not yet a production-level one.
 
    **The ops sink must be configured and proven; it is a mandatory pre-gate.**
    Measured on the production host: the container runs the Docker **`json-file`** driver
-   and its log lives at `/var/lib/docker/containers/<container-id>/<id>-json.log`, i.e.
+   and its log lives at `/srv/@docker/containers/<container-id>/<id>-json.log`, i.e.
    a **per-container** path that `docker rm` / recreate deletes with the container. It is
    a different volume from the app data, but it is **not** durable across a redeploy, so
    it cannot be the evidence sink on its own.
@@ -202,7 +202,9 @@ Boundaries (all verified with `docker inspect`, and deliberately narrow):
 | root filesystem | `read_only: true` (only `/tmp` is a tmpfs) |
 | capabilities | `cap_drop: [ALL]` + `no-new-privileges:true` |
 | network exposure | no ports; it only reaches the app by service name |
-| filesystem access | `./data:/data:ro` — read-only, so it can never modify evidence |
+| filesystem access | `./data:/data:ro`, plus `./data/ops-log` read-write — the sink must be
+  writable for the uid, or `[ -w /data/ops-log ]` reports a fault for the wrong reason. The
+  monitor can write only inside that one directory; every evidence file it reads stays read-only |
 | identity | `user: "1002:10"`, the same uid as the app, so `test -w` reflects reality |
 | host footprint | none: no systemd unit, no host directory, no Docker daemon config change |
 

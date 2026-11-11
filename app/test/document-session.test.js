@@ -158,6 +158,34 @@ test("same-document reload protects edits made while reload pending", () => {
   assert.equal(session.path, "A.md");
 });
 
+test("a rename rebases the open document, so its next save posts the new path", async () => {
+  const session = createDocumentSession({ createMutationId: () => "m-r" });
+  openDoc(session, { path: "Old.md", content: "text", revision: "r1" });
+
+  assert.equal(session.rebasePath("Old.md", "New.md"), true);
+  assert.equal(session.path, "New.md");
+  assert.equal(session.baseRevision, "r1", "the content did not change, only the name");
+
+  session.noteLocalEdit("text typed after the rename");
+  const seen = [];
+  const saved = await session.enqueueSave(async (mutation) => {
+    seen.push(mutation.path);
+    return { revision: "r2" };
+  }, { getLiveText: () => "text typed after the rename" });
+  assert.deepEqual(seen, ["New.md"], "the save must not post the old path");
+  assert.notEqual(saved, null);
+});
+
+test("a folder rename rebases an open note inside it, and an unrelated note stays", () => {
+  const session = createDocumentSession();
+  openDoc(session, { path: "Projects/One.md", content: "x", revision: "r1" });
+  session.rebasePath("Projects", "Work");
+  assert.equal(session.path, "Work/One.md");
+
+  session.rebasePath("Elsewhere", "Other");
+  assert.equal(session.path, "Work/One.md", "a rename elsewhere never moves the open note");
+});
+
 test("save during new input keeps dirty and updates baseline revision", async () => {
   let live = "save snapshot";
   const session = createDocumentSession({ createMutationId: () => "m1" });

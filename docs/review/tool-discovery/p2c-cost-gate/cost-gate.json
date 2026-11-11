@@ -3,7 +3,7 @@
   "generatedBy": "app/scripts/tool-discovery-cost-gate.mjs",
   "mode": "phase2c cost gate (offline static)",
   "source": {
-    "commit": "289c143b13aef78f967f3b920ca77fd47737ea8a",
+    "commit": "1ac421359e433d8e377e648ef68012d121fb2b1d",
     "commitIsInformational": true,
     "exactSourceSha": null,
     "provenance": "Offline, deterministic. Recomputable from the current worktree without a live server; the content digest is over everything except this `source` block. `commit` is the pre-generation HEAD and is informational only (generation predates the commit that ships the artifact); it is not an exact source digest."
@@ -303,11 +303,11 @@
       "get_note_version",
       "compare_note_versions"
     ],
-    "descriptorBytes": 174471,
-    "inputSchemaBytes": 42093,
-    "outputSchemaBytes": 73790,
-    "toolsListPayloadBytes": 174574,
-    "estimatedTokens": 43618,
+    "descriptorBytes": 174791,
+    "inputSchemaBytes": 42147,
+    "outputSchemaBytes": 73956,
+    "toolsListPayloadBytes": 174894,
+    "estimatedTokens": 43698,
     "annotationCensus": {
       "readOnly": 53,
       "destructive": 31,
@@ -1065,10 +1065,10 @@
         "compare_note_versions"
       ],
       "cost": {
-        "descriptorBytes": 174471,
-        "inputSchemaBytes": 42093,
-        "outputSchemaBytes": 73790,
-        "estimatedTokens": 43618
+        "descriptorBytes": 174791,
+        "inputSchemaBytes": 42147,
+        "outputSchemaBytes": 73956,
+        "estimatedTokens": 43698
       },
       "reductionVsFull": {
         "hiddenTools": 0,
@@ -1182,8 +1182,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 86,
-        "descriptorBytesSaved": 157199,
-        "descriptorBytesReduction": 0.9010036051836695
+        "descriptorBytesSaved": 157519,
+        "descriptorBytesReduction": 0.9011848436132295
       },
       "coverage": {
         "fixtures": 50,
@@ -1512,8 +1512,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 90,
-        "descriptorBytesSaved": 168995,
-        "descriptorBytesReduction": 0.9686136951126548
+        "descriptorBytesSaved": 169315,
+        "descriptorBytesReduction": 0.9686711558375432
       },
       "coverage": {
         "fixtures": 50,
@@ -1888,8 +1888,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 84,
-        "descriptorBytesSaved": 157781,
-        "descriptorBytesReduction": 0.9043394031099724
+        "descriptorBytesSaved": 158101,
+        "descriptorBytesReduction": 0.9045145345012043
       },
       "coverage": {
         "fixtures": 50,
@@ -2235,8 +2235,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 88,
-        "descriptorBytesSaved": 165280,
-        "descriptorBytesReduction": 0.9473207581775768
+        "descriptorBytesSaved": 165600,
+        "descriptorBytesReduction": 0.9474172011144738
       },
       "coverage": {
         "fixtures": 50,
@@ -2636,8 +2636,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 74,
-        "descriptorBytesSaved": 138307,
-        "descriptorBytesReduction": 0.7927219996446401
+        "descriptorBytesSaved": 138627,
+        "descriptorBytesReduction": 0.7931014754764262
       },
       "coverage": {
         "fixtures": 50,
@@ -3022,8 +3022,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 79,
-        "descriptorBytesSaved": 157569,
-        "descriptorBytesReduction": 0.9031243014598415
+        "descriptorBytesSaved": 157889,
+        "descriptorBytesReduction": 0.9033016574079901
       },
       "coverage": {
         "fixtures": 50,
@@ -3416,8 +3416,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 76,
-        "descriptorBytesSaved": 143534,
-        "descriptorBytesReduction": 0.8226811332542371
+        "descriptorBytesSaved": 143854,
+        "descriptorBytesReduction": 0.8230057611661927
       },
       "coverage": {
         "fixtures": 50,
@@ -3795,8 +3795,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 86,
-        "descriptorBytesSaved": 166334,
-        "descriptorBytesReduction": 0.9533618767588883
+        "descriptorBytesSaved": 166654,
+        "descriptorBytesReduction": 0.9534472598703595
       },
       "coverage": {
         "fixtures": 50,
@@ -4181,8 +4181,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 79,
-        "descriptorBytesSaved": 149991,
-        "descriptorBytesReduction": 0.8596901490792166
+        "descriptorBytesSaved": 150311,
+        "descriptorBytesReduction": 0.8599470224439474
       },
       "coverage": {
         "fixtures": 50,
@@ -4535,8 +4535,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 91,
-        "descriptorBytesSaved": 170678,
-        "descriptorBytesReduction": 0.9782599973634587
+        "descriptorBytesSaved": 170998,
+        "descriptorBytesReduction": 0.9782997980445217
       },
       "coverage": {
         "fixtures": 50,
@@ -4928,15 +4928,15 @@
         "manage_publish"
       ],
       "cost": {
-        "descriptorBytes": 3622,
-        "inputSchemaBytes": 558,
-        "outputSchemaBytes": 1861,
-        "estimatedTokens": 906
+        "descriptorBytes": 3942,
+        "inputSchemaBytes": 612,
+        "outputSchemaBytes": 2027,
+        "estimatedTokens": 986
       },
       "reductionVsFull": {
         "hiddenTools": 90,
         "descriptorBytesSaved": 170849,
-        "descriptorBytesReduction": 0.9792401029397436
+        "descriptorBytesReduction": 0.9774473514082533
       },
       "coverage": {
         "fixtures": 50,
@@ -5327,8 +5327,8 @@
       },
       "reductionVsFull": {
         "hiddenTools": 83,
-        "descriptorBytesSaved": 155392,
-        "descriptorBytesReduction": 0.8906465830997702
+        "descriptorBytesSaved": 155712,
+        "descriptorBytesReduction": 0.8908467827290879
       },
       "coverage": {
         "fixtures": 50,
@@ -5691,8 +5691,8 @@
       "workflows": 5
     },
     "allCoverExpected": true,
-    "descriptorBytesTotal": 994696,
-    "descriptorBytesMin": 3622,
+    "descriptorBytesTotal": 995656,
+    "descriptorBytesMin": 3942,
     "descriptorBytesP50": 19079,
     "descriptorBytesP95": 36164,
     "descriptorBytesMax": 36164,
@@ -6069,7 +6069,7 @@
           "publish"
         ],
         "toolCount": 2,
-        "descriptorBytes": 3622,
+        "descriptorBytes": 3942,
         "coversExpected": true,
         "missing": []
       },
@@ -6080,7 +6080,7 @@
           "publish"
         ],
         "toolCount": 2,
-        "descriptorBytes": 3622,
+        "descriptorBytes": 3942,
         "coversExpected": true,
         "missing": []
       },
@@ -6091,7 +6091,7 @@
           "publish"
         ],
         "toolCount": 2,
-        "descriptorBytes": 3622,
+        "descriptorBytes": 3942,
         "coversExpected": true,
         "missing": []
       },
@@ -6270,12 +6270,12 @@
       "plans"
     ],
     "toolCount": 91,
-    "descriptorBytes": 170678,
+    "descriptorBytes": 170998,
     "totalToolsets": 11,
     "toolsetsOmitted": [
       "context"
     ],
-    "descriptorBytesReduction": 0.021740002636541318,
+    "descriptorBytesReduction": 0.021700201955478258,
     "semantics": "Smallest fixed module bundle (by descriptor bytes) that statically exposes all fixture expected tools. Static coverage is necessary but not sufficient for a default shrink; see gate."
   },
   "unmeasured": [
@@ -6347,6 +6347,6 @@
   },
   "contentDigest": {
     "bytes": 110347,
-    "sha256": "f50f4706da62bf208958f88d637c224324f0ad08e06e7f1772f2def638f5f520"
+    "sha256": "f13dd49cc1f234d2cc25f020f01b216673f380b00d481ae046e7cfaadd0337da"
   }
 }

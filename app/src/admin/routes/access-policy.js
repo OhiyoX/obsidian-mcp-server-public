@@ -1,38 +1,39 @@
-// 定时授权 (access-policy) route module — the lane's replacement for the legacy shim.
+// 定时授权 (access-policy) route module — the legacy surface, frozen.
 //
-// Owned surface: `GET {base}` (list, `?id=` drawer, `?edit=`/`?new=`/`?copy=` editor, `?confirm=delete`
-// confirm page) plus the write endpoints `POST {base}/{create,update,toggle,delete,preview,repair}`.
-// Service semantics are unchanged and remain the authority: `createPolicy` / `updatePolicy` (incl.
-// `setEnabled`) / `deletePolicy` / `previewForSubject` / `repairFromCandidate`, the store CAS
-// (`expectedRevision`) and the schema validation all run exactly as before — this module only
-// decodes the form, renders the prototype's markup (see `pages/authz.js`, `pages/authz-editor.js`)
-// and maps a rejection to a status code plus an honest message.
+// Owned surface: `GET {base}` (list, `?id=` drawer, `?edit=` read-only view). The seven legacy write
+// endpoints (`POST {base}/{create,update,toggle,delete,preview,repair,subjects}`) are still registered
+// so an old bookmark or form answers honestly,
+// but every one of them refuses with 409 `access_policy_frozen` (design §7 step 2 + step 5, ruling R6 for
+// `repair`): the per-Vault document decides now, and an accepted legacy edit would be stored and never
+// apply. See `pages/authz.js` (`LEGACY_POLICY_FROZEN_CODE` / `LEGACY_POLICY_REPLACEMENT`) for the
+// read-only face of the same fact.
 //
 // Hard rules kept from the frozen contract (`scratch/authz/INTERFACE.md` §10.4/§10.6):
-//   * every write goes through `requireAdmin` + `requireCsrf` with the *existing* session cookie and
-//     the `csrf` field name — no second auth scheme, no new endpoint class;
-//   * the Admin plane is never gated by the policy it manages: nothing here calls `runtime.evaluate`
-//     (only the read-only `previewForSubject` reaches `runtime.explain`, through the service);
-//   * a stale CAS is never last-write-wins: the store decides, we surface 409 and keep the submitted
-//     draft on screen while still carrying the *stale* revision, so a resubmit is rejected again;
-//   * a broken store still renders the repair surface (the store read never throws into the page);
-//   * no policy JSON, credential secret or token is echoed back except the operator's own submitted
-//     repair document (returned to the textarea they typed it in) — never into a URL or a log.
+//   * every POST still goes through `requireAdmin` + `requireCsrf` with the *existing* session cookie
+//     and the `csrf` field name — a frozen endpoint is not an unauthenticated oracle, and no second
+//     auth scheme appeared;
+//   * the Admin plane is never gated by the policy it manages: nothing here calls `runtime.evaluate`;
+//   * a broken store still renders the page (the store read never throws into it), now without the
+//     repair form the freeze takes away;
+//   * no policy JSON, credential secret or token is echoed back — never into a URL or a log.
 //
-// No script (D0 HOLD): results are `.result` lines, danger actions go through a separate confirm
-// page (`ui.confirmPage`), and the two GET filters (`?capq=` / `?subjq=`) sit *above* the POST form
-// because a nested `<form>` is not a form.
+// The seventh write, `POST {base}/subjects` (「应用已有规则」 from a subject drawer), is frozen with
+// them: adding a subject to a legacy policy is a legacy edit like any other, and accepting it would
+// store a rule that never applies. The drawer now shows the stored rules read-only and points at the
+// per-Vault page; Task 6 gives it the constraint model.
+//
+// No script (D0 HOLD): every result is server-rendered markup.
 import { buildCatalog } from "../catalog.js";
-import { ACCESS_POLICY_CODES } from "../../access-policy/errors.js";
-import { ACCESS_POLICY_ADMIN_CODES, orphanedSubjects, snapshotSubjects } from "../access-policy.js";
+import { orphanedSubjects, snapshotSubjects } from "../access-policy.js";
 import { capabilityCatalog } from "../capabilities.js";
 import { clean } from "../http.js";
-import { confirmPage } from "../ui.js";
 import { esc } from "../presentation/format.js";
 import { zonedParts } from "../presentation/model.js";
-import { renderAuthzPage } from "../pages/authz.js";
-import { renderAuthzEditorPage, resolveWeeklyPreset } from "../pages/authz-editor.js";
+import { renderAuthzPage, LEGACY_POLICY_FROZEN_CODE, LEGACY_POLICY_REPLACEMENT } from "../pages/authz.js";
+import { renderAuthzEditorPage } from "../pages/authz-editor.js";
 import { t } from "../../i18n/context.js";
+
+export { LEGACY_POLICY_FROZEN_CODE };
 
 /** Public default base URL, frozen by the C2 BRIEF §1.1. */
 export const DEFAULT_BASE = "/admin/auth/access-policy";
@@ -40,45 +41,6 @@ export const DEFAULT_BASE = "/admin/auth/access-policy";
 export const DEFAULT_MOUNT_PATH = "/admin/auth";
 
 const WEEK_DAYS = Object.freeze(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
-
-/** Tabs a subject drawer can live on — the only redirect targets the attach route accepts. */
-const RETURN_TABS = new Set(["keys", "clients", "accounts"]);
-
-// A schema `details.path` (e.g. `policies[0].label`) is safe to show as a field hint; anything else
-// is dropped so a message can never smuggle a value.
-const SAFE_DETAIL = /^[A-Za-z0-9_.:\[\]-]{1,80}$/;
-
-// i18n: the table holds catalog keys and is resolved per request (see src/i18n/context.js).
-const CODE_HINT_KEYS = Object.freeze({
-  [ACCESS_POLICY_CODES.INVALID_DOCUMENT]: "adm.authz.code.invalidDocument",
-  [ACCESS_POLICY_CODES.INVALID_POLICY]: "adm.authz.code.invalidPolicy",
-  [ACCESS_POLICY_CODES.UNSUPPORTED_SCHEMA]: "adm.authz.code.unsupportedSchema",
-  [ACCESS_POLICY_CODES.LIMIT_EXCEEDED]: "adm.authz.code.limitExceeded",
-  [ACCESS_POLICY_CODES.UNKNOWN_SUBJECT]: "adm.authz.code.unknownSubject",
-  [ACCESS_POLICY_CODES.UNKNOWN_CAPABILITY]: "adm.authz.code.unknownCapability",
-  [ACCESS_POLICY_CODES.INVALID_TIMEZONE]: "adm.authz.code.invalidTimezone",
-  [ACCESS_POLICY_CODES.INVALID_WINDOW]: "adm.authz.code.invalidWindow",
-  [ACCESS_POLICY_CODES.REVOKE_REQUIRES_ALL]: "adm.authz.code.revokeRequiresAll",
-  [ACCESS_POLICY_CODES.STALE_REVISION]: "adm.authz.code.staleRevision",
-  [ACCESS_POLICY_CODES.STORE_IO]: "adm.authz.code.storeIo",
-  [ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID]: "adm.authz.code.unknownPolicyId",
-  [ACCESS_POLICY_ADMIN_CODES.STORE_UNAVAILABLE]: "adm.authz.code.storeUnavailable",
-});
-
-const STATUS_BY_CODE = Object.freeze({
-  [ACCESS_POLICY_CODES.STALE_REVISION]: 409,
-  [ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID]: 404,
-  [ACCESS_POLICY_ADMIN_CODES.STORE_UNAVAILABLE]: 503,
-});
-
-/** Prototype page for `?done=<action>`; a fixed map so a crafted query cannot echo text back. */
-const DONE_MESSAGE_KEYS = Object.freeze({
-  create: "adm.authz.done.create",
-  update: "adm.authz.done.update",
-  toggle: "adm.authz.done.toggle",
-  delete: "adm.authz.done.delete",
-  repair: "adm.authz.done.repair",
-});
 
 /**
  * Resolve the public action URLs (used in the rendered forms/links) plus the router-relative base
@@ -98,22 +60,6 @@ export function resolveActions(actions = {}, mountPath = DEFAULT_MOUNT_PATH) {
     preview: actions.preview ?? `${base}/preview`,
     repair: actions.repair ?? `${base}/repair`,
   });
-}
-
-function statusForCode(code) {
-  return STATUS_BY_CODE[code] ?? 400;
-}
-
-function hintFor(result) {
-  const code = String(result?.code ?? "");
-  const hintKey = CODE_HINT_KEYS[code];
-  const hint = hintKey ? t(hintKey) : t("adm.authz.code.rejected");
-  const detail = typeof result?.detail === "string" && SAFE_DETAIL.test(result.detail) ? t("adm.authz.code.detail", { field: result.detail }) : "";
-  return `${hint}${detail}`;
-}
-
-function isStale(result) {
-  return String(result?.code ?? "") === ACCESS_POLICY_CODES.STALE_REVISION;
 }
 
 // ------------------------------------------------------------------ form decoding
@@ -326,6 +272,7 @@ export function registerAccessPolicyRoutes(router, {
   requireCsrf,
   actions = {},
   provider = null,
+  authorizationMode = null,
   configuredApiKeyEnabled = false,
   // The sidebar shows the whole Admin inventory, so this module must build the SAME catalog the tab
   // routes do. It used to pass only three dependencies, and `buildCatalog` degrades a missing service
@@ -363,6 +310,9 @@ export function registerAccessPolicyRoutes(router, {
       authz: { ...catalog.authz, orphaned, policies, count: policies.length },
       subjects,
       runtimeState: runtime ? { enabled: runtime.enabled === true, status: runtime.status } : null,
+      // `legacy | shadow | enforce`, or null when no authorization runtime was injected. The frozen
+      // banner states it, because only `enforce` answers from the per-Vault model.
+      authorizationMode,
       capabilities: catalog.capabilities ?? capabilityCatalog(),
       csrf: req.adminSession?.csrf ?? "",
       session: req.adminSession,
@@ -375,125 +325,26 @@ export function registerAccessPolicyRoutes(router, {
     return (ctx.authz?.policies ?? []).find((policy) => policy.id === String(id ?? "")) ?? null;
   }
 
-  /** Delete confirmation — prototype `delPolicy()`: type the policy label, then a red confirm. */
-  function deleteConfirm(ctx, policy) {
-    return confirmPage({
-      title: t("adm.authz.delete.title", { name: policy.label }),
-      bodyHtml: t("adm.authz.delete.body", { subjects: (Array.isArray(policy.subjects) ? policy.subjects : []).map((subject) => esc(ctx.model.subjectView(subject).name)).join(esc(t("adm.ui.listSeparator"))) || "—" }),
-      listItems: [
-        `<span class="mono">${esc(policy.id)}</span>`,
-        t("adm.authz.delete.revision", { revision: esc(String(ctx.authz?.revision ?? "—")) }),
-      ],
-      typed: policy.label,
-      ok: t("adm.authz.delete.ok"),
-      tone: "danger",
-      action: urls.delete,
-      csrf: ctx.csrf,
-      fields: { id: policy.id, expectedRevision: ctx.authz?.revision ?? "" },
-      backHref: base,
-    });
-  }
-
-  /** Disable confirmation — prototype `onMenu("policy","toggle")`: 停用 asks, 启用 does not. */
-  function toggleConfirm(ctx, policy) {
-    return confirmPage({
-      title: t("adm.authz.toggle.title", { name: policy.label }),
-      bodyHtml: esc(t("adm.authz.toggle.body")),
-      ok: t("adm.authz.toggle.ok"),
-      tone: "primary",
-      action: urls.toggle,
-      csrf: ctx.csrf,
-      fields: { id: policy.id, enabled: "false", expectedRevision: ctx.authz?.revision ?? "", confirmed: "1" },
-      backHref: base,
-    });
-  }
-
-  /** Repair confirmation — prototype `authz-repair`: the damaged file is backed up first. */
-  function repairConfirm(ctx, document) {
-    return confirmPage({
-      title: t("adm.authz.repair.title"),
-      bodyHtml: esc(t("adm.authz.repair.body")),
-      typed: t("adm.authz.repair.token"),
-      ok: t("adm.authz.repair.ok"),
-      tone: "danger",
-      action: urls.repair,
-      csrf: ctx.csrf,
-      fields: { document },
-      backHref: base,
-    });
-  }
-
-  /** Which page the request asks for. `query` is the GET query or a POST form's view request. */
+  /**
+   * Which page the request asks for.
+   *
+   * Frozen surfaces only: the list, the `?id=` drawer and the `?edit=` read-only view. The four
+   * write-side entry points are gone with the writes — `?confirm=delete` (the type-to-confirm page),
+   * `?new=` / `?copy=` (a draft the operator could never save) and the editor's draft round trips
+   * (`?day=` / `?addSlot=` / `?addRange=` / `?weeklyPreset=`) — so a bookmarked one lands on the list
+   * and its banner, not on a control that can only fail.
+   */
   function selectPage(ctx, query, extra = {}) {
     const pageCtx = { ...ctx, query, ...extra };
-    const confirm = String(query.confirm ?? "");
-    if (confirm === "delete" && query.id) {
-      const policy = findPolicy(ctx, query.id);
-      const list = renderAuthzPage({ ...pageCtx, query: {} });
-      if (!policy) {
+    if (query.edit) {
+      const source = findPolicy(ctx, query.edit);
+      if (!source) {
         return { status: 404, content: renderAuthzPage({ ...pageCtx, query: {}, failure: t("adm.authz.policyMissing") }).content, detailPanel: "" };
       }
-      return { status: extra.status ?? 200, content: list.content, detailPanel: deleteConfirm(pageCtx, policy) };
-    }
-    const wantsEditor = Boolean(query.edit || query.new || query.copy);
-    if (wantsEditor) {
-      const source = query.copy ? findPolicy(ctx, query.copy) : query.edit ? findPolicy(ctx, query.edit) : null;
-      if ((query.copy || query.edit) && !source) {
-        return { status: 404, content: renderAuthzPage({ ...pageCtx, query: {}, failure: t("adm.authz.policyMissing") }).content, detailPanel: "" };
-      }
-      const preset = resolveWeeklyPreset(query.weeklyPreset);
-      // No-JS draft edits (prototype `6-app.js:311/353/354`): the editor's day chips, 为已选日期再加
-      // 一个时段 and 添加日期区间 are scripted toggles in the prototype; here each is a GET round trip
-      // over the same state, so the editor stays fully usable with scripting disabled. A day toggled
-      // ON gets the prototype's own default (09:00–18:00), the extra slot the prototype's own
-      // 19:00–22:00, and a new date range today → +7d.
-      const dayKey = WEEK_DAYS.includes(String(query.day)) ? String(query.day) : null;
-      const addSlot = String(query.addSlot ?? "") === "1";
-      const addRange = String(query.addRange ?? "") === "1";
-      const applyDraftEdits = (draft) => {
-        if (!dayKey && !addSlot && !addRange) return draft;
-        const weekly = { ...(draft.weekly && typeof draft.weekly === "object" ? draft.weekly : {}) };
-        if (dayKey) {
-          if (Array.isArray(weekly[dayKey]) && weekly[dayKey].length) delete weekly[dayKey];
-          else weekly[dayKey] = [["09:00", "18:00"]];
-        }
-        if (addSlot) {
-          for (const day of WEEK_DAYS) {
-            if (!Array.isArray(weekly[day]) || !weekly[day].length) continue;
-            weekly[day] = [...weekly[day], ["19:00", "22:00"]];
-          }
-        }
-        const dateRanges = Array.isArray(draft.dateRanges) ? [...draft.dateRanges] : [];
-        if (addRange) {
-          const today = new Date();
-          const week = new Date(today.getTime() + 7 * 24 * 3600 * 1000);
-          dateRanges.push({ from: today.toISOString().slice(0, 10), to: week.toISOString().slice(0, 10) });
-        }
-        return { ...draft, weekly, dateRanges };
-      };
-      // `extra.draft` means this render is a re-render of a *submitted* form (validation failure or
-      // CAS conflict): the operator's own values win over the stored policy, and the revision they
-      // loaded with is kept so a resubmit is rejected instead of overwriting.
-      // A subject page's 「新建规则」 link opens the editor with the subject already picked
-      // (`?new=1&subject=api-key:…`). Only a subject this request already knows is seeded: an
-      // arbitrary query string must not become a stored subject.
-      const seedSubject = (() => {
-        const asked = typeof query.subject === "string" ? query.subject.trim() : "";
-        if (!asked) return null;
-        const referenced = (ctx.authz?.policies ?? []).flatMap((policy) => (Array.isArray(policy?.subjects) ? policy.subjects : []));
-        const known = new Set([...(ctx.subjects ?? []), ...referenced]);
-        return known.has(asked) ? asked : null;
-      })();
-      const derived = applyDraftEdits(source
-        ? (query.copy
-          ? { ...source, id: undefined, createdAt: undefined, updatedAt: undefined, label: t("adm.authz.copySuffix", { name: source.label }), ...(preset ? { weekly: preset } : {}) }
-          : { ...source, ...(preset ? { weekly: preset } : {}) })
-        : { label: "", mode: "suspend", enabled: true, timezone: "Asia/Shanghai", startsAt: "", expiresAt: "", weekly: preset ?? {}, dateRanges: [], subjects: seedSubject ? [seedSubject] : [], capabilities: [] });
       const rendered = renderAuthzEditorPage({
         ...pageCtx,
-        draft: extra.draft ?? derived,
-        policyId: extra.draft ? (extra.policyId ?? null) : (query.copy ? null : query.edit ?? null),
-        expectedRevision: extra.expectedRevision ?? ctx.authz?.revision ?? null,
+        draft: source,
+        policyId: source.id,
       });
       return { status: extra.status ?? 200, ...rendered };
     }
@@ -515,278 +366,42 @@ export function registerAccessPolicyRoutes(router, {
     }));
   }
 
-  /**
-   * A rejected write. Stale CAS keeps the submitted draft (create/update) or re-renders the list,
-   * always with the *stale* revision still in the form, so a resubmit cannot silently overwrite the
-   * other admin's change.
-   */
-  async function respondFailure(req, res, { result: outcome, draft = null, id = null, endpoint = "" }) {
-    const status = statusForCode(outcome?.code);
-    const message = hintFor(outcome);
-    const stale = isStale(outcome);
-    if ((endpoint === "create" || endpoint === "update") && draft) {
-      await sendPage(req, res, {
-        query: endpoint === "update" && id ? { edit: id } : { new: "1" },
-        extra: { failure: message, conflict: stale, draft, policyId: endpoint === "update" && id ? id : null, expectedRevision: req.body?.expectedRevision ?? null },
-        status,
-      });
-      return;
-    }
-    await sendPage(req, res, { extra: { failure: message, conflict: stale }, status });
-  }
-
   // ---------------------------------------------------------------- GET
 
   router.get(routeBase, requireAdmin, async (req, res, next) => {
     try {
-      await sendPage(req, res, { extra: { repairDocument: null } });
+      await sendPage(req, res);
     } catch (error) {
       next(error);
     }
   });
+
+  // ---------------------------------------------------------------- writes (frozen)
 
   /**
-   * Read-only preview for the live editor pane (lane L3, D0 progressive enhancement).
+   * Every legacy write is refused before it reaches the service (design §7 step 2 + step 5).
    *
-   * `GET {base}/preview?preview=1&<draft form fields>` answers the editor's right-hand
-   * 生效预览 for a draft that has *not* been saved: the same `decodeDraft` decoding the POST
-   * write path uses, the same `renderAuthzEditorPage` (hence the same `presentAccessPolicyWindow`
-   * summary, `policyTimelineHtml` timeline and `policyNowState` verdict) and the same
-   * `previewForSubject`-free read model. The enhancement script only adopts the rendered
-   * `.ped-side` node, so the 「现在（…）允许/拒绝」 verdict and 「对主体的影响」 are always the
-   * server's answer — the browser never computes one.
+   * The durable per-Vault document decides now (Tasks 1-2), so an accepted legacy edit could only
+   * ever be a lie: it would be stored and never apply — the anti-goal of §4. `repair` is refused for
+   * the same reason even though it is not a policy edit (ruling R6): rewriting the frozen store would
+   * resurrect editing. All seven answer the same code with a 409, and the body names where the request
+   * *can* go instead.
    *
-   * Why a separate path instead of `?preview=1` on `{base}`: the list/edit GET already owns that
-   * URL (`selectPage`), and this lane may only *add* an endpoint, never change existing semantics.
-   *
-   * Properties that keep this from being a new authority:
-   *   * `requireAdmin` only — no CSRF field is needed because nothing is written (the POST
-   *     `/preview` that reaches `runtime.explain` keeps its CSRF/`requireCsrf` protection);
-   *   * the response is a fragment of the *editor page* the operator can already open, so it
-   *     exposes exactly the revision/subject vocabulary that page already renders;
-   *   * the draft travels in the query string, so the router's own `Cache-Control: no-store`
-   *     applies and the value never reaches a log or a stored page;
-   *   * no policy JSON or credential secret is echoed: only the operator's own submitted draft is
-   *     rendered back, escaped by the page module like every other value.
+   * `requireAdmin` + `requireCsrf` stay in front: a frozen endpoint must not become an
+   * unauthenticated oracle, and a request without a session or CSRF token must still fail as before.
    */
-  router.get(`${routeBase}/preview`, requireAdmin, async (req, res, next) => {
-    try {
-      const query = req.query ?? {};
-      // The draft decodes exactly like the POST body: same helper, same coercions, same defaults.
-      const draft = decodeDraft(query);
-      const asked = typeof query.edit === "string" ? query.edit : "";
-      const ctx = await readPage(req, query);
-      // An id that no longer exists renders a *new*-policy preview instead of leaking a 404 page;
-      // the form's own action is a copy/new policy in that case.
-      const policyId = asked && findPolicy(ctx, asked) ? asked : null;
-      if (policyId) draft.id = policyId;
-      const rendered = renderAuthzEditorPage({
-        ...ctx,
-        draft,
-        policyId,
-        expectedRevision: null,
-      });
-      res.status(200).type("text/html; charset=utf-8").send(rendered.content);
-    } catch (error) {
-      next(error);
-    }
-  });
+  function refuseFrozenWrite(req, res) {
+    res.status(409).json({
+      error: LEGACY_POLICY_FROZEN_CODE,
+      message: t("adm.authz.frozen.refusal"),
+      movedTo: LEGACY_POLICY_REPLACEMENT,
+    });
+  }
 
-  // ---------------------------------------------------------------- writes
-
-  router.post(`${routeBase}/create`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const draft = decodeDraft(req.body);
-      const outcome = await admin.createPolicy(draft, req.body?.expectedRevision);
-      if (outcome?.ok) {
-        res.redirect(303, `${base}?done=create`);
-        return;
-      }
-      await respondFailure(req, res, { result: outcome, draft, endpoint: "create" });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(`${routeBase}/update`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const id = String(req.body?.id ?? "");
-      const draft = decodeDraft(req.body);
-      if (!id) {
-        await respondFailure(req, res, { result: { code: ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID }, draft, endpoint: "update" });
-        return;
-      }
-      const outcome = await admin.updatePolicy(id, draft, req.body?.expectedRevision);
-      if (outcome?.ok) {
-        res.redirect(303, `${base}?done=update`);
-        return;
-      }
-      await respondFailure(req, res, { result: outcome, draft, id, endpoint: "update" });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  // 「应用已有规则」 from a subject's own drawer (2026-10-31): add ONE subject to an existing policy.
-  //
-  // Properties that keep this from being a new authority:
-  //   * same `requireAdmin` + `requireCsrf` as every other write, same session cookie, same `csrf`
-  //     field — no second auth scheme and no new endpoint class;
-  //   * the body carries only a policy id and a subject, so it cannot express "also change the
-  //     window": the draft is derived from the *stored* policy inside `attachSubject`, and the
-  //     schema, the cap and the CAS still decide;
-  //   * the subject must be known to this request's snapshot (or already referenced by a stored
-  //     policy) — an unknown subject is refused here instead of being written and banner-ed later;
-  //   * the outcome comes back as a redirect to the drawer the operator came from, carrying a flag
-  //     this route set (`done=authz-attach` / `authzError=<code>`). No policy document, no secret and
-  //     no free-form message travels in the URL, and the page renders the line, not the browser.
-  router.post(`${routeBase}/subjects`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const id = String(req.body?.id ?? "");
-      const subject = String(req.body?.subject ?? "").trim();
-      const tab = RETURN_TABS.has(String(req.body?.tab ?? "")) ? String(req.body.tab) : "keys";
-      const subjectId = String(req.body?.subjectId ?? "");
-      const back = `${DEFAULT_MOUNT_PATH}?tab=${encodeURIComponent(tab)}${subjectId ? `&id=${encodeURIComponent(subjectId)}` : ""}`;
-      const bounce = (flag) => res.redirect(303, `${back}&${flag}`);
-      if (!id) {
-        bounce(`authzError=${encodeURIComponent(ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID)}`);
-        return;
-      }
-      const ctx = await readPage(req, {});
-      const referenced = (ctx.authz.policies ?? []).flatMap((policy) => (Array.isArray(policy?.subjects) ? policy.subjects : []));
-      const known = new Set([...(ctx.subjects ?? []), ...referenced]);
-      if (!subject || !known.has(subject)) {
-        bounce(`authzError=${encodeURIComponent(ACCESS_POLICY_CODES.UNKNOWN_SUBJECT)}`);
-        return;
-      }
-      const outcome = await admin.attachSubject(id, subject, req.body?.expectedRevision);
-      if (outcome?.ok) {
-        bounce("done=authz-attach");
-        return;
-      }
-      bounce(`authzError=${encodeURIComponent(String(outcome?.code ?? ACCESS_POLICY_CODES.INVALID_POLICY))}`);
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(`${routeBase}/toggle`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const id = String(req.body?.id ?? "");
-      const enabled = coerceBool(req.body?.enabled, null);
-      if (enabled === null) {
-        await respondFailure(req, res, { result: { code: ACCESS_POLICY_CODES.INVALID_POLICY, detail: "enabled" }, endpoint: "toggle" });
-        return;
-      }
-      // Prototype rule: 停用 needs a confirmation, 启用 applies directly.
-      if (enabled === false && String(req.body?.confirmed ?? "") !== "1") {
-        const ctx = await readPage(req, req.query ?? {});
-        const policy = findPolicy(ctx, id);
-        if (!policy) {
-          await respondFailure(req, res, { result: { code: ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID }, endpoint: "toggle" });
-          return;
-        }
-        res.status(200).send(shellFor(view, req, {
-          base,
-          vaultGitBase,
-          content: renderAuthzPage({ ...ctx, query: {} }).content,
-          detailPanel: toggleConfirm(ctx, policy),
-          theme: ctx.theme,
-          navCounts: ctx.navCounts,
-          navAttention: ctx.navAttention,
-        }));
-        return;
-      }
-      const outcome = await admin.setEnabled(id, enabled, req.body?.expectedRevision);
-      if (outcome?.ok) {
-        res.redirect(303, `${base}?done=toggle`);
-        return;
-      }
-      await respondFailure(req, res, { result: outcome, endpoint: "toggle" });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(`${routeBase}/delete`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const id = String(req.body?.id ?? "");
-      const ctx = await readPage(req, req.query ?? {});
-      const policy = findPolicy(ctx, id);
-      if (!policy) {
-        await respondFailure(req, res, { result: { code: ACCESS_POLICY_ADMIN_CODES.UNKNOWN_POLICY_ID }, endpoint: "delete" });
-        return;
-      }
-      // Type-to-confirm (prototype `delPolicy`), verified server-side — never by a scripted button.
-      if (String(req.body?.confirm ?? "") !== policy.label) {
-        res.status(400).send(shellFor(view, req, {
-          base,
-          vaultGitBase,
-          content: renderAuthzPage({ ...ctx, query: {}, failure: t("adm.authz.delete.mismatch") }).content,
-          detailPanel: deleteConfirm(ctx, policy),
-          theme: ctx.theme,
-          navCounts: ctx.navCounts,
-          navAttention: ctx.navAttention,
-        }));
-        return;
-      }
-      const outcome = await admin.deletePolicy(id, req.body?.expectedRevision);
-      if (outcome?.ok) {
-        res.redirect(303, `${base}?done=delete`);
-        return;
-      }
-      await respondFailure(req, res, { result: outcome, endpoint: "delete" });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(`${routeBase}/preview`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const subject = clean(req.body?.subject, 200) ?? "";
-      const ctx = await readPage(req, req.query ?? {});
-      const referenced = (ctx.authz.policies ?? []).flatMap((policy) => (Array.isArray(policy.subjects) ? policy.subjects : []));
-      const known = new Set([...ctx.subjects, ...referenced]);
-      const query = String(req.body?.view ?? "list") === "editor"
-        ? (req.body?.edit ? { edit: String(req.body.edit) } : { new: "1" })
-        : {};
-      if (!subject || !known.has(subject)) {
-        await sendPage(req, res, { query, extra: { failure: t("adm.authz.previewUnknownSubject") } });
-        return;
-      }
-      const preview = await admin.previewForSubject(subject);
-      await sendPage(req, res, { query, extra: { preview } });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.post(`${routeBase}/repair`, requireAdmin, requireCsrf, async (req, res, next) => {
-    try {
-      const document = typeof req.body?.document === "string" ? req.body.document : "";
-      if (String(req.body?.confirm ?? "") !== t("adm.authz.repair.token")) {
-        const ctx = await readPage(req, req.query ?? {});
-        res.status(200).send(shellFor(view, req, {
-          base,
-          vaultGitBase,
-          content: renderAuthzPage({ ...ctx, query: {}, repairDocument: document }).content,
-          detailPanel: repairConfirm(ctx, document),
-          theme: ctx.theme,
-          navCounts: ctx.navCounts,
-          navAttention: ctx.navAttention,
-        }));
-        return;
-      }
-      const outcome = await admin.repairFromCandidate(document);
-      if (outcome?.ok) {
-        res.redirect(303, `${base}?done=repair`);
-        return;
-      }
-      await sendPage(req, res, { extra: { failure: hintFor(outcome), repairDocument: document }, status: statusForCode(outcome?.code) });
-    } catch (error) {
-      next(error);
-    }
-  });
+  // `subjects` is the attach-from-drawer write: the same legacy edit reached from another page.
+  for (const endpoint of ["create", "update", "toggle", "delete", "preview", "repair", "subjects"]) {
+    router.post(`${routeBase}/${endpoint}`, requireAdmin, requireCsrf, refuseFrozenWrite);
+  }
 
   return { base: urls.base, actions: urls };
 }

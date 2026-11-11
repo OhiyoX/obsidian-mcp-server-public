@@ -62,8 +62,8 @@ const NAV_GROUP_KEYS = Object.freeze({
 
 const navLabel = (item) => t(NAV_LABEL_KEYS[item.id] || "adm.nav.overview");
 
-function hrefFor(item, { accessPolicyBase, vaultGitBase }) {
-  if (item.id === "access-policy") return accessPolicyBase || "/admin/auth";
+function hrefFor(item, { constraintsBase, vaultGitBase }) {
+  if (item.id === "access-policy") return constraintsBase || "/admin/auth";
   if (item.id === "vault-git") return vaultGitBase || "/admin/auth";
   return `/admin/auth?tab=${item.id}`;
 }
@@ -75,7 +75,7 @@ function hrefFor(item, { accessPolicyBase, vaultGitBase }) {
  * `null` without their service and document the tab as "absent").
  */
 function navAvailable(item, bases) {
-  if (item.id === "access-policy") return Boolean(bases.accessPolicyBase);
+  if (item.id === "access-policy") return Boolean(bases.constraintsBase);
   if (item.id === "vault-git") return Boolean(bases.vaultGitBase);
   return true;
 }
@@ -98,8 +98,8 @@ function itemHtml(item, activeTab, counts, attention, bases) {
 }
 
 /** Sidebar (`.side`): brand, grouped nav with counts/attention, footer actions. */
-export function renderSidebar({ activeTab, counts = {}, attention = {}, accessPolicyBase = null, vaultGitBase = null, theme = "dark", csrf = "", version = null, navOpen = false, navCloseHref = null }) {
-  const bases = { accessPolicyBase, vaultGitBase };
+export function renderSidebar({ activeTab, counts = {}, attention = {}, constraintsBase = null, vaultGitBase = null, theme = "dark", csrf = "", version = null, navOpen = false, navCloseHref = null }) {
+  const bases = { constraintsBase, vaultGitBase };
   const nav = NAV.map((item) => {
     if (item.group !== undefined && !item.id) return `<div class="sec-h">${esc(t(NAV_GROUP_KEYS[item.group] || item.group))}</div>`;
     return itemHtml(item, activeTab, counts, attention, bases);
@@ -121,8 +121,8 @@ export function renderSidebar({ activeTab, counts = {}, attention = {}, accessPo
 }
 
 /** Mobile bottom nav (`.mnav`): four primary slots + a `更多` sheet with the rest. */
-export function renderMnav({ activeTab, counts = {}, attention = {}, accessPolicyBase = null, vaultGitBase = null }) {
-  const bases = { accessPolicyBase, vaultGitBase };
+export function renderMnav({ activeTab, counts = {}, attention = {}, constraintsBase = null, vaultGitBase = null }) {
+  const bases = { constraintsBase, vaultGitBase };
   const primary = NAV.filter((item) => item.id && MOBILE_PRIMARY.includes(item.id) && navAvailable(item, bases));
   const rest = NAV.filter((item) => item.id && !MOBILE_PRIMARY.includes(item.id) && navAvailable(item, bases));
   const inRest = rest.some((item) => item.id === activeTab);
@@ -159,15 +159,15 @@ function navToggle({ open, href }) {
 }
 
 /** Authenticated app frame: sidebar + main + mobile nav (+ optional detail drawer). */
-export function renderAppShell({ activeTab, content, notices = "", theme = "dark", counts = {}, attention = {}, accessPolicyBase = null, vaultGitBase = null, csrf = "", version = null, drawerHtml = "", nav = null }) {
+export function renderAppShell({ activeTab, content, notices = "", theme = "dark", counts = {}, attention = {}, constraintsBase = null, vaultGitBase = null, csrf = "", version = null, drawerHtml = "", nav = null }) {
   const navOpen = Boolean(nav?.open);
   const navHref = nav?.href || null;
   const navCloseHref = nav?.closeHref || null;
   const { side } = renderSidebar({
-    activeTab, counts, attention, accessPolicyBase, vaultGitBase, theme, csrf, version,
+    activeTab, counts, attention, constraintsBase, vaultGitBase, theme, csrf, version,
     navCloseHref, navOpen,
   });
-  const mnav = renderMnav({ activeTab, counts, attention, accessPolicyBase, vaultGitBase });
+  const mnav = renderMnav({ activeTab, counts, attention, constraintsBase, vaultGitBase });
   // `data-tab` lets the enhancement script know which page it is on (prototype `S.route`); the nav
   // links carry `data-hotkey` for the `g <key>` jumps. Both are inert without the script.
   const scrim = navOpen ? '<div class="scrim on" id="mscrim" data-nav-scrim></div>' : "";

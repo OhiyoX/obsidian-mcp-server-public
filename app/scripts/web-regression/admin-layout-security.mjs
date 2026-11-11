@@ -14,6 +14,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { armInteractionObservers } from '../proto-parity/interaction.mjs';
+import { startAdminLayoutFixture } from './admin-layout-fixture.mjs';
+import { seedHostileLabelPolicy } from '../proto-parity/seed.mjs';
 import { clientSinkFailures, probeInjectionSurface, XSS_PAYLOADS } from '../proto-parity/injection.mjs';
 import { ADMIN_CLIENT_MODULES, CLIENT_SCRIPT_BASE } from '../proto-parity/policy.mjs';
 import { runProbe } from '../proto-parity/probe.mjs';
@@ -78,18 +80,6 @@ async function injectPayloads({ request, base, apiKey }) {
     return '303';
   });
 
-  await step('access-policy label payload', async () => {
-    // `enabled=false`: the payload must render, and a disabled policy restricts nothing (the other
-    // scenes' MCP calls keep working).
-    const response = await postForm(request, base, '/admin/auth/access-policy/create', {
-      csrf, label: XSS_PAYLOADS.policyLabel, mode: 'suspend', enabled: 'false', timezone: 'Asia/Shanghai',
-      startsAt: '', expiresAt: '', subjects: ['api-key:configured-env'], capabilities: 'scope:obsidian.read',
-      weekly: 'mon 00:00-24:00', dateRanges: '',
-    });
-    if (response.status() !== 303) throw new Error(`status ${response.status()}`);
-    return '303';
-  });
-
   await step('audit User-Agent payload (real MCP call)', async () => {
     const call = await mcpCallWithUserAgent({ base, apiKey, userAgent: XSS_PAYLOADS.auditUserAgent, name: 'write_note', args: { path: 'notes/l4-xss-ua.md', overwrite: true, content: '# xss ua probe\n' } });
     if (call.json?.result?.isError) throw new Error(`MCP write_note failed: ${call.text.slice(0, 160)}`);
@@ -100,11 +90,12 @@ async function injectPayloads({ request, base, apiKey }) {
 }
 
 /**
- * Register the injection checks. `deps`: `{ browser, fixture, outputRoot, tracePhase }`.
+ * Register the injection checks. `deps`: `{ browser, fixture, outputRoot, tracePhase, root, appRoot }`
+ * (`root`/`appRoot` are only needed by the hostile-label fixture, which boots its own server).
  */
 export async function registerSecurityChecks(ctx, deps) {
   const { check } = ctx;
-  const { browser, fixture, outputRoot, tracePhase } = deps;
+  const { browser, fixture, outputRoot, tracePhase, root, appRoot } = deps;
   const base = fixture.base;
   const trace = { startedAt: new Date().toISOString(), payloads: XSS_PAYLOADS, seeding: [], surfaces: [] };
 
@@ -119,7 +110,7 @@ export async function registerSecurityChecks(ctx, deps) {
     await setupContext.close().catch(() => {});
   }
 
-  await check('admin-security: 注入落地（正控）— 4 个恶意串都写进了真实数据字段并渲染为文本', async () => {
+  await check('admin-security: 注入落地（正控）— 3 个恶意串经真实路由写进数据字段并渲染为文本', async () => {
     const page = await (await browser.newContext({ viewport: VIEWPORT })).newPage();
     const context = page.context();
     try {
@@ -136,7 +127,10 @@ export async function registerSecurityChecks(ctx, deps) {
       }
       trace.surfaces = surfaces.map((surface) => ({ label: surface.label, visible: surface.visible, inlineHandlers: surface.inlineHandlers.length, javascriptUrls: surface.javascriptUrls.length }));
       const visiblePayloads = new Set(surfaces.flatMap((surface) => surface.visible.filter((item) => item.asText).map((item) => item.payload)));
-      const missing = Object.entries(XSS_PAYLOADS).filter(([, payload]) => !visiblePayloads.has(payload)).map(([field]) => field);
+      // The policy-label stanza cannot be written from here (all seven legacy writes are frozen); the
+      // dedicated check below seeds it into its own store file. This control owns the other three.
+      const writtenHere = Object.entries(XSS_PAYLOADS).filter(([field]) => field !== 'policyLabel');
+      const missing = writtenHere.filter(([, payload]) => !visiblePayloads.has(payload)).map(([field]) => field);
       const failures = [...seeded.errors];
       if (missing.length) failures.push(`payload 没有出现在任何页面的文本里：${missing.join(', ')}（注入未落地 ⇒ 探针无法证明渲染器安全）`);
       await checkWrite(outputRoot, 'admin-security-surfaces.json', trace.surfaces);
@@ -153,7 +147,8 @@ export async function registerSecurityChecks(ctx, deps) {
     try {
       await context.request.post(`${base}/admin/auth/login`, { form: { password: fixture.password }, maxRedirects: 0 });
       const failures = [];
-      const payloadList = Object.values(XSS_PAYLOADS);
+      // The policy-label payload is never on these pages: it lives in the dedicated fixture below.
+      const payloadList = Object.entries(XSS_PAYLOADS).filter(([field]) => field !== 'policyLabel').map(([, payload]) => payload);
       const visited = [
         ['accounts 列表', '/admin/auth?tab=accounts'],
         ['keys 列表', '/admin/auth?tab=keys'],
@@ -244,6 +239,74 @@ export async function registerSecurityChecks(ctx, deps) {
   });
 
   tracePhase?.('admin-security', { seedingFailures: seeded.errors.length, surfaces: trace.surfaces.length });
+
+  /**
+   * The hostile POLICY LABEL — the one payload no route can store any more.
+   *
+   * Task 3 froze every legacy policy write (all seven refuse with 409), so the positive control cannot
+   * land this payload through the shared fixture. It gets its own fixture instead, seeded the way an
+   * operator's legacy save would have left it: in the store file, before the process starts
+   * (`seedHostileLabelPolicy`). The claim is then checked where the value is really rendered — the list
+   * row, the `?id=` drawer and the `?edit=` read-only view — and it must arrive as TEXT: the payload is
+   * present, escaped, with no executable node and no `on*` attribute.
+   */
+  await check('admin-security: 注入落地（正控）— 存进策略标签的恶意串在三处都渲染为文本，且不生成可执行节点', async () => {
+    const hostileRoot = path.join(root, 'admin-layout-hostile-label');
+    await fs.mkdir(hostileRoot, { recursive: true });
+    const hostileErrors = [];
+    const hostile = await startAdminLayoutFixture({ root: hostileRoot, appRoot, serverErrors: hostileErrors, prepareData: seedHostileLabelPolicy });
+    const payload = XSS_PAYLOADS.policyLabel;
+    const context = await browser.newContext({ viewport: VIEWPORT });
+    const failures = [];
+    try {
+      let ready = false;
+      for (let attempt = 0; attempt < 300; attempt += 1) {
+        try { if ((await fetch(`${hostile.base}/healthz`)).ok) { ready = true; break; } } catch { /* keep waiting */ }
+        if (hostile.child.exitCode !== null) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      assert.ok(ready, `the hostile-label fixture server must become ready (exit ${hostile.child.exitCode}): ${hostileErrors.join('').slice(0, 400)}`);
+      const login = await context.request.post(`${hostile.base}/admin/auth/login`, { form: { password: hostile.password }, maxRedirects: 0 });
+      assert.equal(login.status(), 303, 'the hostile-label fixture must log in');
+      const page = await context.newPage();
+      const list = await (await context.request.get(`${hostile.base}/admin/auth/access-policy`)).text();
+      const id = /access-policy\?id=([0-9a-fA-F-]{8,})/.exec(list)?.[1] ?? null;
+      if (!id) failures.push('播种的策略没有出现在列表页（没有 ?id= 入口）');
+      for (const [label, url] of [
+        ['列表', `${hostile.base}/admin/auth/access-policy`],
+        ...(id ? [
+          ['?id= 抽屉', `${hostile.base}/admin/auth/access-policy?id=${id}`],
+          ['?edit= 只读视图', `${hostile.base}/admin/auth/access-policy?edit=${id}`],
+        ] : []),
+      ]) {
+        await page.goto(url, { waitUntil: 'load' });
+        await page.waitForTimeout(120);
+        const surface = await runProbe(page, probeInjectionSurface, [payload]);
+        const asText = surface.visible.some((item) => item.payload === payload && item.asText);
+        if (!asText) failures.push(`[${label}] 播种的恶意标签没有作为文本出现（渲染器没读到它，正控就成了空证明）`);
+        // The served markup carries the payload ESCAPED (`&lt;svg onload=…&gt;`), which is the point:
+        // its text is present and no live element was created from it.
+        const markup = await page.content();
+        if (!markup.includes('__xss_svg')) failures.push(`[${label}] 服务端返回的标记里没有这个标签的文本`);
+        if (/<svg\s+onload/i.test(markup)) failures.push(`[${label}] 标记里出现未转义的 <svg onload …>（payload 真的成了元素）`);
+        if (surface.inlineHandlers.length) failures.push(`[${label}] 出现 on* 属性：${surface.inlineHandlers.slice(0, 3).join(', ')}`);
+        if (surface.inlineScripts) failures.push(`[${label}] 出现 ${surface.inlineScripts} 个 inline <script> 节点`);
+        if (surface.javascriptUrls.length) failures.push(`[${label}] 出现 javascript: URL`);
+        if (surface.flags.any) failures.push(`[${label}] payload 真的执行了`);
+        trace.surfaces.push({ label: `hostile-label ${label}`, payload, asText, inlineHandlers: surface.inlineHandlers.length });
+      }
+      await checkWrite(outputRoot, 'admin-security-surfaces.json', trace.surfaces);
+      assert.equal(failures.length, 0, failures.join('\n'));
+    } finally {
+      await context.close().catch(() => {});
+      const shutdown = await hostile.stop();
+      await fs.rm(hostileRoot, { recursive: true, force: true }).catch(() => {});
+      assert.equal(shutdown.childExited, true, `the hostile-label fixture must be reaped: ${JSON.stringify(shutdown)}`);
+      assert.equal(shutdown.portReleased, true, 'the hostile-label fixture port must be free afterwards');
+    }
+  });
+
+
   return { trace, seeded };
 }
 

@@ -16,6 +16,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { decodeDocumentRoute, encodeDocumentRoute } from "../publish/service.js";
 import { appPage } from "./pages.js";
+import { chainWith, createWebAuthorizationAsks, webReadRouteGate } from "./access-policy.js";
+import { deepLinkVaultId } from "../authorization/adapters/web.js";
 import { readWebAppearance } from "./themes.js";
 import { localeInfo } from "../i18n/request.js";
 import { defaultWebVaultId, resolveWebVault, resolveWebVaultPath } from "./vault-registry.js";
@@ -36,8 +38,11 @@ async function statCanvasFile(vault, userPath) {
   return { path: resolved.path, stat: { size: stat.size, created: stat.birthtime.toISOString(), modified: stat.mtime.toISOString() } };
 }
 
-export function registerCanvasPageRoute(router, { requirePage, manager }) {
-  router.get("/app/canvas/*", requirePage, async (req, res, next) => {
+export function registerCanvasPageRoute(router, { requirePage, manager, policy = null, authorizationShadow = null, authorizationAsks = null }) {
+  // The Vault containment decision belongs to the runtime, not to a local allowlist.
+  const containment = (authorizationAsks ?? createWebAuthorizationAsks({})).vault;
+  const readGate = webReadRouteGate(policy, "GET /app/canvas/*", { shadow: authorizationShadow, vaultIdOf: (req) => deepLinkVaultId(req?.params?.[0]) });
+  router.get("/app/canvas/*", chainWith(requirePage, readGate), async (req, res, next) => {
     try {
       const route = req.params[0];
       let target;
@@ -51,7 +56,7 @@ export function registerCanvasPageRoute(router, { requirePage, manager }) {
         target = { vaultId: defaultWebVaultId(), path: route };
         readablePath = true;
       }
-      if (!req.webSession.allowedVaults.includes(target.vaultId)) return res.sendStatus(404);
+      if (!(await containment(req.webSession, target.vaultId))) return res.sendStatus(404);
       const vault = await resolveWebVault(target.vaultId);
       if (vault.id !== target.vaultId) return res.sendStatus(404);
       const canvas = await statCanvasFile(vault, target.path);

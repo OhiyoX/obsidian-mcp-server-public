@@ -78,6 +78,7 @@ export async function startAdmin(t, {
   accessPolicyAdmin = undefined,
   vaultGitAdmin = null,
   configuredApiKeyEnabled = false,
+  authorization = null,
 } = {}) {
   const app = express();
   const admin = accessPolicyAdmin !== undefined
@@ -90,6 +91,7 @@ export async function startAdmin(t, {
     configuredApiKeyEnabled,
     accessPolicyAdmin: admin,
     vaultGitAdmin,
+    authorization,
   }));
   const server = app.listen(0);
   await once(server, "listening");

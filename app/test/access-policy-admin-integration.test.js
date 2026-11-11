@@ -2,11 +2,11 @@
 //
 // These tests mount the *real* `createAdminRouter` in a real Express app and speak real HTTP over a
 // loopback socket; the shared harness (store, app, HTTP helpers) lives in
-// `helpers/access-policy-admin-http.js`. The AuthZ page's own structure and preserved write
-// semantics (CAS 409, toggle/delete confirmations, revoke ⇒ `all`, preview, repair, the `?capq=`
-// filter) are pinned in `admin-redo/authz.test.js`, which is the page's lane regression; what stays
-// here is the cross-cutting surface: the service-absent fail-closed shape, the #399 nav wiring, the
-// secret/PII leak scan and the persistence of a created policy.
+// `helpers/access-policy-admin-http.js`. What stays here is the cross-cutting surface: the
+// service-absent fail-closed shape, the #399 nav wiring, the secret/PII leak scan and the frozen
+// write surface (Task 3 of the per-Vault plan: every legacy write answers 409
+// `access_policy_frozen` and the page only shows what is stored). The page's own frozen structure is
+// pinned in `access-policy-frozen.test.js`.
 //
 // Contract: `docs/admin/README.md` (Admin plane) + `scratch/authz/INTERFACE.md` §10.4/§10.6.
 
@@ -14,9 +14,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { createAccessPolicyAdmin } from "../src/admin/access-policy.js";
 import { parseAccessPolicyDocument } from "../src/access-policy/schema.js";
 import {
   CREATE_FIELDS,
+  MONDAY_INSIDE,
   TAB,
   csrfFrom,
   getPage,
@@ -28,7 +30,18 @@ import {
   vaultGitAdminStub,
 } from "./helpers/access-policy-admin-http.js";
 
-test("the tab requires an admin session and renders 定时授权 with the provider subjects", async (t) => {
+/**
+ * Seed the legacy document through the *service*: Task 3 froze the write *routes*, not the store, so
+ * a fixture can still be stored (and the page has something honest to show).
+ */
+async function seedPolicy(store, overrides = {}) {
+  const admin = createAccessPolicyAdmin({ store, now: () => MONDAY_INSIDE });
+  const created = await admin.createPolicy({ ...CREATE_FIELDS, ...overrides });
+  assert.equal(created.ok, true, "the fixture policy must be stored");
+  return created.policy;
+}
+
+test("the tab requires an admin session and renders the frozen 定时授权 page", async (t) => {
   const { store } = await makeStore(t);
   const { origin } = await startAdmin(t, { store });
 
@@ -43,12 +56,15 @@ test("the tab requires an admin session and renders 定时授权 with the provid
   const page = await getPage(origin, cookie, TAB);
   assert.equal(page.response.status, 200);
   assert.ok(page.body.includes("定时授权"));
-  assert.ok(page.body.includes("oauth-user:u1"), "subjects come from the provider snapshot");
-  assert.ok(page.body.includes("api-key:key-1"));
-  assert.ok(page.body.includes("oauth-client:client-1"));
+  // Frozen (Task 3): the page names the fact and points at the new constraint page. The credential
+  // subjects the old 当前状态预览 listed are gone with the POST preview, so nothing on this surface
+  // offers a subject picker any more.
+  assert.match(page.body, /data-frozen="access_policy_frozen"/, "the read-only banner names the freeze");
+  assert.match(page.body, /href="\/admin\/auth\/authz"/, "the banner points at the new page");
+  assert.equal(page.body.includes('name="subject"'), false, "no subject picker survives the freeze");
 });
 
-test("every POST requires the existing admin CSRF token", async (t) => {
+test("every POST requires the existing admin CSRF token, and a valid one is still refused", async (t) => {
   const { store } = await makeStore(t);
   const { origin } = await startAdmin(t, { store });
   const cookie = await login(origin);
@@ -59,22 +75,28 @@ test("every POST requires the existing admin CSRF token", async (t) => {
   assert.ok(rejected.body.includes("CSRF"));
   assert.equal(store.snapshot().revision, 0, "a CSRF failure must not write");
 
-  const accepted = await postForm(origin, cookie, `${TAB}/create`, CREATE_FIELDS, { csrf });
-  assert.equal(accepted.response.status, 303);
-  assert.equal(store.snapshot().revision, 1);
+  // The CSRF gate stays in front of the freeze: a well-authenticated, well-tokened write is refused
+  // with the frozen code, and it still writes nothing.
+  const refused = await postForm(origin, cookie, `${TAB}/create`, CREATE_FIELDS, { csrf });
+  assert.equal(refused.response.status, 409);
+  assert.equal(JSON.parse(refused.body).error, "access_policy_frozen");
+  assert.equal(store.snapshot().revision, 0, "a frozen write must not write");
 });
 
-test("create persists a normalized policy and the tab lists the new row", async (t) => {
+test("a stored policy is still listed read-only, and a create is refused", async (t) => {
   const { file, store } = await makeStore(t);
   const { origin } = await startAdmin(t, { store });
   const cookie = await login(origin);
   const csrf = csrfFrom((await getPage(origin, cookie, TAB)).body);
 
+  // A create through the frozen route writes nothing…
   const created = await postForm(origin, cookie, `${TAB}/create`, CREATE_FIELDS, { csrf });
-  assert.equal(created.response.status, 303);
-  // The write answers with the prototype's result line, so the redirect carries `?done=`.
-  assert.equal(created.response.headers.get("location"), `${TAB}?done=create`);
+  assert.equal(created.response.status, 409);
+  assert.equal(JSON.parse(created.body).error, "access_policy_frozen");
+  assert.equal(store.snapshot().revision, 0, "the refused create must not reach the store");
 
+  // … while a policy already in the document is still listed, with the same normalized shape.
+  await seedPolicy(store);
   const persisted = parseAccessPolicyDocument(await readFile(file, "utf8"));
   assert.equal(persisted.ok, true);
   assert.equal(persisted.document.revision, 1);
@@ -106,15 +128,13 @@ test("#434: the 窗口 cell carries the summary/markers and ?window= opens the d
   const { store } = await makeStore(t);
   const { origin } = await startAdmin(t, { store });
   const cookie = await login(origin);
-  const csrf = csrfFrom((await getPage(origin, cookie, TAB)).body);
-  await postForm(origin, cookie, `${TAB}/create`, {
-    ...CREATE_FIELDS,
+  const seeded = await seedPolicy(store, {
     weekly: "mon 09:00-18:00\ntue 09:00-18:00\nwed 09:00-18:00\nthu 09:00-18:00\nfri 09:00-18:00",
     dateRanges: "2026-10-01..2026-10-07",
     startsAt: "2026-10-05T01:00:00.000Z",
     expiresAt: "2026-10-06T01:00:00.000Z",
-  }, { csrf });
-  const policyId = store.snapshot().policies[0].id;
+  });
+  const policyId = seeded.id;
   const revisionBefore = store.snapshot().revision;
 
   const list = await getPage(origin, cookie, TAB);
@@ -144,13 +164,16 @@ test("#434: the 窗口 cell carries the summary/markers and ?window= opens the d
   assert.match(drawer, /<div class="w" style="left:37\.5%;width:37\.5%" title="09:00–18:00">/, "the worked interval is drawn");
   assert.equal(store.snapshot().revision, revisionBefore, "a read-only ?window= GET must not write");
 
+  // Frozen: the ?edit= view shows the same stored values without a draft input — the full date range
+  // and both bounds (wall clock + the stored UTC instant) stay readable.
   const editor = await getPage(origin, cookie, `${TAB}?edit=${policyId}`);
-  assert.match(editor.body, /name="range_from_1" value="2026-10-01"/);
-  assert.match(editor.body, /name="range_to_1" value="2026-10-07"/);
-  assert.match(editor.body, /name="startsAt" value="2026-10-05T09:00"/, "09:00 Asia/Shanghai is the wall clock for the stored instant");
-  assert.match(editor.body, /name="expiresAt" value="2026-10-06T09:00"/);
-  assert.match(editor.body, /存储为 <span class="mono">2026-10-05T01:00:00\.000Z<\/span>/, "the stored UTC instant is echoed");
-  assert.equal(store.snapshot().revision, revisionBefore, "opening the editor must not write");
+  assert.equal(editor.response.status, 200);
+  assert.match(editor.body, /2026-10-01\.\.2026-10-07/, "the stored date range is readable");
+  assert.match(editor.body, /<span class="mono">2026-10-05 09:00<\/span> <span class="muted mono">2026-10-05T01:00:00\.000Z<\/span>/, "the start bound keeps its wall clock and its stored UTC instant");
+  assert.match(editor.body, /<span class="mono">2026-10-06 09:00<\/span> <span class="muted mono">2026-10-06T01:00:00\.000Z<\/span>/, "the expiry bound keeps its wall clock and its stored UTC instant");
+  assert.equal(editor.body.includes("<form"), true, "only the app shell's own forms remain");
+  assert.equal(editor.body.includes('name="range_from_1"'), false, "no draft input survives the freeze");
+  assert.equal(store.snapshot().revision, revisionBefore, "opening the read-only view must not write");
 
   const unknown = await getPage(origin, cookie, `${TAB}?window=does-not-exist`);
   assert.equal(unknown.response.status, 200);
@@ -170,32 +193,43 @@ test("no response leaks a secret, a token or the full policy JSON", async (t) =>
   const cookie = await login(origin);
   const page = await getPage(origin, cookie, TAB);
   const csrf = csrfFrom(page.body);
-  await postForm(origin, cookie, `${TAB}/create`, CREATE_FIELDS, { csrf });
-  const policyId = store.snapshot().policies[0].id;
+  const seeded = await seedPolicy(store);
+  const policyId = seeded.id;
 
-  // A stale CAS, an unknown id and a rejected draft — the three refusals that render an error
-  // answer. The new plane keeps every write behind the same service + CSRF, so the leak scan has
-  // to read their real bodies: a stale delete must clear the server-side label check first (the
-  // typed-label confirmation is what the page demands), and an invalid draft is a value the
-  // service's own schema rejects (an unknown capability), not a shape the page normalises away.
-  const stale = await postForm(origin, cookie, `${TAB}/delete`, { id: policyId, confirm: CREATE_FIELDS.label, expectedRevision: "0" }, { csrf });
-  const unknown = await postForm(origin, cookie, `${TAB}/delete`, { id: "policy-does-not-exist", confirm: CREATE_FIELDS.label, expectedRevision: "1" }, { csrf });
+  // Three refused writes — a well-formed delete, an unknown id and an invalid draft — plus a hostile
+  // label. All four are refused by the freeze, so the scan has to read the refusal bodies: they must
+  // carry the frozen code and nothing of the submitted draft.
+  const stale = await postForm(origin, cookie, `${TAB}/delete`, { id: policyId, confirm: seeded.label, expectedRevision: "0" }, { csrf });
+  const unknown = await postForm(origin, cookie, `${TAB}/delete`, { id: "policy-does-not-exist", confirm: seeded.label, expectedRevision: "1" }, { csrf });
   const invalid = await postForm(origin, cookie, `${TAB}/create`, {
     ...CREATE_FIELDS,
     label: "未知能力",
     capabilities: ["tool:definitely-not-a-tool"],
   }, { csrf });
-  assert.equal(stale.response.status, 409);
-  assert.equal(unknown.response.status, 404);
-  assert.equal(invalid.response.status, 400);
+  const hostile = await postForm(origin, cookie, `${TAB}/create`, {
+    ...CREATE_FIELDS,
+    label: "<script>alert(1)</script>",
+    capabilities: ["tool:definitely-not-a-tool"],
+  }, { csrf });
+  for (const [name, refused] of Object.entries({ stale, unknown, invalid, hostile })) {
+    assert.equal(refused.response.status, 409, `${name} is refused by the freeze`);
+    assert.equal(JSON.parse(refused.body).error, "access_policy_frozen", `${name} carries the frozen code`);
+    assert.equal(refused.body.includes("未知能力"), false, `${name} must not echo the submitted label`);
+    assert.equal(refused.body.includes("<script>alert(1)</script>"), false, `${name} must not echo a hostile label`);
+  }
   assert.equal(store.snapshot().revision, 1, "no refused write may commit");
 
   // Full policy JSON markers plus credential material must never be echoed. Raw substrings like
   // "secret"/"token"/"password" are intentionally not used: the prototype stylesheet
   // legitimately contains `.secret`/`[type=password]` and the sidebar contains "OAuth Token".
-  // The page *does* re-render the operator's own refused draft (the no-JS contract: the form comes
-  // back filled), so that echo is checked for escaping below instead of being forbidden.
-  for (const [name, body] of Object.entries({ page: page.body, stale: stale.body, unknown: unknown.body, invalid: invalid.body })) {
+  const readOnly = await getPage(origin, cookie, `${TAB}?edit=${policyId}`);
+  for (const [name, body] of Object.entries({
+    page: page.body,
+    readOnly: readOnly.body,
+    stale: stale.body,
+    unknown: unknown.body,
+    invalid: invalid.body,
+  })) {
     for (const marker of ["schemaVersion", "\"policies\"", "clientSecret", "accessToken", "refreshToken", "\"createdAt\"", "\"updatedAt\"", "\"revision\""]) {
       assert.equal(body.includes(marker), false, `${name} response leaked ${marker}`);
     }
@@ -203,18 +237,6 @@ test("no response leaks a secret, a token or the full policy JSON", async (t) =>
   }
   // The list read before the write cannot echo the submitted draft at all.
   assert.equal(page.body.includes("工作时间"), false, "the pre-write list response echoed the submitted draft");
-
-  // A hostile draft comes back escaped — the refusal path re-renders the submitted form, so this is
-  // where an unescaped echo would land.
-  const hostile = await postForm(origin, cookie, `${TAB}/create`, {
-    ...CREATE_FIELDS,
-    label: "<script>alert(1)</script>",
-    capabilities: ["tool:definitely-not-a-tool"],
-  }, { csrf });
-  assert.equal(hostile.response.status, 400);
-  assert.match(hostile.body, /value="&lt;script&gt;alert\(1\)&lt;\/script&gt;"/, "the submitted draft is re-rendered escaped");
-  assert.doesNotMatch(hostile.body, /<script>alert\(1\)<\/script>/, "the raw draft never reaches the document");
-  assert.equal(store.snapshot().revision, 1, "a refused draft must not persist");
 });
 
 test("without the injected service the tab is absent and no access-policy route exists", async (t) => {
@@ -243,7 +265,10 @@ test("#399: the access-policy page renders the same 9-tab nav as the Auth Center
   assert.equal(accessPolicy.response.status, 200);
   const accessPolicyTabs = tabHrefs(accessPolicy.body);
   assert.ok(accessPolicyTabs.includes("/admin/auth/vault-git"), "the access-policy page must link the Vault 与 Git tab");
-  assert.ok(accessPolicyTabs.includes("/admin/auth/access-policy"));
+  // Task 7 item B: the 定时授权 entry opens the constraint page, so no nav row points at the frozen
+  // legacy page any more. The frozen page stays reachable as the read-only link the new page renders.
+  assert.ok(accessPolicyTabs.includes("/admin/auth/authz"), "the 定时授权 entry leads to the constraint page");
+  assert.equal(accessPolicyTabs.includes(TAB), false, "the frozen page is not a nav entry any more");
   assert.equal(accessPolicyTabs.length, 9);
 
   const overview = await getPage(origin, cookie, "/admin/auth?tab=overview");
@@ -258,12 +283,17 @@ test("#399: the access-policy page renders the same 9-tab nav as the Auth Center
     "/admin/auth?tab=tokens",
     "/admin/auth?tab=publishes",
     "/admin/auth?tab=audit",
-    "/admin/auth/access-policy",
+    "/admin/auth/authz",
     "/admin/auth/vault-git",
   ]);
   assert.ok(/class="app"/.test(accessPolicy.body), "AuthZ must use the prototype app shell");
   assert.equal(/<nav class="tabs"/.test(accessPolicy.body), false, "AuthZ must not emit horizontal tabs");
-  assert.ok(/href="\/admin\/auth\/access-policy"[^>]*aria-current="page"|class="ni on"[^>]*href="\/admin\/auth\/access-policy"/.test(accessPolicy.body), "access-policy nav active");
+  assert.ok(/href="\/admin\/auth\/authz"[^>]*data-hotkey="z"/.test(accessPolicy.body), "the 定时授权 nav row keeps its target and hotkey");
+
+  // And the frozen page is still one click away: the constraint page renders it as its history link.
+  const constraints = await getPage(origin, cookie, "/admin/auth/authz");
+  assert.equal(constraints.response.status, 200, "the constraint page must render");
+  assert.ok(constraints.body.includes(`href="${TAB}"`), "the new page links the frozen page");
 });
 
 test("#399 negative control: without the vault-git service the tab is absent and /vault-git is 404", async (t) => {
@@ -290,7 +320,8 @@ test("#399 reverse: the vault-git page keeps its 定时授权 tab and the same 9
   const page = await getPage(origin, cookie, "/admin/auth/vault-git");
   assert.equal(page.response.status, 200);
   const hrefs = tabHrefs(page.body);
-  assert.ok(hrefs.includes("/admin/auth/access-policy"), "the 定时授权 tab must not regress");
+  assert.ok(hrefs.includes("/admin/auth/authz"), "the 定时授权 tab must not regress");
+  assert.equal(hrefs.includes(TAB), false, "and it points at the constraint page, not the frozen one");
   assert.ok(hrefs.includes("/admin/auth/vault-git"));
   assert.equal(hrefs.length, 9);
   assert.ok(/class="app"/.test(page.body), "Vault must use the prototype app shell");

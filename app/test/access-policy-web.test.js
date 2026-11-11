@@ -101,6 +101,9 @@ function runChain(middlewares, req) {
 function session(overrides = {}) {
   return {
     id: "web-session-1",
+    // A real session always carries its non-secret credential id (resolveWebSession), and
+    // the authorization runtime identifies the Web actor by it.
+    credentialId: "web-session:fixture-hash",
     userId: "u1",
     vaultId: "vault-1",
     allowedVaults: ["vault-1"],

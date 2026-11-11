@@ -13,11 +13,25 @@ services:
     init: true
     user: "1002:10"
     ports:
-      - "${MCP_PORT:-18923}:18923"
+      # Plaintext stays for local health checks, in-container probes and rollback, and it is bound
+      # to loopback only: proxies reach the container on the TLS port below. The public edge comes in
+      # over frp, which forwards plaintext; example-host re-encrypts it there (see RELEASE_AND_DEPLOY.md).
+      - "127.0.0.1:${MCP_PORT:-18923}:18923"
+      # Encrypted proxy -> process hop. The operator chooses the bind address of this one, because
+      # the edge and the LAN clients reach it there.
+      - "${MCP_BIND_ADDR:-0.0.0.0}:${MCP_TLS_PORT:-18924}:18924"
     environment:
       HOME: /data
+      # Git push reads keys from /data/.ssh because HOME is /data; the data mount already
+      # carries it. Keep that directory mode 700 and owner 1002.
       HOST: 0.0.0.0
       PORT: 18923
+      # Both files or neither: the process refuses a half-configured pair instead of answering plaintext.
+      TLS_CERT_FILE: "${TLS_CERT_FILE:-}"
+      TLS_KEY_FILE: "${TLS_KEY_FILE:-}"
+      # Fixed on purpose: the published port above is the operator knob (MCP_TLS_PORT); the process
+      # always listens on 18924 inside the container, so the two can never disagree.
+      TLS_PORT: "18924"
       MCP_PATH: /mcp
       MCP_SERVER_NAME: obsidian-mcp-server
       MCP_SERVER_VERSION: "${MCP_SERVER_VERSION:-1.0.0}"
@@ -47,6 +61,10 @@ services:
       API_KEY_HEADER: "${API_KEY_HEADER:-X-API-Key}"
       API_KEY_VAULTS: "${API_KEY_VAULTS:-}"
       OAUTH_ENABLED: "${OAUTH_ENABLED:-false}"
+      # Which authorization model answers: legacy | shadow | enforce. Forwarded so a soak or a
+      # rollback (legacy) can reach the container without a rebuild; see
+      # docs/superpowers/specs/2026-11-09-authz-per-vault-windows-design.md §7.
+      AUTHORIZATION_MODE: "${AUTHORIZATION_MODE:-legacy}"
       AUTHZ_ENABLED: "${AUTHZ_ENABLED:-false}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
       PUBLIC_BASE_URL_ALIASES: "${PUBLIC_BASE_URL_ALIASES:-}"
@@ -122,13 +140,18 @@ services:
       - "${OBSIDIAN_VAULT_PATH:-./vaults/vault}:/vault"
       - "${OBSIDIAN_VAULTS_ROOT:-./vaults}:/vaults"
       - "./data:/data"
-      - "./data/ssh:/root/.ssh:ro"
-      - "./app/server.js:/app/server.js:ro"
-      - "./app/src:/app/src:ro"
+      - "./certs:/certs:ro"
+    # The image is the runtime. The host `app/` tree is the release payload that built it, so a
+    # source mount here would run whatever the checkout holds instead of the built code.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
   deprecation-monitor:
-    image: "${DEPRECATION_MONITOR_IMAGE:-alpine:latest}"
+    image: "${DEPRECATION_MONITOR_IMAGE:-alpine:3.20}"
     container_name: obsidian-deprecation-monitor
     user: "1002:10"
     read_only: true
@@ -138,7 +161,10 @@ services:
     tmpfs:
       - /tmp
     volumes:
+      # The whole data tree is read-only; the ops log is writable so the sink check below can
+      # mean something. A read-only sink made `[ -w /data/ops-log ]` report a fault every run.
       - "./data:/data:ro"
+      - "./data/ops-log:/data/ops-log"
     environment:
       MONITOR_TAG: web-deprecation-monitor
       MONITOR_INTERVAL_SECONDS: "${MONITOR_INTERVAL_SECONDS:-3600}"

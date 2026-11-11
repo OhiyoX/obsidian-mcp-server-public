@@ -25,6 +25,11 @@ export function initializeExplorerWiring({
   escapeHtml,
   openNote,
   createNote,
+  // Optional: the safe-delete path leaves the editor through the shell's welcome
+  // transition when the deleted entry was the open note.
+  enterWelcome,
+  // Optional: a rename reports the entry's old and new path, so the open document can follow it.
+  pathMoved,
   searchInput,
   searchClear,
   searchCase,
@@ -48,8 +53,11 @@ export function initializeExplorerWiring({
     api,
     toast,
     escapeHtml,
-    openNote: (path) => openNote(path),
+    // The options travel too: a rename reload passes `{ reason: "moved" }` for its own guard text.
+    openNote: (path, options) => openNote(path, options),
     createNote: (folderPath, name) => createNote(folderPath, name),
+    enterWelcome: () => enterWelcome?.(),
+    pathMoved: (from, to) => pathMoved?.(from, to),
     openBase: (payload) => onOpenBase?.(payload),
     openFile: (item) => {
       if (typeof openFile === "function") return openFile(item);

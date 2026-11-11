@@ -1,7 +1,7 @@
 # Progressive Tool Discovery — Phase 2C eval & cost gate
 
 Status: **candidate** (offline, deterministic branch artifact). Default production profile stays `full`.
-Source commit: `289c143b13aef78f967f3b920ca77fd47737ea8a`.
+Source commit: `1ac421359e433d8e377e648ef68012d121fb2b1d`.
 
 This slice is evaluation/evidence only. It changes no registration, no visibility default,
 no Scope truth, and no Vault behavior. It reuses the frozen 50 task fixtures and the native
@@ -27,7 +27,7 @@ Blockers:
 
 ## Catalog baseline
 
-- Native catalog: **92** tools; descriptor 174471 bytes (~43618 est. tokens); inputSchema 42093 bytes; outputSchema 73790 bytes.
+- Native catalog: **92** tools; descriptor 174791 bytes (~43698 est. tokens); inputSchema 42147 bytes; outputSchema 73956 bytes.
 - Canonical membership order (`TOOL_NAMES`, `server_info.tools`, Scope tables): 92 names — **immutable membership order, not the wire order**.
 - Native wire order (raw `tools/list`): positional mismatches vs canonical membership = **56**; set equality = `true`. The two orders are recorded separately; neither is inferred from the other.
 - Wired runtime parity (full profile, all scopes): output deep-equals raw native descriptors in order = **true** (names true, descriptors true).
@@ -41,10 +41,10 @@ Blockers:
 
 | Profile | Visible | Hidden | Descriptor B | Est. tokens | Bytes saved | Critical recall | Fixtures fully covered | Missing critical refs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `full` | 92 | 0 | 174471 | ~43618 | 0.0% | 100.0% | 50/50 | 0 |
+| `full` | 92 | 0 | 174791 | ~43698 | 0.0% | 100.0% | 50/50 | 0 |
 | `core` | 6 | 86 | 17272 | ~4318 | 90.1% | 24.1% | 8/50 | 44 |
 | `module:info` | 2 | 90 | 5476 | ~1369 | 96.9% | 10.3% | 2/50 | 52 |
-| `module:notes` | 8 | 84 | 16690 | ~4173 | 90.4% | 19.0% | 7/50 | 47 |
+| `module:notes` | 8 | 84 | 16690 | ~4173 | 90.5% | 19.0% | 7/50 | 47 |
 | `module:search` | 4 | 88 | 9191 | ~2298 | 94.7% | 5.2% | 2/50 | 55 |
 | `module:files` | 18 | 74 | 36164 | ~9041 | 79.3% | 8.6% | 5/50 | 53 |
 | `module:links` | 13 | 79 | 16902 | ~4226 | 90.3% | 6.9% | 4/50 | 54 |
@@ -52,7 +52,7 @@ Blockers:
 | `module:git` | 6 | 86 | 8137 | ~2035 | 95.3% | 8.6% | 4/50 | 53 |
 | `module:intelligence` | 13 | 79 | 24480 | ~6120 | 86.0% | 15.5% | 7/50 | 49 |
 | `module:context` | 1 | 91 | 3793 | ~949 | 97.8% | 0.0% | 0/50 | 58 |
-| `module:publish` | 2 | 90 | 3622 | ~906 | 97.9% | 5.2% | 3/50 | 55 |
+| `module:publish` | 2 | 90 | 3942 | ~986 | 97.7% | 5.2% | 3/50 | 55 |
 | `module:plans` | 9 | 83 | 19079 | ~4770 | 89.1% | 12.1% | 7/50 | 51 |
 
 ### Wrong/missing-tool exposure (annotation/Scope derived, not a selection rate)
@@ -76,13 +76,13 @@ Blockers:
 ## Module oracle (upper bound, not a deployment)
 
 - All fixtures expressible by a toolset union: **true**.
-- Per-fixture cover descriptor bytes: min 3622, p50 19079, p95 36164, max 36164.
+- Per-fixture cover descriptor bytes: min 3942, p50 19079, p95 36164, max 36164.
 
 ## Best fixed module bundle (diagnostic optimizer)
 
 - Toolsets: `info`, `notes`, `search`, `files`, `links`, `workflows`, `git`, `intelligence`, `publish`, `plans`.
 - Omitted toolsets: `context`.
-- Visible tools 91; descriptor 170678 bytes; descriptor reduction vs full 2.2%.
+- Visible tools 91; descriptor 170998 bytes; descriptor reduction vs full 2.2%.
 
 ## Scope-negative matrix
 
@@ -184,5 +184,5 @@ Blockers:
 - host/client deferred loading behavior (Phase 3 live host evidence)
 - deployed-server scope enforcement (needs a scope-limited credential)
 
-Content digest (excludes `source`): `f50f4706da62bf208958f88d637c224324f0ad08e06e7f1772f2def638f5f520` (110347 bytes).
+Content digest (excludes `source`): `f13dd49cc1f234d2cc25f020f01b216673f380b00d481ae046e7cfaadd0337da` (110347 bytes).
 

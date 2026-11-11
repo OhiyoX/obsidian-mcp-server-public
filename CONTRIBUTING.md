@@ -2,6 +2,8 @@
 
 Thanks for helping improve Obsidian MCP Server.
 
+**This repository is the public source snapshot and the community contribution entry point.** Maintainers review accepted changes in a private development line first, then include them in a later public snapshot. You do not need access to any other repository to contribute here.
+
 ## Issues
 
 - Search existing issues first.
@@ -20,10 +22,11 @@ Thanks for helping improve Obsidian MCP Server.
 5. Open the pull request with the problem, the change, and the verification you
    ran.
 
-Accepted changes are reviewed and merged by the maintainers. Attribution is
-recorded in the release notes or an equivalent public record, **not necessarily
-preserved as the original commit graph**. Direct pushes to `main` from
-contributors are not accepted.
+Maintainers review accepted public changes and include them in a later public
+snapshot. Attribution is recorded in the public release notes or an equivalent
+public record, **not necessarily preserved as the original commit graph**.
+Direct pushes to the public `main` from contributors are not accepted. A GitHub
+PR being opened or reviewed does not mean it shipped.
 
 ## Licensing
 

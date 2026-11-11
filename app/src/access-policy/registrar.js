@@ -21,10 +21,13 @@
 //  - `explain()` runs only on deny, so the hot path stays evaluate-only.
 
 import { MEMORY_POLICY_URI } from "../agent-bootstrap.js";
+import { DEFAULT_VAULT_ID } from "../oauth/primitives.js";
 import { requestContext } from "../request-context.js";
+import { mcpAuthorizationRequest } from "../authorization/adapters/mcp.js";
+import { AUTHORIZATION_DECISION_CODES } from "../authorization/evaluate.js";
+import { createAuthorizationSeam } from "../authorization/runtime.js";
 import { capabilitiesForResource, capabilitiesForTool } from "./capabilities.js";
 import { ACCESS_DENY_CODES } from "./errors.js";
-import { subjectsFromAuthInfo } from "./subjects.js";
 
 /**
  * Tools that must remain callable while a principal is suspended and while the
@@ -53,12 +56,12 @@ function markDenied() {
 // Stable machine-readable deny payloads (INTERFACE §10.1, DEVELOPMENT §15).
 // Explicit key lists keep both the JSON text and `structuredContent` byte-for-
 // byte stable and identical.
-function outsideWindowResult(decision, nextAllowedAt) {
+function outsideWindowResult(decision) {
   const payload = {
     code: ACCESS_DENY_CODES.OUTSIDE_WINDOW,
     mode: decision.mode,
-    policyId: decision.denyPolicyId,
-    nextAllowedAt,
+    policyId: decision.denyConstraintId,
+    nextAllowedAt: decision.nextAllowedAt,
   };
   return {
     content: [{ type: "text", text: JSON.stringify(payload) }],
@@ -91,8 +94,37 @@ function lastArg(args) {
  * @param {object} options.runtime access-policy runtime (A4)
  * @param {(name: string) => boolean} [options.isMetadataTool]
  * @param {(uri: string) => boolean} [options.isMetadataResource]
+ * @param {object} [options.authorizationShadow] P2 shadow observer; observation only
+ * @param {string} [options.primaryVaultId] primary Vault id for the shadow target
  */
-export function createAccessPolicyRegistrar(server, { runtime, isMetadataTool, isMetadataResource } = {}) {
+export function createAccessPolicyRegistrar(server, { runtime, authorization = null, isMetadataTool, isMetadataResource, authorizationShadow = null, primaryVaultId = DEFAULT_VAULT_ID } = {}) {
+  const shadow = authorizationShadow;
+  // P3: the runtime decides here too. `runtime` stays as the audit sink and as the old
+  // temporal plane the extracted legacy backend reads; it no longer answers anything by
+  // itself.
+  const decide = createAuthorizationSeam({ authorization, accessRuntime: runtime });
+
+  /**
+   * The one decision of this layer. The old capability set travels with the request as
+   * frozen data, and the metadata plane states the bypass the old gate applied.
+   */
+  function decideTemporal({ extra, name, args, resourceUri = null, capabilities = null, bypass = false }) {
+    const request = mcpAuthorizationRequest({
+      authInfo: extra?.authInfo,
+      name: resourceUri === null ? name : null,
+      resourceUri,
+      args,
+      primaryVaultId,
+      legacy: { phase: resourceUri === null ? "tool" : "resource", capabilities, bypass },
+    });
+    if (request === null) return null;
+    return { request, decision: decide.authorize(request) };
+  }
+
+  function observeTemporal(entry, boundaryKey, phase) {
+    if (shadow === null || typeof shadow.compare !== "function" || entry === null) return;
+    shadow.compare({ request: entry.request, legacyDecision: entry.decision, boundaryKey, phase });
+  }
   const overrideTool = typeof isMetadataTool === "function" ? isMetadataTool : null;
   const overrideResource = typeof isMetadataResource === "function" ? isMetadataResource : null;
   // Overrides are additive only: the frozen metadata plane can never be
@@ -100,33 +132,29 @@ export function createAccessPolicyRegistrar(server, { runtime, isMetadataTool, i
   const isMetadata = (name) => METADATA_TOOL_SET.has(name) || overrideTool?.(name) === true;
   const isMetadataUri = (uri) => uri === MEMORY_POLICY_URI || overrideResource?.(uri) === true;
 
-  function deny(decision, subjects, capabilities) {
+  function deny(decision, capabilities) {
     markDenied();
-    const broken = decision.reason === "policy_unavailable";
-    // `explain` only runs for a real temporal deny; the broken plane has no
-    // meaningful next window (INTERFACE §10.1, DEVELOPMENT A-11).
-    const explained = broken ? null : runtime.explain({ subjects, capabilities });
-    const nextAllowedAt = explained?.nextAllowedAt ?? null;
+    const broken = decision.code === AUTHORIZATION_DECISION_CODES.POLICY_UNAVAILABLE;
     // Exactly one `authz.deny` per denied request (INTERFACE §10.1 erratum,
     // DEVELOPMENT §20.10). The A4 runtime owns the field whitelist and stamps
     // `time` from its injected clock, so the registrar passes neither. A failing
     // audit sink must never turn a deny into an allow (A-10).
     try {
-      runtime.audit?.({
+      runtime?.audit?.({
         action: "authz.deny",
         outcome: "failure",
         surface: "mcp",
         mode: decision.mode ?? null,
-        policyId: decision.denyPolicyId ?? null,
+        policyId: decision.denyConstraintId ?? null,
         capabilities,
-        nextAllowedAt,
-        reason: decision.reason,
+        nextAllowedAt: decision.nextAllowedAt ?? null,
+        reason: broken ? "policy_unavailable" : "outside_window",
       });
     } catch {
       // Audit is best-effort; the deny result stands.
     }
     if (broken) return policyUnavailableResult();
-    return outsideWindowResult(decision, nextAllowedAt);
+    return outsideWindowResult(decision);
   }
 
   const registrar = {
@@ -134,29 +162,33 @@ export function createAccessPolicyRegistrar(server, { runtime, isMetadataTool, i
     getClientVersion: () => server.server?.getClientVersion?.() ?? server.getClientVersion?.(),
     registerTool(name, config, handler) {
       const wrapped = async (...args) => {
-        if (isMetadata(name)) return handler(...args);
         const extra = lastArg(args);
-        const subjects = subjectsFromAuthInfo(extra?.authInfo);
-        const capabilities = capabilitiesForTool(name);
+        const capabilities = isMetadata(name) ? null : capabilitiesForTool(name);
         // Unknown tool: discovery/protocol owns that semantics.
-        if (capabilities === null) return handler(...args);
-        const decision = runtime.evaluate({ subjects, capabilities });
-        if (decision?.allowed) return handler(...args);
-        return deny(decision, subjects, capabilities);
+        if (!isMetadata(name) && capabilities === null) return handler(...args);
+        // Metadata stays reachable while suspended or broken (A-07): the old plane never
+        // evaluated it, so the decision states that bypass instead of inventing an answer.
+        const entry = decideTemporal({ extra, name, args: args[0], capabilities, bypass: isMetadata(name) });
+        // A boundary the adapter cannot normalize keeps the protocol's answer; nothing is
+        // decided and nothing is recorded (P2 semantics, unchanged).
+        if (entry === null) return handler(...args);
+        observeTemporal(entry, name, "tool");
+        if (entry.decision.allowed === true) return handler(...args);
+        return deny(entry.decision, capabilities ?? []);
       };
       return server.registerTool(name, config, wrapped);
     },
     registerResource(name, uri, config, handler) {
       const wrapped = async (...args) => {
-        if (isMetadataUri(uri)) return handler(...args);
-        const capabilities = capabilitiesForResource(uri);
-        // Unknown URI: same rule as unknown tools.
-        if (capabilities === null) return handler(...args);
         const extra = lastArg(args);
-        const subjects = subjectsFromAuthInfo(extra?.authInfo);
-        const decision = runtime.evaluate({ subjects, capabilities });
-        if (decision?.allowed) return handler(...args);
-        return deny(decision, subjects, capabilities);
+        const capabilities = isMetadataUri(uri) ? null : capabilitiesForResource(uri);
+        // Unknown URI: same rule as unknown tools.
+        if (!isMetadataUri(uri) && capabilities === null) return handler(...args);
+        const entry = decideTemporal({ extra, resourceUri: uri, name, capabilities, bypass: isMetadataUri(uri) });
+        if (entry === null) return handler(...args);
+        observeTemporal(entry, uri, "resource");
+        if (entry.decision.allowed === true) return handler(...args);
+        return deny(entry.decision, capabilities ?? []);
       };
       return server.registerResource(name, uri, config, wrapped);
     },

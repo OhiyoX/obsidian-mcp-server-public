@@ -161,6 +161,8 @@ function enabledMenuItems(popup) {
   const items = [...(popup?.querySelectorAll?.("button") ?? [])];
   return items.filter((item) => {
     if (!ITEM_ROLES.has(item.getAttribute?.("role"))) return false;
+    // A `hidden` item is not on screen, so the keyboard must not land on it either.
+    if (item.hidden === true) return false;
     return item.disabled !== true && item.getAttribute("aria-disabled") !== "true";
   });
 }

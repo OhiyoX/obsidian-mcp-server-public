@@ -50,6 +50,9 @@ export const persistenceMethods = {
         user.lastLoginAt ??= null;
         user.lastSource ??= null;
         user.lastUserAgent ??= null;
+        // Syntax only: an account default that no longer sits in allowedVaults stays
+        // recorded and is refused at call time, never silently rewritten here.
+        if (user.defaultVaultId !== undefined) user.defaultVaultId = normalizeDefaultVaultId(user.defaultVaultId);
       }
       for (const record of Object.values(this.data.apiKeys)) {
         record.allowedScopes = normalizedScopes(record.allowedScopes);
@@ -92,7 +95,20 @@ export const persistenceMethods = {
     // This is a preference, not a grant. Per-token allowlists are enforced on every call.
     const usage = this.data.clientUsage[clientId] ||= { createdAt: null };
     usage.defaultVaultId = normalized;
-    this.recordAudit({ action: "oauth.client.default-vault.update", credentialType: "oauth-client", clientId, detail: normalized ? "configured" : "inherit" });
+    this.recordAudit({ action: "oauth.client.default-vault.update", credentialType: "oauth-client", clientId, detail: normalized || "inherit" });
+    await this.save();
+    return true;
+  },
+
+  async updateOAuthUserDefaultVault(userId, defaultVaultId) {
+    await this.ready;
+    const record = this.data.oauthUsers[userId];
+    if (!record) return false;
+    // A preference, never a grant: it must stay inside the account's own Vaults, and each
+    // token's allowlist is still enforced on every call.
+    const normalized = normalizeDefaultVaultId(defaultVaultId, record.allowedVaults || []);
+    record.defaultVaultId = normalized;
+    this.recordAudit({ action: "oauth.user.default-vault.update", credentialType: "oauth-user", credentialId: userId, detail: normalized || "inherit" });
     await this.save();
     return true;
   },

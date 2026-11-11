@@ -280,6 +280,29 @@ export function createVaultGitAdminAssembly({
     },
     refreshInventory: () => delegate.refreshInventory(),
     admissionAction: admission === null ? undefined : admissionAdmin.apply,
+    // The managed reconciliation service is the thing the page used to call "not wired yet"
+    // (#437). These are its own facts, read only: nothing here triggers a round.
+    runtime: () => {
+      const status = admission?.status?.() ?? null;
+      if (!status) return null;
+      const last = Array.isArray(status.history) ? status.history.at(-1) ?? null : null;
+      return Object.freeze({
+        enabled: status.enabled === true,
+        initialized: status.initialized === true,
+        inFlight: status.inFlight === true,
+        coalesced: status.coalesced ?? 0,
+        runs: status.runs ?? 0,
+        failures: status.failures ?? 0,
+        lastRunAt: status.lastRunAt ?? null,
+        lastSuccessAt: status.lastSuccessAt ?? null,
+        lastError: status.lastError ?? null,
+        lastTrigger: last?.trigger ?? null,
+        lastStatus: last?.status ?? null,
+        watcher: status.scheduled?.watcher === true,
+        periodic: status.scheduled?.periodic === true,
+        periodicMs: status.scheduled?.periodicMs ?? null,
+      });
+    },
     verify: async (vaultId) => {
       await ensureInventory();
       return delegate.verify(vaultId);

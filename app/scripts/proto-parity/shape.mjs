@@ -126,6 +126,10 @@ export function probeShapeTree(options) {
     else if (pathname === '/admin/auth/login') page = 'login';
     else if (pathname === '/admin/auth/access-policy') page = 'authz';
     else if (pathname.startsWith('/admin/auth/access-policy/')) { page = 'authz'; detail = 'action'; }
+    // The 定时授权 entry leads to the per-Vault constraint page (Task 7 B): same route token as the
+    // frozen page it replaced, so the sidebar compares as one destination and not as a literal URL.
+    else if (pathname === '/admin/auth/authz') page = 'authz';
+    else if (pathname.startsWith('/admin/auth/authz/')) { page = 'authz'; detail = 'action'; }
     else if (pathname === '/admin/auth/vault-git') page = 'vaults';
     else if (KNOWN.includes(segments[0])) { page = segments[0]; if (segments[1]) detail = segments[1] === 'new' ? 'new' : 'detail'; }
     else return 'route:' + mask(value).replace(/=[^&]*/g, '=<v>');

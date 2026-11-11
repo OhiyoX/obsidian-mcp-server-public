@@ -1,38 +1,41 @@
-// 主体侧栏的定时授权配置（2026-10-31 owner request）— Key / OAuth 客户端 / 账户 的详情抽屉里
-// 能直接看到这个主体命中的规则，并「应用已有规则」。
+// 主体侧栏的定时授权（2026-10-31 owner request）— Key / OAuth 客户端 / 账户 的详情抽屉里能直接
+// 看到这个主体命中的约束。
 //
-// Everything runs against the real stack: a real access-policy store in a temp dir, the real runtime,
-// the real Admin service and the real `createAdminRouter` over a real Express listener; the provider
-// is a deterministic credential snapshot stub (the pages only consume that snapshot).
+// Design §6.6 / plan Task 7 item D: the section is read-only on the per-Vault model, and the write
+// lives where the document does — the constraint editor's subject picker. Everything runs against the
+// real stack: a real constraint document on disk, the real constraint service, the real Admin service
+// and the real `createAdminRouter` over a real Express listener; the provider is a deterministic
+// credential snapshot stub (the pages only consume that snapshot).
 //
 // What is pinned:
-//   1. all three subject drawers render the section with their own subject id and tab;
-//   2. the apply form is a real POST carrying the session CSRF and a 303 comes back to that drawer;
-//   3. attaching touches *nothing but* the subject list (window, capabilities, mode, enabled, label
-//      survive; the revision moves), and re-applying is a no-op;
-//   4. every refusal (stale CAS, unknown policy, unknown subject, missing CSRF) writes nothing and
-//      says so instead of claiming success;
-//   5. `?new=1&subject=…` pre-fills the editor with a subject this request already knows;
-//   6. a negative control proving the structural assertions can actually go red.
+//   1. all three subject drawers render the section without one control in it, and the applied list
+//      names the constraint that carries the subject;
+//   2. the section states which backend decides, and follows the mode: in `legacy` it says these
+//      constraints are recorded and do not decide, in `enforce` that they do;
+//   3. the frozen legacy endpoint stays frozen — a pointer is kept because the two endpoints read
+//      almost alike and neither may write from here;
+//   4. a negative control proving the structural assertions can actually go red.
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { once } from "node:events";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { once } from "node:events";
 import test from "node:test";
 
 import express from "express";
 
 import { createAdminRouter } from "../../src/admin/router.js";
-import { createAccessPolicyAdmin } from "../../src/admin/access-policy.js";
-import { createAccessPolicyRuntime } from "../../src/access-policy/runtime.js";
-import { createAccessPolicyStore } from "../../src/access-policy/store.js";
+import { AUTHORIZATION_CATALOG_VERSION } from "../../src/authorization/catalog.js";
+import { createConstraintAdmin } from "../../src/authorization/constraint-admin.js";
+import { serializeAuthorizationDocument } from "../../src/authorization/schema.js";
+import { createAuthorizationStore } from "../../src/authorization/store.js";
 
 const ADMIN_PASSWORD = "subject-authz-admin-password";
-const BASE = "/admin/auth/access-policy";
+const BASE = "/admin/auth/authz";
 const KEY_SUBJECT = "api-key:key-1";
 const CLIENT_SUBJECT = "oauth-client:client-1";
 const USER_SUBJECT = "oauth-user:u-1";
+const STAMP = "2026-11-01T00:00:00.000Z";
 
 function snapshot() {
   return {
@@ -57,18 +60,71 @@ function makeProvider(state) {
   };
 }
 
-async function startFixture(t) {
+/** One stored suspend constraint: Monday 09:00-18:00, `get_note` on Vault "default". */
+function constraint({ id, label, subjects, mode = "suspend", capabilities = ["get_note"], vaultIds = ["default"] }) {
+  return {
+    id,
+    label,
+    enabled: true,
+    subjects,
+    mode,
+    selector: {
+      anyOf: [mode === "revoke"
+        ? { surfaces: null, capabilities: null, targets: null }
+        : {
+          surfaces: null,
+          capabilities,
+          targets: vaultIds === null ? null : vaultIds.map((vaultId) => ({ kind: "vault", vaultId })),
+        }],
+    },
+    schedule: {
+      timezone: "Asia/Shanghai",
+      weekly: { mon: [["09:00", "18:00"]] },
+      dateRanges: [],
+      startsAt: null,
+      expiresAt: null,
+    },
+    createdAt: STAMP,
+    updatedAt: STAMP,
+  };
+}
+
+const KEY_CONSTRAINT = "11111111-1111-4111-8111-111111111111";
+const CLIENT_CONSTRAINT = "22222222-2222-4222-8222-222222222222";
+
+async function startFixture(t, { mode = null } = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), "admin-redo-subject-authz-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
-  const store = createAccessPolicyStore({ file: path.join(dir, "access-policy.json") });
+  const file = path.join(dir, "authorization.json");
+  await writeFile(file, serializeAuthorizationDocument({
+    schemaVersion: 1,
+    catalogVersion: AUTHORIZATION_CATALOG_VERSION,
+    revision: 5,
+    timeConstraintsEnabled: true,
+    subjects: {},
+    constraints: [
+      constraint({ id: KEY_CONSTRAINT, label: "研究机器人仅工作时间", subjects: [KEY_SUBJECT] }),
+      constraint({ id: CLIENT_CONSTRAINT, label: "客户端仅午休", subjects: [CLIENT_SUBJECT], vaultIds: null }),
+    ],
+  }));
+  const fs = await import("node:fs/promises");
+  const store = createAuthorizationStore({
+    file,
+    io: { mkdir: fs.mkdir, readFile: fs.readFile, open: fs.open, rename: fs.rename, unlink: fs.unlink, chmod: fs.chmod },
+  });
   await store.ready;
-  const runtime = createAccessPolicyRuntime({ enabled: true, store });
-  await runtime.ready;
-  const admin = createAccessPolicyAdmin({ store, runtime });
+  const service = createConstraintAdmin({ store, vaultIds: ["default"], now: () => STAMP });
   const provider = makeProvider({ snapshot: snapshot() });
-  provider.accessRuntime = runtime;
+
   const app = express();
-  app.use("/admin/auth", createAdminRouter({ provider, adminPassword: ADMIN_PASSWORD, secureCookie: false, accessPolicyAdmin: admin }));
+  app.use("/admin/auth", createAdminRouter({
+    provider,
+    adminPassword: ADMIN_PASSWORD,
+    secureCookie: false,
+    listVaults: async () => ({ vaults: [{ id: "default", name: "Default" }] }),
+    authorizationAdmin: service,
+    ...(mode ? { authorization: { summary: () => ({ mode }) } } : {}),
+  }));
   const server = app.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -80,7 +136,7 @@ async function startFixture(t) {
   });
   assert.equal(login.status, 303, "the fixture login must succeed");
   const cookie = login.headers.get("set-cookie").split(";", 1)[0];
-  return { origin, cookie, store, admin, runtime };
+  return { origin, cookie, store, service };
 }
 
 async function get(origin, cookie, urlPath) {
@@ -107,186 +163,135 @@ function csrfOf(body) {
   return match[1];
 }
 
-function formFields(overrides = {}) {
-  return {
-    label: "研究机器人仅工作时间",
-    enabled: ["false", "true"],
-    mode: "suspend",
-    timezone: "Asia/Shanghai",
-    subjects: [KEY_SUBJECT],
-    capabilities: ["scope:obsidian.read"],
-    w_mon_from_1: "09:00", w_mon_to_1: "18:00",
-    ...overrides,
-  };
+/**
+ * The 定时授权 section of a drawer page, cut out of the whole document.
+ *
+ * Whole-page predicates cannot pin "no control here": every drawer page has forms, selects and
+ * buttons of its own below the section, so the assertions must read this block and nothing else.
+ */
+function sectionOf(html) {
+  const start = html.indexOf('<div class="dsec" id="authz">');
+  assert.ok(start >= 0, "the drawer carries the 定时授权 section");
+  const rest = html.slice(start);
+  const next = rest.slice(1).search(/<(?:form|div) class="dsec"/);
+  return next < 0 ? rest : rest.slice(0, next + 1);
 }
-
-/** Create the canonical policy (subject = the Key) and bring back its id + the stored document. */
-async function createPolicy(origin, cookie, overrides = {}) {
-  const csrf = csrfOf((await get(origin, cookie, `${BASE}?new=1`)).body);
-  const created = await post(origin, cookie, `${BASE}/create`, { csrf, ...formFields(overrides) });
-  assert.equal(created.status, 303, `create must redirect, got ${created.status}: ${created.body.slice(0, 400)}`);
-  const list = (await get(origin, cookie, BASE)).body;
-  const id = /[?&]id=([0-9a-f-]{36})/.exec(list)?.[1] ?? null;
-  assert.ok(id, "the created policy must expose its id");
-  return id;
-}
-
-async function storedPolicy(store, id) {
-  const current = store.snapshot();
-  return current.policies.find((policy) => policy.id === id) ?? null;
-}
-
-// ------------------------------------------------------------------ structure
 
 /** The section contract, kept as a function so the negative control can run the same assertions. */
-function assertSubjectSection(html, { subject, tab, subjectId, appliedLabel = "研究机器人仅工作时间", candidateLabel = "客户端仅午休" }) {
-  assert.match(html, /<div class="dsec" id="authz"><h3>定时授权<\/h3>/, "the drawer carries the 定时授权 section");
-  assert.match(html, /只在这个主体已有的权限上再加限制，不会放大权限/, "the section states the restriction direction");
-  assert.ok(html.includes(`name="subject" value="${subject}"`), `the form carries this page's subject (${subject})`);
-  assert.ok(html.includes(`name="tab" value="${tab}"`), `the form carries the tab it must return to (${tab})`);
-  assert.ok(html.includes(`name="subjectId" value="${subjectId}"`), `the form carries the drawer id it must return to (${subjectId})`);
-  assert.match(html, /<form class="inline-form form-block" method="post" action="\/admin\/auth\/access-policy\/subjects">/, "applying is a real POST form");
-  assert.match(html, /<input type="hidden" name="expectedRevision" value="\d+">/, "the form carries the CAS revision it rendered with");
-  assert.match(html, new RegExp(`<option value="">选一条已有规则…</option>`), "the picker starts empty and never preselects a rule");
-  assert.ok(html.includes(candidateLabel), "a rule that does not yet carry the subject is offered");
-  assert.match(html, /新建规则/, "the section links to the editor for a brand-new rule");
-  assert.match(html, /[?&]new=1&(?:amp;)?subject=/, "the new-rule link prefills the subject");
-  assert.ok(appliedLabel ? html.includes(appliedLabel) : true, "an applied rule is listed by its label");
+function assertSubjectSection(html, { appliedLabel = "研究机器人仅工作时间" } = {}) {
+  const section = sectionOf(html);
+  assert.match(section, /<div class="dsec" id="authz"><h3>定时授权<\/h3>/, "the section keeps the prototype's head");
+  assert.match(section, /只在这个主体已有的权限上再加限制，不会放大权限/, "the section states the restriction direction");
+  // An APPLIED row links to the constraint's editor and names it.
+  if (appliedLabel) {
+    assert.match(section, new RegExp(`\\?edit=[^"]*"[^>]*>${appliedLabel}<\\/a>`), "an applied constraint is listed by its label");
+    assert.match(section, /查看<\/a>/, "and each row offers its 查看 link");
+  }
+  // Read-only: attaching a subject is the constraint editor's subject picker, not this drawer. Every
+  // predicate below is a structural signature the prototype does not have, so the shape ratchet
+  // cannot absorb one of them coming back.
+  assert.doesNotMatch(section, /<form\b/, "no form in the section");
+  assert.doesNotMatch(section, /<select\b|<option\b/, "no rule picker in the section");
+  assert.doesNotMatch(section, /<button\b/, "no button in the section");
+  assert.doesNotMatch(section, /<input\b|name="subject"|<p class=/, "no control and no new paragraph kind");
+  assert.doesNotMatch(section, /应用已有规则|新建规则/, "no attach or new-rule label is offered");
+  assert.doesNotMatch(section, /action="\/admin\/auth\/(?:access-policy|authz)\//, "nothing in the section writes");
+  // The one pointer, and the only thing the section spends: the page that owns the document.
+  assert.match(section, new RegExp(`href="${BASE}"`), "the banner points at the 定时授权 page");
+  assert.match(section, /只读：要把这个主体加进某条约束/, "and says where a subject joins a constraint");
   assert.doesNotMatch(html, /<script(?![^>]*src="\/admin\/auth\/assets\/)/i, "the drawer adds no script");
   assert.doesNotMatch(html, /[\s"']on(?:click|change|input|submit|load|error)\s*=/i, "no inline handlers");
 }
 
-test("all three subject drawers render the 定时授权 section with their own subject and tab", async (t) => {
+/**
+ * The applied constraint, stripped of the two fields a write must move.
+ *
+ * `updatedAt` and the document revision are the CAS's own bookkeeping: a write stamps the record.
+ * Everything else must be byte-identical.
+ */
+async function storedConstraint(store, id) {
+  const current = store.snapshot();
+  return current.document.constraints.find((item) => item.id === id) ?? null;
+}
+
+// ------------------------------------------------------------------ structure
+
+test("all three subject drawers render the 定时授权 section with their own subject", async (t) => {
   const { origin, cookie } = await startFixture(t);
-  // Two rules so every drawer has both halves: one that already carries the subject (the applied
-  // list) and one that does not (the 应用已有规则 picker).
-  await createPolicy(origin, cookie, { label: "研究机器人仅工作时间" });
-  await createPolicy(origin, cookie, { label: "客户端仅午休", subjects: [CLIENT_SUBJECT] });
 
   const keys = await get(origin, cookie, "/admin/auth?tab=keys&id=key-1");
   assert.equal(keys.status, 200);
-  assertSubjectSection(keys.body, { subject: KEY_SUBJECT, tab: "keys", subjectId: "key-1" });
+  assertSubjectSection(keys.body);
 
   const clients = await get(origin, cookie, "/admin/auth?tab=clients&id=client-1");
   assert.equal(clients.status, 200);
-  assertSubjectSection(clients.body, {
-    subject: CLIENT_SUBJECT, tab: "clients", subjectId: "client-1",
-    appliedLabel: "客户端仅午休", candidateLabel: "研究机器人仅工作时间",
-  });
+  assertSubjectSection(clients.body, { appliedLabel: "客户端仅午休" });
 
   const accounts = await get(origin, cookie, "/admin/auth?tab=accounts&id=u-1");
   assert.equal(accounts.status, 200);
-  assert.match(accounts.body, /不受定时授权限制/, "a subject no rule names is reported as unrestricted");
-  assertSubjectSection(accounts.body, { subject: USER_SUBJECT, tab: "accounts", subjectId: "u-1", appliedLabel: "" });
+  assert.match(accounts.body, /不受定时授权限制/, "a subject no constraint names is reported as unrestricted");
+  assertSubjectSection(accounts.body, { appliedLabel: "" });
 });
 
 test("negative control: the structural assertions are not vacuous", async (t) => {
   const { origin, cookie } = await startFixture(t);
-  const emptyDrawer = await get(origin, cookie, "/admin/auth?tab=keys&id=key-1");
-  assert.match(emptyDrawer.body, /不受定时授权限制/, "with no policy the drawer says so");
-  assert.match(emptyDrawer.body, /没有其他可应用的规则/, "and offers only the new-rule link");
+  // The accounts drawer is restricted by nothing, so it carries no applied label.
+  const accounts = await get(origin, cookie, "/admin/auth?tab=accounts&id=u-1");
+  assert.match(accounts.body, /不受定时授权限制/, "with no matching constraint the drawer says so");
   assert.throws(
-    () => assertSubjectSection(emptyDrawer.body, { subject: CLIENT_SUBJECT, tab: "keys", subjectId: "key-1" }),
-    /the form carries this page's subject/,
-    "the same assertions must reject the wrong subject",
+    () => assertSubjectSection(accounts.body, { appliedLabel: "研究机器人仅工作时间" }),
+    /an applied constraint is listed by its label/,
+    "the same assertions must reject a drawer that lists no applied constraint",
   );
-  await createPolicy(origin, cookie, { label: "研究机器人仅工作时间" });
-  await createPolicy(origin, cookie, { label: "客户端仅午休", subjects: [CLIENT_SUBJECT] });
-  const filled = await get(origin, cookie, "/admin/auth?tab=keys&id=key-1");
+  const keys = await get(origin, cookie, "/admin/auth?tab=keys&id=key-1");
+  assertSubjectSection(keys.body);
   assert.throws(
-    () => assertSubjectSection(filled.body, { subject: KEY_SUBJECT, tab: "clients", subjectId: "key-1" }),
-    /return to \(clients\)/,
+    () => assertSubjectSection(keys.body, { appliedLabel: "客户端仅午休" }),
+    /an applied constraint is listed by its label/,
+    "a label that is not in this section cannot pass",
   );
+});
+
+// ------------------------------------------------------------------ which backend decides
+
+test("the section says which backend decides, and follows the mode", async (t) => {
+  // `legacy` and `shadow` record these constraints and answer from the legacy backend
+  // (`authorization/runtime.js`), so the verdicts above them are a record, not a restriction.
+  const legacy = await startFixture(t, { mode: "legacy" });
+  const section = sectionOf((await get(legacy.origin, legacy.cookie, "/admin/auth?tab=keys&id=key-1")).body);
+  assert.match(section, /data-authorization-mode="legacy"/, "the section names the served mode");
+  assert.match(section, /data-decides="legacy"/, "and that the legacy backend decides");
+  assert.match(section, /约束会记录，但暂不裁定/, "so it does not state the restriction as fact");
+  assert.doesNotMatch(section, /约束正在裁定/);
+
+  // `enforce` is the one mode where they decide; the same banner says so.
+  const enforce = await startFixture(t, { mode: "enforce" });
+  const decided = sectionOf((await get(enforce.origin, enforce.cookie, "/admin/auth?tab=keys&id=key-1")).body);
+  assert.match(decided, /data-authorization-mode="enforce"/);
+  assert.match(decided, /data-decides="constraints"/);
+  assert.match(decided, /约束正在裁定/);
+  assert.doesNotMatch(decided, /暂不裁定/);
+
+  // A mode that cannot be read claims nothing about which backend decides.
+  const bare = await startFixture(t);
+  const unknown = sectionOf((await get(bare.origin, bare.cookie, "/admin/auth?tab=keys&id=key-1")).body);
+  assert.match(unknown, /data-authorization-mode="unknown"/);
+  assert.doesNotMatch(unknown, /data-decides="(legacy|constraints)"/);
 });
 
 // ------------------------------------------------------------------ behaviour
 
-test("applying an existing rule attaches the subject and changes nothing else", async (t) => {
+test("the legacy attach endpoint stays frozen and writes nothing", async (t) => {
   const { origin, cookie, store } = await startFixture(t);
-  const id = await createPolicy(origin, cookie);
-  const before = await storedPolicy(store, id);
-  const revisionBefore = store.snapshot().revision;
+  const revision = store.snapshot().revision;
+  const csrf = csrfOf((await get(origin, cookie, "/admin/auth?tab=clients&id=client-1")).body);
 
-  const drawer = await get(origin, cookie, "/admin/auth?tab=clients&id=client-1");
-  const csrf = csrfOf(drawer.body);
-  const applied = await post(origin, cookie, `${BASE}/subjects`, {
-    csrf, id, subject: CLIENT_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revisionBefore,
+  const legacy = await post(origin, cookie, "/admin/auth/access-policy/subjects", {
+    csrf, id: CLIENT_CONSTRAINT, subject: USER_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revision,
   });
-  assert.equal(applied.status, 303, `attach must redirect, got ${applied.status}: ${applied.body.slice(0, 300)}`);
-  assert.equal(applied.location, "/admin/auth?tab=clients&id=client-1&done=authz-attach", "the redirect returns to the drawer it came from");
-
-  const after = await storedPolicy(store, id);
-  assert.deepEqual(after.subjects.slice().sort(), [CLIENT_SUBJECT, KEY_SUBJECT].sort(), "the subject is added");
-  for (const field of ["label", "enabled", "mode", "timezone", "capabilities", "weekly", "dateRanges", "startsAt", "expiresAt", "createdAt"]) {
-    assert.deepEqual(after[field], before[field], `attaching must not touch ${field}`);
-  }
-  assert.notEqual(after.updatedAt, before.updatedAt, "the write is stamped");
-  assert.equal(store.snapshot().revision, revisionBefore + 1, "the revision moves exactly once");
-
-  const back = await get(origin, cookie, applied.location);
-  assert.match(back.body, /已把这个主体加入所选规则/, "the drawer confirms the write");
-});
-
-test("re-applying an already attached subject is a no-op, not a second write", async (t) => {
-  const { origin, cookie, store } = await startFixture(t);
-  const id = await createPolicy(origin, cookie);
-  const revision = store.snapshot().revision;
-  const csrf = csrfOf((await get(origin, cookie, "/admin/auth?tab=keys&id=key-1")).body);
-  const again = await post(origin, cookie, `${BASE}/subjects`, { csrf, id, subject: KEY_SUBJECT, tab: "keys", subjectId: "key-1", expectedRevision: revision });
-  assert.equal(again.status, 303);
-  assert.equal(again.location, "/admin/auth?tab=keys&id=key-1&done=authz-attach");
-  assert.equal(store.snapshot().revision, revision, "an unchanged policy must not bump the revision");
-  assert.deepEqual((await storedPolicy(store, id)).subjects, [KEY_SUBJECT], "and must not duplicate the subject");
-});
-
-test("a stale revision is refused, writes nothing and says so", async (t) => {
-  const { origin, cookie, store } = await startFixture(t);
-  const id = await createPolicy(origin, cookie);
-  const revision = store.snapshot().revision;
-  // somebody else moves the store first
-  await store.replace(revision, store.snapshot().policies.map((policy) => ({ ...policy })));
-  const csrf = csrfOf((await get(origin, cookie, "/admin/auth?tab=clients&id=client-1")).body);
-  const refused = await post(origin, cookie, `${BASE}/subjects`, { csrf, id, subject: CLIENT_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revision });
-  assert.equal(refused.status, 303);
-  assert.match(refused.location, /authzError=stale_policy_revision/, "the drawer is told the CAS refused it");
-  assert.deepEqual((await storedPolicy(store, id)).subjects, [KEY_SUBJECT], "nothing was written");
-  const back = await get(origin, cookie, refused.location);
-  assert.match(back.body, /规则在提交前被其他人修改了/, "the message names the real cause");
-});
-
-test("an unknown policy or an unknown subject is refused before the write", async (t) => {
-  const { origin, cookie, store } = await startFixture(t);
-  const id = await createPolicy(origin, cookie);
-  const revision = store.snapshot().revision;
-  const csrf = csrfOf((await get(origin, cookie, "/admin/auth?tab=clients&id=client-1")).body);
-
-  const missing = await post(origin, cookie, `${BASE}/subjects`, { csrf, id: "00000000-0000-4000-8000-000000000000", subject: CLIENT_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revision });
-  assert.match(missing.location, /authzError=unknown_access_policy_id/);
-
-  const ghost = await post(origin, cookie, `${BASE}/subjects`, { csrf, id, subject: "api-key:not-in-the-snapshot", tab: "clients", subjectId: "client-1", expectedRevision: revision });
-  assert.match(ghost.location, /authzError=unknown_access_policy_subject/);
-
-  assert.equal(store.snapshot().revision, revision, "neither refusal wrote anything");
-  assert.deepEqual((await storedPolicy(store, id)).subjects, [KEY_SUBJECT]);
-});
-
-test("the attach endpoint keeps the session CSRF contract", async (t) => {
-  const { origin, cookie, store } = await startFixture(t);
-  const id = await createPolicy(origin, cookie);
-  const revision = store.snapshot().revision;
-  const refused = await post(origin, cookie, `${BASE}/subjects`, { csrf: "not-the-token", id, subject: CLIENT_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revision });
-  assert.equal(refused.status, 403, "a bad CSRF token must be rejected");
-  assert.equal(store.snapshot().revision, revision, "and must not write");
-});
-
-test("`?new=1&subject=…` prefills the editor only with a subject this request knows", async (t) => {
-  const { origin, cookie } = await startFixture(t);
-  const known = await get(origin, cookie, `${BASE}?new=1&subject=${encodeURIComponent(CLIENT_SUBJECT)}`);
-  assert.equal(known.status, 200);
-  assert.ok(known.body.includes(`value="${CLIENT_SUBJECT}"`), "the known subject arrives as a checked pick");
-  assert.match(known.body, /ChatGPT Connector/, "and is spelled out by name");
-
-  const unknown = await get(origin, cookie, `${BASE}?new=1&subject=${encodeURIComponent("api-key:not-in-the-snapshot")}`);
-  assert.equal(unknown.status, 200);
-  assert.ok(!unknown.body.includes('value="api-key:not-in-the-snapshot"'), "an unknown subject is never seeded");
+  // No legacy store is wired into this router, so the frozen route answers its own "not configured"
+  // shape; either way it must not write the per-Vault document.
+  assert.notEqual(legacy.status, 303, "the frozen endpoint never attaches");
+  assert.equal(store.snapshot().revision, revision);
+  assert.deepEqual((await storedConstraint(store, CLIENT_CONSTRAINT)).subjects, [CLIENT_SUBJECT]);
 });

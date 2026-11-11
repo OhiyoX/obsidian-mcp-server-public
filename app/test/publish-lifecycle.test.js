@@ -39,10 +39,11 @@ const SOURCE_PATH = path.join(HERE, "..", "src", "publish", "lifecycle.js");
 const { ACTIVE, ORPHANED, INVALID, UNKNOWN, REVOKED } = PUBLISH_LIFECYCLE;
 const E = PUBLISH_ERROR_CODES;
 const I = PUBLISH_MIGRATION_ISSUES;
-const { MARKDOWN, MISSING, NON_MARKDOWN, UNVERIFIABLE } = PUBLISH_OBSERVATION;
+const { MARKDOWN, DIRECTORY, MISSING, NON_MARKDOWN, UNVERIFIABLE } = PUBLISH_OBSERVATION;
 
 const OBSERVATIONS = Object.freeze({
   [MARKDOWN]: Object.freeze({ exists: true, isMarkdown: true }),
+  [DIRECTORY]: Object.freeze({ exists: true, isDirectory: true }),
   [MISSING]: Object.freeze({ exists: false, isMarkdown: false }),
   [NON_MARKDOWN]: Object.freeze({ exists: true, isMarkdown: false }),
   [UNVERIFIABLE]: Object.freeze({}),
@@ -202,7 +203,7 @@ test("§8.1 legacy normalization: v1 record without lifecycle → unknown, not a
   assert.equal(record.createdBy, null);
   assert.equal(isPublishedCandidate(record), false, "un-observed legacy record must not be a published candidate");
   assert.equal(STATE_VERSION_SOURCE, 1);
-  assert.equal(STATE_VERSION_TARGET, 2);
+  assert.equal(STATE_VERSION_TARGET, 3);
 });
 
 test("§8.1 legacy record fails closed on non-Markdown and on missing targets", () => {
@@ -309,6 +310,8 @@ test("observation classification is total and fail-closed", () => {
   assert.equal(classifyObservation({ exists: false, isMarkdown: false }), MISSING);
   assert.equal(classifyObservation({ exists: false, isMarkdown: true }), MISSING);
   assert.equal(classifyObservation({ exists: true, isMarkdown: false }), NON_MARKDOWN);
+  assert.equal(classifyObservation({ exists: true, isDirectory: true }), DIRECTORY);
+  assert.equal(classifyObservation({ exists: true, isDirectory: true, isMarkdown: true }), UNVERIFIABLE, "a directory cannot also be Markdown");
   assert.equal(classifyObservation({ exists: false, isMarkdown: false, observedMissing: true }), MISSING);
   assert.equal(classifyObservation({ observedMissing: true }), MISSING);
   for (const unexpected of [
@@ -329,19 +332,21 @@ test("exhaustive (lifecycle × observation) resolve grid — 20 cells, no gaps",
   const expected = {
     [ACTIVE]: {
       [MARKDOWN]: [true, null],
+      [DIRECTORY]: [false, INVALID],
       [MISSING]: [false, ORPHANED],
       [NON_MARKDOWN]: [false, INVALID],
       [UNVERIFIABLE]: [false, null],
     },
     [UNKNOWN]: {
       [MARKDOWN]: [true, ACTIVE],
+      [DIRECTORY]: [false, INVALID],
       [MISSING]: [false, ORPHANED],
       [NON_MARKDOWN]: [false, INVALID],
       [UNVERIFIABLE]: [false, null],
     },
-    [ORPHANED]: { [MARKDOWN]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
-    [INVALID]: { [MARKDOWN]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
-    [REVOKED]: { [MARKDOWN]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
+    [ORPHANED]: { [MARKDOWN]: [false, null], [DIRECTORY]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
+    [INVALID]: { [MARKDOWN]: [false, null], [DIRECTORY]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
+    [REVOKED]: { [MARKDOWN]: [false, null], [DIRECTORY]: [false, null], [MISSING]: [false, null], [NON_MARKDOWN]: [false, null], [UNVERIFIABLE]: [false, null] },
   };
   let cells = 0;
   for (const [lifecycle, byObservation] of Object.entries(expected)) {
@@ -354,43 +359,49 @@ test("exhaustive (lifecycle × observation) resolve grid — 20 cells, no gaps",
       assert.equal(plan.changed, next !== null, `${lifecycle}/${kind} changed`);
     }
   }
-  assert.equal(cells, 20);
+  assert.equal(cells, 25);
 });
 
 test("exhaustive (record state × observation) publish grid — 24 cells, no gaps", () => {
   const expected = {
     null: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_CREATE, PUBLISH_ID_POLICY.NEW, null, false],
+      [DIRECTORY]: [true, PUBLISH_ACTIONS.PUBLISH_CREATE, PUBLISH_ID_POLICY.NEW, null, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
     },
     [ACTIVE]: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_REUSE, PUBLISH_ID_POLICY.SAME, null, false],
+      [DIRECTORY]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, INVALID, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, ORPHANED, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, INVALID, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
     },
     [UNKNOWN]: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_ADOPT, PUBLISH_ID_POLICY.SAME, ACTIVE, false],
+      [DIRECTORY]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, INVALID, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, ORPHANED, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, INVALID, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
     },
     [ORPHANED]: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_REPUBLISH, PUBLISH_ID_POLICY.NEW, null, true],
+      [DIRECTORY]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
     },
     [INVALID]: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_REPUBLISH, PUBLISH_ID_POLICY.NEW, null, true],
+      [DIRECTORY]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
     },
     [REVOKED]: {
       [MARKDOWN]: [true, PUBLISH_ACTIONS.PUBLISH_REPUBLISH, PUBLISH_ID_POLICY.NEW, null, true],
+      [DIRECTORY]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [MISSING]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [NON_MARKDOWN]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
       [UNVERIFIABLE]: [false, PUBLISH_ACTIONS.PUBLISH_DENY, PUBLISH_ID_POLICY.NONE, null, false],
@@ -413,7 +424,7 @@ test("exhaustive (record state × observation) publish grid — 24 cells, no gap
       assert.equal(plan.changed, changed, `${label} changed`);
     }
   }
-  assert.equal(cells, 24);
+  assert.equal(cells, 30);
 });
 
 test("planners are pure: frozen outputs, identical repeats, no input mutation", () => {

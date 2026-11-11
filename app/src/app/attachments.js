@@ -88,7 +88,8 @@ export function attachmentHeaders(attachment) {
   return {
     "Content-Type": attachment.contentType,
     "Content-Disposition": `inline; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
-    "Cache-Control": "private, max-age=300",
+    // no-store: an attachment body must not survive in the browser disk cache after logout.
+    "Cache-Control": "private, no-store",
     "X-Content-Type-Options": "nosniff",
   };
 }

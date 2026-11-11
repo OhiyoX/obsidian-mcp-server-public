@@ -181,7 +181,9 @@ function makeRuntime({ mode = "suspend", startMs = INSIDE_MS } = {}) {
 }
 
 function makeSession(id) {
-  return { id, userId: "u1", vaultId: vault.id, allowedVaults: [vault.id], csrf: "csrf-token" };
+  // A resolved Web session always carries its non-secret credential id; the authorization
+  // runtime identifies the Web actor by it.
+  return { id, credentialId: `web-session:${id}`, userId: "u1", vaultId: vault.id, allowedVaults: [vault.id], csrf: "csrf-token" };
 }
 
 async function openStream(socket, session, revalidate) {

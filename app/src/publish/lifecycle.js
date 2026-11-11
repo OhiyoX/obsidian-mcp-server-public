@@ -1,4 +1,4 @@
-// Publish record lifecycle vocabulary + v1→v2 state normalization: the pure decision
+// Publish record lifecycle vocabulary + v1/v2→v3 state normalization: the pure decision
 // model for issues #277/#278 (lane A2 of
 // `Web/DEVELOPMENT - Issues 277-278 Publish 生命周期与 Markdown-only 边界收口` §5/§8.1).
 //
@@ -47,12 +47,18 @@ export const PERSISTABLE_LIFECYCLE_STATES = Object.freeze([
 export const PUBLISH_LIFECYCLE_LEGACY_ALIAS = "legacy";
 
 export const STATE_VERSION_SOURCE = 1;
-export const STATE_VERSION_TARGET = 2;
+export const STATE_VERSION_TARGET = 3;
+
+// v2 files only hold documents. v3 adds folder records, whose `kind` the planners below read to
+// decide whether a directory observation may be `active`.
+export const PUBLISH_RECORD_KINDS = Object.freeze({ DOCUMENT: "document", FOLDER: "folder" });
 
 // Explicit observation kinds. Everything the planners need is a boolean; anything
 // missing, non-boolean or self-contradictory is `unverifiable` → fail closed.
+// `DIRECTORY` is the folder record's healthy shape: `{ exists: true, isDirectory: true }`.
 export const PUBLISH_OBSERVATION = Object.freeze({
   MARKDOWN: "markdown",
+  DIRECTORY: "directory",
   MISSING: "missing",
   NON_MARKDOWN: "non_markdown",
   UNVERIFIABLE: "unverifiable",
@@ -132,19 +138,24 @@ const transitionOf = (from, to, errorCode, reason, httpStatus = HTTP.NOT_FOUND) 
 
 /**
  * Classify an explicit observation into `PUBLISH_OBSERVATION`.
- * Shape: `{ exists: boolean, isMarkdown: boolean, observedMissing?: boolean }`.
+ * Shape: `{ exists: boolean, isMarkdown: boolean, isDirectory?: boolean, observedMissing?: boolean }`.
  * `observedMissing === true` is the authoritative "we looked and it was absent"
  * signal of doc §5.2; `exists === false` means the same. `observedMissing: true`
- * together with `exists: true` is contradictory → `unverifiable`.
+ * together with `exists: true` is contradictory → `unverifiable`. `isDirectory: true`
+ * is a folder target and is classified before the Markdown flags.
  */
 export function classifyObservation(observation) {
   if (!isPlainObject(observation)) return PUBLISH_OBSERVATION.UNVERIFIABLE;
-  const { exists, isMarkdown, observedMissing } = observation;
+  const { exists, isMarkdown, isDirectory, observedMissing } = observation;
   if (observedMissing === true) {
     return exists === true ? PUBLISH_OBSERVATION.UNVERIFIABLE : PUBLISH_OBSERVATION.MISSING;
   }
   if (observedMissing !== undefined && observedMissing !== false) return PUBLISH_OBSERVATION.UNVERIFIABLE;
   if (exists === false) return PUBLISH_OBSERVATION.MISSING;
+  if (exists === true && isDirectory === true) {
+    // A directory that also claims to be Markdown is self-contradictory: fail closed.
+    return isMarkdown === true ? PUBLISH_OBSERVATION.UNVERIFIABLE : PUBLISH_OBSERVATION.DIRECTORY;
+  }
   if (exists === true && isMarkdown === true) return PUBLISH_OBSERVATION.MARKDOWN;
   if (exists === true && isMarkdown === false) return PUBLISH_OBSERVATION.NON_MARKDOWN;
   return PUBLISH_OBSERVATION.UNVERIFIABLE;
@@ -175,6 +186,22 @@ const planInput = (input) => {
   return { record: isPlainObject(source.record) ? source.record : null, observation: source.observation };
 };
 
+// One rule for a record's `kind`, used by the identity below and by the record normalizer:
+// anything but `"folder"` is a document. The default is silent; a deferred task adds an
+// unrecognised-kind migration issue (see `.superpowers/sdd/2026-11-08-folder-publish/task-3-report.md`).
+const recordKindOf = (record) => (record?.kind === PUBLISH_RECORD_KINDS.FOLDER
+  ? PUBLISH_RECORD_KINDS.FOLDER
+  : PUBLISH_RECORD_KINDS.DOCUMENT);
+
+/**
+ * Record identity: `vaultId + path + kind`, stated once for every caller. The state normalizer
+ * dedupes on it and `PublishService` looks records up by it, so a folder and a document that
+ * share one path string are two records and neither can drop the other.
+ */
+export function publishRecordKey(record) {
+  return `${record?.vaultId}\0${record?.path}\0${recordKindOf(record)}`;
+}
+
 /**
  * Normalize one record for a v2 state file. Never throws: an unusable record yields
  * `{ record: null, issues: [...] }` so one bad entry cannot stop the service from
@@ -200,6 +227,7 @@ export function normalizeLegacyRecord(record) {
 
   const record_ = Object.freeze({
     id: record.id,
+    kind: recordKindOf(record),
     vaultId: record.vaultId,
     path: record.path,
     lifecycle,
@@ -211,7 +239,8 @@ export function normalizeLegacyRecord(record) {
 }
 
 /**
- * Normalize a whole loaded state file: `{ version: 2, sourceVersion, records, issues, dropped }`.
+ * Normalize a whole loaded state file: `{ version: 3, sourceVersion, records, issues, dropped }`.
+ * Versions 1, 2 and 3 all load; the result is always version 3.
  * Malformed records are dropped with a `records[i]: <issue>` entry instead of
  * aborting the load; duplicates (same `id`, or same `vaultId + NUL + path`) keep
  * the first occurrence. A structurally broken file only produces issues — B1
@@ -233,7 +262,7 @@ export function migratePublishState(state) {
   const records = [];
   const issues = [];
   const ids = new Set();
-  const documents = new Set();
+  const keys = new Set();
   for (const [index, entry] of state.records.entries()) {
     const normalized = normalizeLegacyRecord(entry);
     for (const issue of normalized.issues) issues.push(`records[${index}]: ${issue}`);
@@ -243,13 +272,13 @@ export function migratePublishState(state) {
       issues.push(`records[${index}]: ${PUBLISH_MIGRATION_ISSUES.RECORD_ID_DUPLICATE}`);
       continue;
     }
-    const documentKey = `${record.vaultId}\0${record.path}`;
-    if (documents.has(documentKey)) {
+    const key = publishRecordKey(record);
+    if (keys.has(key)) {
       issues.push(`records[${index}]: ${PUBLISH_MIGRATION_ISSUES.RECORD_DOCUMENT_DUPLICATE}`);
       continue;
     }
     ids.add(record.id);
-    documents.add(documentKey);
+    keys.add(key);
     records.push(record);
   }
 
@@ -280,9 +309,14 @@ export function planPublish(input) {
   const kind = classifyObservation(observation);
   const { MARKDOWN, MISSING, NON_MARKDOWN } = PUBLISH_OBSERVATION;
   const E = PUBLISH_ERROR_CODES;
+  // A folder target exists as a directory: for a new record and for a folder record that is the
+  // healthy shape, so every `MARKDOWN` decision below applies to it unchanged.
+  const serveable = kind === MARKDOWN
+    || (kind === PUBLISH_OBSERVATION.DIRECTORY
+      && (record === null || record.kind === PUBLISH_RECORD_KINDS.FOLDER));
 
   if (!record) {
-    if (kind === MARKDOWN) {
+    if (serveable) {
       return decision({
         action: PUBLISH_ACTIONS.PUBLISH_CREATE,
         idPolicy: PUBLISH_ID_POLICY.NEW,
@@ -307,7 +341,7 @@ export function planPublish(input) {
       ? publishDeny(transitionOf(current, nextLifecycle, errorCode, reason, httpStatus))
       : publishDeny({ httpStatus, errorCode, reason });
 
-  if (kind === MARKDOWN) {
+  if (serveable) {
     if (current === LIFECYCLE_ACTIVE) {
       return decision({
         action: PUBLISH_ACTIONS.PUBLISH_REUSE,
@@ -340,7 +374,9 @@ export function planPublish(input) {
   if (kind === MISSING) {
     return denyObservation(LIFECYCLE_ORPHANED, E.PUBLISH_TARGET_MISSING, "publish_target_missing", HTTP.NOT_FOUND);
   }
-  if (kind === NON_MARKDOWN) {
+  // A directory observation on a record that is not a folder is the same failure as a
+  // non-Markdown file, and `planResolve` already answers `invalid` for it.
+  if (kind === NON_MARKDOWN || kind === PUBLISH_OBSERVATION.DIRECTORY) {
     return denyObservation(LIFECYCLE_INVALID, E.UNSUPPORTED_PUBLISH_TARGET, "publish_target_not_markdown", HTTP.BAD_REQUEST);
   }
   return publishDeny({
@@ -380,9 +416,13 @@ export function planResolve(input) {
   }
 
   // Live records: `unknown` is the not-yet-observed legacy state; the first
-  // observation decides and is persisted.
+  // observation decides and is persisted. A folder record is served by its directory;
+  // a document record that became a directory is `invalid`.
   const adopt = current === LIFECYCLE_UNKNOWN;
-  if (kind === PUBLISH_OBSERVATION.MARKDOWN) {
+  const folderRecord = record.kind === PUBLISH_RECORD_KINDS.FOLDER;
+  const serveable = kind === PUBLISH_OBSERVATION.MARKDOWN
+    || (kind === PUBLISH_OBSERVATION.DIRECTORY && folderRecord);
+  if (serveable) {
     if (!adopt) return decision({ action: PUBLISH_ACTIONS.RESOLVE_SERVE, lifecycle: LIFECYCLE_ACTIVE, reason: "resolve_active_markdown" });
     return decision({
       action: PUBLISH_ACTIONS.RESOLVE_SERVE,
@@ -397,7 +437,7 @@ export function planResolve(input) {
     const reason = adopt ? "resolve_legacy_missing" : "resolve_active_missing";
     return deny(transitionOf(current, LIFECYCLE_ORPHANED, errorCode, reason));
   }
-  if (kind === PUBLISH_OBSERVATION.NON_MARKDOWN) {
+  if (kind === PUBLISH_OBSERVATION.NON_MARKDOWN || kind === PUBLISH_OBSERVATION.DIRECTORY) {
     const reason = adopt ? "resolve_legacy_non_markdown" : "resolve_active_non_markdown";
     return deny(transitionOf(current, LIFECYCLE_INVALID, E.PUBLISH_RECORD_INVALID, reason));
   }

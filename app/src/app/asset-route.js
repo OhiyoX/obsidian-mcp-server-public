@@ -12,8 +12,7 @@ import express from "express";
 import { WEB_ASSET_MAX_BYTES, WEB_ATTACHMENT_FOLDER } from "../config.js";
 import { assertWritable } from "../vault.js";
 import { writeWebAsset } from "./attachments.js";
-
-const passThrough = (_req, _res, next) => next();
+import { createWebAuthorizationAsks, WEB_ROUTE_SCOPE_CHECKS, webWriteRouteGate } from "./access-policy.js";
 
 /** Builds the `<img src>`-ready URL; `from` lets the read route take its direct branch. */
 function assetUrl(asset) {
@@ -28,9 +27,16 @@ export function registerAssetRoute(router, deps = {}) {
     requireCsrf,
     currentVault,
     provider,
-    writeGate = passThrough,
+    policy = null,
+    authorizationShadow = null,
+    authorizationAsks = null,
     source = () => "unknown",
   } = deps;
+  // The route states its own catalog boundary key. A direct caller may still inject a
+  // gate (`deps.writeGate`), which is how the route tests replace the temporal plane.
+  const writeGate = deps.writeGate
+    ?? webWriteRouteGate(policy, "POST /api/web/v1/asset", { shadow: authorizationShadow });
+  const asks = authorizationAsks ?? createWebAuthorizationAsks({});
 
   router.post(
     "/api/web/v1/asset",
@@ -42,7 +48,8 @@ export function registerAssetRoute(router, deps = {}) {
       try {
         // Same write pipeline as `POST /api/web/v1/note`: scope -> read-only mode ->
         // Vault from the session -> audit. The Vault id is never taken from the body.
-        if (!req.webSession.allowedScopes.includes("obsidian.write")) return res.status(403).json({ error: "Account does not have write permission" });
+        // The route's own Scope class, asked again of the same runtime (duplicate defence).
+        if (!(await asks.route(req.webSession, "POST /api/web/v1/asset", WEB_ROUTE_SCOPE_CHECKS.write))) return res.status(403).json({ error: "Account does not have write permission" });
         assertWritable();
         const body = req.body;
         if (!Buffer.isBuffer(body)) return res.status(400).json({ error: "Invalid request body" });

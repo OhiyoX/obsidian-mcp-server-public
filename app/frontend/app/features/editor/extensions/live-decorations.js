@@ -65,6 +65,19 @@ const HIDDEN_MARKS = new Set([
   "HighlightMark",
 ]);
 
+// A block mark that introduces nothing is not chrome: `###` alone, `>` alone and `-` alone
+// are still being typed, and the desktop editor keeps them as the literal characters until
+// the construct applies. The parser emits the mark node for those empty constructs, so the
+// mark's own line decides. A mark followed by any other character keeps the parser's verdict
+// (`>x` is a quote in the Reader too, and parity outranks this rule).
+const LINE_MARKS = new Set(["HeaderMark", "QuoteMark", "ListMark"]);
+
+/** Whether a block mark's construct applies, judged by the character after it. */
+export function blockMarkApplies(nodeName, nextChar) {
+  if (!LINE_MARKS.has(nodeName)) return true;
+  return nextChar !== "" && nextChar !== "\n" && nextChar !== "\r";
+}
+
 // #484: a `URL` node is chrome only when it is a link or image *destination*. Obsidian's own
 // grammar for this is "the target inside `[text](target)` / `![alt](src)`"; everywhere else a
 // `URL` node IS user-visible text and hiding it deletes content:
@@ -105,12 +118,13 @@ const ESCAPE_LIKE = new Set(["Escape", "HardBreak"]);
  * Both are `local`: they reveal from their own range (and the line holding them), not from the
  * whole directive/paragraph context the other marks use.
  */
-export function idleChromeRange(nodeName, nodeFrom, nodeTo, parentName, firstChar = "") {
+export function idleChromeRange(nodeName, nodeFrom, nodeTo, parentName, firstChar = "", nextChar = "x") {
   if (ESCAPE_LIKE.has(nodeName)) {
     if (firstChar !== "\\") return null;
     return { from: nodeFrom, to: Math.min(nodeTo, nodeFrom + 1), local: true };
   }
   if (!isHiddenIdleMark(nodeName, parentName)) return null;
+  if (!blockMarkApplies(nodeName, nextChar)) return null;
   return { from: nodeFrom, to: nodeTo, local: false };
 }
 
@@ -151,6 +165,11 @@ export function highlightSpans(state, from = 0, to = state.doc.length, excluded 
     }
   }
   return spans;
+}
+
+/** The character after `pos`, or "" at the end of the document. */
+function nextCharAfter(state, pos) {
+  return pos < state.doc.length ? state.sliceDoc(pos, pos + 1) : "";
 }
 
 function collectReplacedRanges(state) {
@@ -313,13 +332,16 @@ function buildLiveDecorations(view) {
       // Never apply line/mark decorations inside it: source chrome must not
       // participate in the table's visual layout.
       if (node.name === "Table") return false;
-      addObsidianSemanticClass(ranges, node, semanticThemeRanges);
-
       const heading = /^ATXHeading([1-6])$/.exec(node.name);
-      if (heading) {
+      const headingApplies = heading === null
+        ? true
+        : blockMarkApplies("HeaderMark", nextCharAfter(view.state, node.from + heading[0].length));
+      addObsidianSemanticClass(ranges, node, semanticThemeRanges, { headingApplies });
+
+      if (heading && headingApplies) {
         ranges.push(Decoration.line({ class: `cm-live-heading cm-live-h${heading[1]} HyperMD-header HyperMD-header-${heading[1]}` }).range(view.state.doc.lineAt(node.from).from));
       }
-      if (node.name === "Blockquote") {
+      if (node.name === "Blockquote" && blockMarkApplies("QuoteMark", nextCharAfter(view.state, node.from + 1))) {
         decorateLines(view, node.from, node.to, "cm-live-quote HyperMD-quote", ranges);
       }
       if (node.name === "FencedCode") {
@@ -420,6 +442,7 @@ function buildLiveDecorations(view) {
       }
       if (node.name === "ListMark") {
         if (overlapsReplaced(replaced, node.from, node.to)) return;
+        if (!blockMarkApplies("ListMark", nextCharAfter(view.state, node.to))) return;
         const mark = view.state.sliceDoc(node.from, node.to);
         const context = node.node.parent || node.node;
         // Reveal list source only when the selection is on the marker or its
@@ -469,6 +492,7 @@ function buildLiveDecorations(view) {
         node.to,
         context.name,
         ESCAPE_LIKE.has(node.name) ? view.state.sliceDoc(node.from, node.from + 1) : "",
+        nextCharAfter(view.state, node.to),
       );
       if (!chrome) return;
       if (overlapsReplaced(replaced, context.from, context.to)) return;

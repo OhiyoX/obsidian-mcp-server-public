@@ -24,6 +24,7 @@ import { createWebBasesFixtureVault } from '../web-bases-fixtures.mjs';
 // 360x800 coarse-pointer context and Base fixture server. Kept in its own module for
 // the architecture line budget; none of the six Cut 2 checks above is touched.
 import { registerBasesTableTouchChecks } from './bases-table-touch.mjs';
+import { waitForHealthz } from './readiness.mjs';
 
 const MOBILE_VIEWPORT = { width: 360, height: 800 };
 // One step above the mobile breakpoint and far below the desktop matrix width: the
@@ -74,11 +75,7 @@ export async function registerBasesMobileChecks(ctx) {
   let page;
   const pageErrors = [];
   try {
-    for (let attempt = 0; attempt < 150; attempt += 1) {
-      try { if ((await fetch(`${base}/healthz`)).ok) break; } catch { /* keep waiting */ }
-      if (child.exitCode !== null) throw new Error('Web Bases mobile test server exited');
-      await sleep(100);
-    }
+    await waitForHealthz({ base, child, serverErrors, label: 'Web Bases mobile test server' });
     page = await context.newPage();
     page.setDefaultTimeout(10000);
     page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));

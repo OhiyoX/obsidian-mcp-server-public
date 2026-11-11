@@ -10,7 +10,10 @@
 // value, which the router stores on the session and this module never touches.
 import { loadAdminProjection } from "./auth-center-transfer-view.js";
 import { publishRecordCounts } from "./publish-view.js";
+import { snapshotSubjects } from "./access-policy.js";
+import { authorizationOperation, catalogOperationIds } from "../authorization/catalog.js";
 import { mergeTokenGrants } from "./grants.js";
+import { observeAdminRead } from "../authorization/adapters/admin.js";
 import { capabilityCatalog } from "./capabilities.js";
 import { createModel } from "./presentation/model.js";
 import { parseCookies } from "./http.js";
@@ -99,6 +102,67 @@ async function readAuthz(accessPolicyAdmin, configuredApiKeyEnabled) {
   }
 }
 
+/**
+ * Read the per-Vault constraint document (plan Task 6). Never throws: a store that is not ready
+ * renders as `broken` with the store's own code, because the Admin plane must never be gated by
+ * what it manages. `null` fields mean "the service did not provide this value" (§6.8).
+ */
+function readConstraints(constraintAdmin) {
+  if (!constraintAdmin || typeof constraintAdmin.list !== "function") {
+    return { available: false, status: "unavailable", revision: null, timeConstraintsEnabled: null, constraints: [], code: null, error: null };
+  }
+  try {
+    const listed = constraintAdmin.list();
+    const broken = listed?.revision === null || typeof listed?.code === "string";
+    return {
+      available: true,
+      status: broken ? "broken" : "ready",
+      revision: broken ? null : listed.revision,
+      timeConstraintsEnabled: broken ? null : listed.timeConstraintsEnabled === true,
+      constraints: broken || !Array.isArray(listed?.constraints) ? [] : listed.constraints,
+      code: listed?.code ?? null,
+      error: null,
+    };
+  } catch (error) {
+    return { available: true, status: "broken", revision: null, timeConstraintsEnabled: null, constraints: [], code: null, error: String(error?.message || error) };
+  }
+}
+
+/**
+ * Operations the picker offers: the catalog's own IDs, one entry per operation, filed under the
+ * first surface it runs on (design §6.3). The ID is the canonical name (§4.1), so no second
+ * vocabulary is invented here; a non-grantable operation is left out because no ceiling can hold
+ * it, and a constraint on it could never remove anything.
+ */
+function constraintOperations() {
+  return catalogOperationIds
+    .map((id) => authorizationOperation(id))
+    .filter((operation) => operation !== null && operation.grantable)
+    .map((operation) => ({
+      id: operation.id,
+      surface: operation.surfaces[0] ?? "system",
+      surfaces: operation.surfaces,
+      label: operation.id,
+    }));
+}
+
+/**
+ * The legacy atoms an imported constraint came from (design §6.3). An imported constraint keeps the
+ * old policy's UUID (`legacy-policy-import.js`), and the legacy store is still readable, so the atom
+ * is read from there instead of guessed: one atom can expand onto several operations, and that
+ * expansion cannot be collapsed back into the atom a page would have to invent.
+ */
+function importedAtoms(constraints, policies) {
+  const atoms = {};
+  const byId = new Map((Array.isArray(policies) ? policies : []).map((policy) => [policy.id, policy]));
+  for (const constraint of constraints) {
+    const policy = byId.get(constraint.id);
+    const list = (Array.isArray(policy?.capabilities) ? policy.capabilities : []).filter((atom) => typeof atom === "string" && atom);
+    if (list.length) atoms[constraint.id] = list;
+  }
+  return atoms;
+}
+
 async function readVaultGit(vaultGitAdmin, vaults) {
   if (!vaultGitAdmin || typeof vaultGitAdmin.model !== "function") return { wired: false, model: null, vaults };
   try {
@@ -115,7 +179,17 @@ async function readVaultGit(vaultGitAdmin, vaults) {
  * @param {{ deps: object, req: object, query?: object, now?: number }} input
  */
 export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) {
-  const { provider, listVaults = async () => ({ vaults: [] }), publishService = null, accessPolicyAdmin = null, vaultGitAdmin = null, configuredApiKeyEnabled = false } = deps;
+  const { provider, listVaults = async () => ({ vaults: [] }), publishService = null, accessPolicyAdmin = null, authorizationAdmin = null, vaultGitAdmin = null, configuredApiKeyEnabled = false, authorizationShadow = null } = deps;
+  // P2 / Task 18: one console read is one authorization unit, recorded with an
+  // `admin-session` actor that carries NO subject. The console is not a person's
+  // credential, so no account window and no user revoke can change its answer. The row is
+  // recorded before the catalog is assembled and changes nothing in it.
+  if (authorizationShadow !== null) {
+    observeAdminRead({
+      shadow: authorizationShadow,
+      routeKey: `ADMIN ${String(req?.method || "GET").toUpperCase()} ${String(req?.path || "/")}`,
+    });
+  }
   const [rawSnapshot, vaultInventory, publications] = await Promise.all([
     provider.authorizationSnapshot(),
     listVaults().catch(() => ({ vaults: [] })),
@@ -128,6 +202,7 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
   const keys = [...(configuredApiKeyEnabled ? [configuredEnvKey(vaults, snapshot.configuredApiKeyUsage || {})] : []), ...(snapshot.apiKeys || [])];
   const grants = mergeTokenGrants(snapshot.tokens || []);
   const authz = await readAuthz(accessPolicyAdmin, configuredApiKeyEnabled);
+  const constraints = readConstraints(authorizationAdmin);
   const audit = snapshot.audit || [];
   const nav = deriveNav({ accounts: snapshot.oauthUsers || [], clients: snapshot.clients || [], keys, grants, publishCounts, audit, authz, vaults, transfers });
   const capabilities = capabilityCatalog();
@@ -146,6 +221,18 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
     labels: { capabilityName: capabilities.nameOf },
   });
 
+  // The page model of 「定时授权」 (design §6.3, plan Task 6): the constraint document plus what a
+  // form needs to describe one — the admitted Vaults and the operation catalog. `presentation` is the
+  // shared subject/capability view model, so a page never builds its own idea of a subject.
+  const constraintPage = {
+    ...constraints,
+    vaults: vaults.map((vault) => ({ id: vault.id, name: vault.name || vault.label || vault.id })),
+    operations: constraintOperations(),
+    importedAtoms: importedAtoms(constraints.constraints, authz.policies),
+    subjects: snapshotSubjects(snapshot, { configuredApiKeyEnabled }),
+    presentation: model,
+  };
+
   return {
     now,
     theme,
@@ -159,8 +246,13 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
     vaultGit,
     transfers,
     authz,
+    constraintPage,
     capabilities,
-    navCounts: nav.counts,
+    // The sidebar's 定时授权 entry opens the constraint page (Task 7 item B), so its badge counts
+    // that page's own rows — the same `constraints` the page bar counts. It used to carry the legacy
+    // policy count, and the two numbers sat side by side on one screen and diverged on the first
+    // create or delete.
+    navCounts: { ...nav.counts, authz: constraintPage.constraints.length },
     navAttention: nav.attention,
     pendingTransfers: nav.pendingTransfers,
     recentFailures: nav.recentFailures,

@@ -14,7 +14,7 @@
 //
 // The desktop class family is `bases-group-heading` (brief §2.6). Its 1.14.4 box offsets
 // were NOT re-measured in this lane (no asar on this host), so the geometry is `[未证实]`
-// and registered as such in HANDOFF-GROUPING.md — the row reuses the table's own tokens
+// and registered as such in the grouping notes — the row reuses the table's own tokens
 // instead of pretending to be measured. A valueless bucket paints `无值` (desktop
 // `labelGroupKeyNone()`, whose zh wording is likewise not verified here).
 

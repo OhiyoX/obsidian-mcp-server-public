@@ -85,6 +85,10 @@ const PARTIAL_BASE = ["views:\n", "  - type: table\n", "    name: Only\n", "    
 const USERS = {
   writer: {
     id: "user-writer",
+    // A resolved Web session carries these three fields (resolveWebSession); the
+    // authorization runtime identifies the actor and its subject by them.
+    userId: "user-writer",
+    credentialId: "web-session:fixture-writer",
     username: "writer",
     displayName: "Writer",
     updatedAt: "v1",
@@ -93,6 +97,8 @@ const USERS = {
   },
   reader: {
     id: "user-reader",
+    userId: "user-reader",
+    credentialId: "web-session:fixture-reader",
     username: "reader",
     displayName: "Reader",
     updatedAt: "v1",
@@ -464,6 +470,7 @@ test("⑦⑧ the write pipeline: unauthenticated 401, no obsidian.write 403, mis
 function variantApp(writeBasePatch, published, readBase = readBaseInRoot, checkMutationBudget = undefined) {
   const app = express();
   app.use((req, _res, next) => {
+    // A real session always carries its non-secret credential id (resolveWebSession).
     req.webSession = { ...USERS.writer, vaultId: "default" };
     next();
   });

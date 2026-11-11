@@ -29,16 +29,15 @@ import { liveDrawerId, withQuery } from '../../scripts/proto-parity/gate.mjs';
 import {
   KEEP_CONTRACT_SELECTOR, LINE_MEASUREMENT_SOURCE, LINE_TOLERANCE_PX, MIDWORD, MIN_KEEP_CONTRACTS, PROBE_LABEL, WORST_CASE_PROBE, WORST_CASE_TOKEN, worstCaseKey, worstCaseParity,
 } from '../../scripts/web-regression/admin-layout-midword.mjs';
-import { editorHref, largestGroup, withParams } from '../../scripts/web-regression/admin-layout-capq.mjs';
+import { NO_SCRIPT_CATEGORIES } from '../../scripts/web-regression/admin-layout-noscript.mjs';
+import { clientSinkFailures, probeInjectionSurface, XSS_PAYLOADS } from '../../scripts/proto-parity/injection.mjs';
+import { ADMIN_CLIENT_MODULES, CLIENT_ENTRY_MODULE, CSP_HEADER, cspFailures, fragmentFetchPermitted, parseCsp, scriptInventoryFailures } from '../../scripts/proto-parity/policy.mjs';
+import { ALL_AREAS, AREA_OF_VERDICT, SABOTAGE } from '../../scripts/web-regression/admin-layout-interaction.mjs';
 import {
   PROTOTYPE_BEHAVIOUR, PROTOTYPE_VERDICT_IDS, VERDICT_IDS, HOST_VERDICT_IDS, armInteractionObservers, interactionVerdicts,
   probeDocumentPolicy, probeDrawerState, probeInteractionObservers, probeKbdState, probeMenuState, probeModalState,
   probeSearchState, probeThemeState, probeToastState,
 } from '../../scripts/proto-parity/interaction.mjs';
-import { clientSinkFailures, probeInjectionSurface, XSS_PAYLOADS } from '../../scripts/proto-parity/injection.mjs';
-import { ADMIN_CLIENT_MODULES, CLIENT_ENTRY_MODULE, CSP_HEADER, cspFailures, fragmentFetchPermitted, parseCsp, scriptInventoryFailures } from '../../scripts/proto-parity/policy.mjs';
-import { ALL_AREAS, AREA_OF_VERDICT, SABOTAGE } from '../../scripts/web-regression/admin-layout-interaction.mjs';
-import { NO_SCRIPT_CATEGORIES } from '../../scripts/web-regression/admin-layout-noscript.mjs';
 
 const INTERACTION_MODULE = 'scripts/proto-parity/interaction.mjs';
 const INJECTION_MODULE = 'scripts/proto-parity/injection.mjs';
@@ -52,7 +51,6 @@ const GATE_SOURCES = [
   'scripts/run-admin-layout-checks.mjs',
   'scripts/web-regression/admin-layout.mjs',
   'scripts/web-regression/admin-layout-midword.mjs',
-  'scripts/web-regression/admin-layout-capq.mjs',
   'scripts/web-regression/admin-layout-author.mjs',
   'scripts/web-regression/admin-layout-interaction.mjs',
   'scripts/web-regression/admin-layout-security.mjs',
@@ -408,12 +406,12 @@ test('migration: the mid-word contract only names prototype classes, and the pro
   assert.equal(/\s/.test(WORST_CASE_TOKEN), false, 'the worst-case token is whitespace-free');
 });
 
-test('migration: the capability-filter helper finds the editor link and keeps the query before the fragment', () => {
-  const hrefs = ['/admin/auth/access-policy', '/admin/auth/access-policy?new=1', '/admin/auth/access-policy?window=x#authz-window', '/admin/auth/access-policy?edit=42#authz-edit'];
-  assert.equal(editorHref(hrefs, '/admin/auth/access-policy'), '/admin/auth/access-policy?edit=42#authz-edit');
-  assert.equal(editorHref(['/admin/auth/access-policy', '/admin/auth/access-policy?new=1'], '/admin/auth/access-policy'), null, 'the 新建 link is not an editor link');
-  assert.equal(withParams('/admin/auth/access-policy?edit=42#authz-edit', { capq: 'tool:x' }), '/admin/auth/access-policy?edit=42&capq=tool%3Ax#authz-edit');
-  assert.equal(largestGroup({ groups: [{ name: 'subjects', count: 3 }, { name: 'capabilities', count: 109 }] }).name, 'capabilities');
+test('migration: the retired capability-filter helper is gone with the frozen editor', async () => {
+  // The capability picker lived in the legacy editor form; Task 3 froze every legacy write, so the
+  // editor has no form, no `?capq=` catalogue and no save. The helper module went with it, and the
+  // remaining criterion for the closed control (`.sel` / `.sel.sm` paint and shape) is asserted by the
+  // paint gate (verbatim prototype CSS) and the shape gate (`select.sel` on both trees).
+  await assert.rejects(fs.access(path.join(REPO_ROOT, 'app', 'scripts/web-regression/admin-layout-capq.mjs')));
 });
 
 // Retired assertions are simply gone (git history holds them); the gate does not keep a ledger of
@@ -431,6 +429,24 @@ test('d0: the split of the interaction gate stays inside the architecture line b
   assert.ok(interaction.includes("from \"./policy.mjs\""), 'interaction.mjs must take the script policy from policy.mjs');
   const security = await fs.readFile(path.join(REPO_ROOT, 'app', 'scripts', 'web-regression', 'admin-layout-security.mjs'), 'utf8');
   assert.ok(security.includes("proto-parity/injection.mjs"), 'the security scene must use the injection module');
+});
+
+// `page.omitted`: the ONE way a page may declare a prototype element deliberately absent. It must be a
+// required candidate (a selector nobody requires is not a non-requirement), it must carry a real
+// reason, and it may never be a wildcard or a column/table contract.
+test('registry: a page may omit a prototype element only with a real, named reason', () => {
+  let declared = 0;
+  for (const entry of PARITY_PAGES) {
+    for (const item of entry.omitted ?? []) {
+      declared += 1;
+      assert.ok(ELEMENT_CANDIDATES.includes(item.selector), `${entry.id}: ${item.selector} must be a required candidate`);
+      assert.equal(/[*?]/.test(item.selector), false, `${entry.id}: ${item.selector} must not be a wildcard`);
+      assert.ok(String(item.reason).length >= 40, `${entry.id}: ${item.selector} needs a real reason (>= 40 characters)`);
+      // The table contract is never omissible: a missing table is a missing page region.
+      assert.equal(/tbl|tbody|td\./.test(item.selector), false, `${entry.id}: the table contract may not be omitted (${item.selector})`);
+    }
+  }
+  assert.equal(declared, 4, 'the only declared omissions are the frozen 定时授权 card (sect/sect-h/card) and its 新建 CTA');
 });
 
 test('registry: excluded candidates each carry a reason and are not also required', () => {

@@ -240,7 +240,11 @@ ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}<form method="post" a
     if (this.isCredentialFenced(record)) throw new Error("Invalid or expired OAuth access token");
     if (!this.allowedResources.has(record.resource)) throw new Error("OAuth token audience does not match this MCP server");
     if (expectedResource && new URL(expectedResource).href !== record.resource) throw new Error("OAuth token audience does not match the requested MCP domain");
-    return { token: accessToken, clientId: record.clientId, userId: record.userId || null, scopes: record.scopes, allowedVaults: [...record.allowedVaults], defaultVaultId: this.data.clientUsage[record.clientId]?.defaultVaultId ?? null, expiresAt: Math.floor(record.expiresAt / 1000), resource: new URL(record.resource) };
+    // The default Vault is a three-layer preference: the client's own choice wins, an
+    // account-level one covers every client that sets none, and neither is a grant.
+    const clientDefault = this.data.clientUsage[record.clientId]?.defaultVaultId ?? null;
+    const accountDefault = (record.userId && this.data.oauthUsers[record.userId]?.defaultVaultId) || null;
+    return { token: accessToken, tokenId: record.id, clientId: record.clientId, userId: record.userId || null, scopes: record.scopes, allowedVaults: [...record.allowedVaults], defaultVaultId: clientDefault ?? accountDefault, defaultVaultLayer: clientDefault ? "client" : (accountDefault ? "account" : null), expiresAt: Math.floor(record.expiresAt / 1000), resource: new URL(record.resource) };
   },
 
   async noteAccessTokenUse(accessToken, usage = {}) {

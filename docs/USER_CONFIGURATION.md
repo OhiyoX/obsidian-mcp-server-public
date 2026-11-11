@@ -271,6 +271,19 @@ re-subscription policy is tracked for the W5 wave.
 - the primary's id is `WEB_DEFAULT_VAULT` when the Vaults root is configured, otherwise `default`;
   `server_info.defaultVaultId` reports it.
 
+**When `vaultId` is omitted, a default decides.** The order is fixed and each layer only fills a gap:
+
+```
+explicit vaultId  >  OAuth client default  >  OAuth account default  >  server primary
+```
+
+The same rule governs the Web sign-in session, except that a Vault the person picks in the UI wins:
+`session Vault  >  account default  >  first allowed Vault  >  server primary`. A saved default is a
+preference, never a grant: it is refused unless it is also in that credential's allowed Vaults, and
+changing it revokes no token. `server_info.defaultVaultSource` names the layer that answered —
+`api-key`, `client`, `account`, or `server` — so "which default is actually in effect" is readable
+without guessing.
+
 There is deliberately **no** session “current Vault” and no `select_vault` tool: any state that
 depends on “the Vault the last call selected” breaks across host reconnects, parallel sessions and
 batched calls. The canonical catalog therefore stays **87 tools** — 2 global (`agent_bootstrap`,

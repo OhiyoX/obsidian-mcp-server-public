@@ -136,12 +136,12 @@ def inventory(project, stage, names, previous):
                    if before[name] != old_hash)
     drift.extend(name for name in names if name not in previous and before[name] is not None)
     drift = sorted(set(drift))
-    if any(name in changes for name in ("app/Dockerfile", "app/package.json", "app/package-lock.json", "app/.dockerignore")):
+    if any(name.startswith("app/") for name in changes):
+        # The image holds the whole app tree and compose mounts no source over it, so any change
+        # under app/ needs a new image. A `restart` here would serve the previous code.
         action = "rebuild"
     elif "docker-compose.yaml" in changes:
         action = "recreate"
-    elif any(name == "app/server.js" or name.startswith("app/src/") for name in changes):
-        action = "restart"
     else:
         action = "files-only"
     return desired, before, changes, drift, action
@@ -168,6 +168,37 @@ def docker(prefix, project, *args, capture=False):
                           stdout=subprocess.PIPE if capture else None)
 
 
+def env_value(project, name, default=""):
+    """One value from the project's protected .env, or `default`."""
+    path = project / ".env"
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return default
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() != name:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        return value
+    return default
+
+
+def health_url(project):
+    """The URL the running container answers on.
+
+    The plaintext port is published on loopback only (the edge uses the TLS port), so the
+    deploy's own health check runs on the NAS host and must use 127.0.0.1.
+    """
+    port = env_value(project, "MCP_PORT", "18923").strip() or "18923"
+    return f"http://127.0.0.1:{port}/healthz"
+
+
 def check_health(prefix, project):
     state = subprocess.check_output([*prefix, "inspect", "--format", "{{.State.Health.Status}}",
                                      "obsidian-mcp-server"], text=True).strip()
@@ -177,7 +208,7 @@ def check_health(prefix, project):
                                    "obsidian-mcp-server"], text=True).strip()
     if cmd != '["node","server.js"]':
         raise RuntimeError(f"Unexpected production command: {cmd}")
-    with urlopen("http://127.0.0.1:18923/healthz", timeout=8) as response:
+    with urlopen(health_url(project), timeout=8) as response:
         if response.status != 200:
             raise RuntimeError(f"healthz returned {response.status}")
 
@@ -209,9 +240,29 @@ def health_wait_budget(prefix, name="obsidian-mcp-server", minimum=60, cap=240):
     return max(minimum, min(cap, int(round(budget))))
 
 
+OPS_LOG_DIR = Path("data") / "ops-log"
+
+
+def ensure_ops_log_dir(project):
+    """Give the monitor's writable sink the runtime ownership before the container starts.
+
+    Compose mounts `./data/ops-log` read-write and the monitor checks `[ -w ]` as uid 1002.
+    Docker creates a missing bind source as root:root 0755, so the check would report
+    `ops-sink-unwritable` for the wrong reason. Only root can set the owner; a non-root run
+    keeps the existing directory and says so.
+    """
+    target = project / OPS_LOG_DIR
+    target.mkdir(parents=True, exist_ok=True)
+    if os.geteuid() != 0:
+        print(f"note: ownership of {target} unchanged (deploy is not root)", file=sys.stderr)
+        return
+    os.chown(target, 1002, 10)
+
+
 def service_action(prefix, project, action, old_image=None):
     if action == "files-only":
         return
+    ensure_ops_log_dir(project)
     docker(prefix, project, "config", "--quiet")
     if action == "rebuild":
         docker(prefix, project, "build", "obsidian-server")
@@ -219,7 +270,7 @@ def service_action(prefix, project, action, old_image=None):
     elif action == "recreate":
         docker(prefix, project, "up", "-d", "--no-build", "--force-recreate", "obsidian-server")
     else:
-        docker(prefix, project, "restart", "obsidian-server")
+        raise RuntimeError(f"Unknown deploy action: {action}")
     budget = health_wait_budget(prefix)
     deadline = time.monotonic() + budget
     while True:
@@ -365,6 +416,8 @@ def main():
     parser.add_argument("--tag", required=True)
     parser.add_argument("--commit")
     parser.add_argument("--adopt", action="store_true")
+    parser.add_argument("--rebuild", action="store_true",
+                        help="build the image even when only compose or data files changed")
     args = parser.parse_args()
     try:
         if not TAG_RE.fullmatch(args.tag):
@@ -385,6 +438,10 @@ def main():
         with contextmanager(read_archive)(Path(args.archive)) as (stage, names):
             previous = state["files"] if state else {}
             desired, before, changes, drift, action = inventory(project, stage, names, previous)
+            # The operator's override for the one-off case the inventory cannot know: the current
+            # image predates the payload (compose and code unchanged, image stale).
+            if args.rebuild and action != "rebuild":
+                action = "rebuild"
             first = state is None
             report = {"tag": args.tag, "commit": args.commit, "baseline": state["tag"] if state else None,
                       "first_deploy_requires_adopt": first, "changes": changes,

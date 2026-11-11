@@ -472,8 +472,10 @@ test("declared output widenings are minimal, and an undeclared one still goes re
   const live = compareToolCatalog({ productionTools: localTools, inventory });
 
   // (a) The declaration is exactly the set that is actually projected — no blanket pass.
-  // `get_base.revision` (P1 #629) plus `file_upload_status.receiptId` (R1, #704 follow-up).
-  assert.deepEqual(live.compatibleOutputSchemaWidenings, ["file_upload_status", "get_base"]);
+  // `get_base.revision` (P1 #629), `file_upload_status.receiptId` (R1, #704 follow-up), and
+  // `get_publish_status.kind` / `manage_publish.kind` (Task 8, 2026-11-08 folder publish: the
+  // record kind explains the public-path shape).
+  assert.deepEqual(live.compatibleOutputSchemaWidenings, ["file_upload_status", "get_base", "get_publish_status", "manage_publish"]);
   assert.deepEqual(live.outputSchemaMismatches, []);
 
   // (b) Negative control: an *undeclared* extra output property must still be reported.

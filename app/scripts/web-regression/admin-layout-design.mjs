@@ -12,9 +12,13 @@
 //     marker (no rule, no handler), so the narrow-screen menu is an ADDITION the plane has to define:
 //     overlay + scrim + focus + Esc + `pushState`, and a server-rendered `?nav=1` state so it works
 //     without the script.
-//   * Q11: the 「当前状态预览」 card was 132px against the prototype's 92px because the no-JS submit
-//     button wrapped onto a second line inside an inline-flex form. The button stays for scriptless
-//     operators and is dropped once the enhancement really ran; the card must match the prototype.
+//   * Q11 (PAID BACK, ruling R9): it measured the 定时授权 page's 「当前状态预览」 card (its height, the
+//     no-JS submit button that collapsed once the enhancement ran, the in-place verdict). Task 3 froze
+//     the legacy page, so the card and its criterion went with the surface. Task 6 rebuilt that surface
+//     as the per-Vault constraint editor, and the criterion is measured again there: the preview card
+//     must be read-only, it must measure like the prototype's own card, and it must say which backend
+//     decides. The retired `?capq=` capability-picker scene is paid back the same way, by the operation
+//     picker's scene below (closed state, popup, keyboard mirror, negative controls).
 //
 // Every criterion here carries its own negative control, and each control says which judgement it
 // expects to see red, so a green run cannot be an artefact of a probe that reports the same thing
@@ -27,6 +31,16 @@ import { ADMIN_SSR_CSS } from '../../src/admin/assets/ssr-css.js';
 import { PROTO_CSS } from '../../src/admin/assets/proto-css.js';
 
 const AUTHZ = '/admin/auth/access-policy';
+/**
+ * R9's two payback scenes live in their own module (`admin-layout-constraints.mjs`): they measure the
+ * per-Vault constraint editor, this module measures the shell-level design decisions, and the
+ * line-budget rule keeps one scene file under 800 lines. Both are registered from `admin-layout.mjs`,
+ * so a red run still names which criterion broke.
+ */
+/**
+ * Q12's surface: the audit page. It is the one page whose `.sel.sm` controls still exist — the frozen
+ * legacy editor renders no form and no select — and the prototype draws the same toolbar as `.sel.sm`.
+ */
 const AUDIT = '/admin/auth?tab=audit';
 const NARROW = { width: 390, height: 844 };
 const WIDE = { width: 1440, height: 900 };
@@ -36,27 +50,6 @@ async function login(context, base, password) {
   assert.equal(response.status(), 303, 'the design scene must be able to log in');
 }
 
-/* ------------------------------------------------------------------ Q11: preview card */
-
-/** What the card is: height, the hidden fallback button, the real control still inside the form. */
-const PROBE_PREVIEW_CARD = () => {
-  const card = document.querySelector('#preview .card');
-  if (!card) return null;
-  const select = card.querySelector('select.sel');
-  const proxy = card.querySelector('[data-select-proxy]');
-  const button = card.querySelector('[data-enhance~="hide-when-scripted"]');
-  const form = card.querySelector('form');
-  return {
-    height: Math.round(card.getBoundingClientRect().height),
-    hasSelect: Boolean(select),
-    selectInForm: Boolean(select && select.form === form),
-    proxyText: proxy ? String(proxy.textContent).trim() : null,
-    buttonHidden: button ? (button.hidden === true || getComputedStyle(button).display === 'none') : null,
-    verdicts: card.querySelectorAll('.verdict').length,
-    help: card.querySelectorAll('p.help').length,
-  };
-};
-
 /* ------------------------------------------------------------------ Q12: self-drawn select */
 
 /**
@@ -65,12 +58,14 @@ const PROBE_PREVIEW_CARD = () => {
  */
 const JUDGE_SELECT = () => {
   const failures = [];
-  // Fall back to any enhanced select: the negative controls move it out of #preview, and the judge
-  // must still see it (otherwise the control "passes" by losing the element it was meant to judge).
-  const select = document.querySelector('#preview select.sel') || document.querySelector('select.sel[data-select-native]');
+  // The first enhanced select on the page, and ITS proxy. The negative controls move the select out of
+  // its form and delete the popup; the judge must still find the control (otherwise a control "passes"
+  // by losing the element it was meant to judge).
+  const select = document.querySelector('select.sel[data-select-native]');
   if (!select) return ['页面上没有 select.sel'];
   const form = select.form;
-  const proxy = document.querySelector('[data-select-proxy]');
+  const sibling = select.nextElementSibling;
+  const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : document.querySelector('[data-select-proxy]');
   if (!proxy) failures.push('没有自绘控件（[data-select-proxy]）');
   if (!form) failures.push('真实 select 不在表单里（提交拿不到值）');
   if (proxy) {
@@ -108,7 +103,9 @@ const JUDGE_SELECT = () => {
 };
 
 const OPEN_SELECT = () => {
-  const proxy = document.querySelector('#preview [data-select-proxy]');
+  const select = document.querySelector('select.sel[data-select-native]');
+  const sibling = select ? select.nextElementSibling : null;
+  const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : document.querySelector('[data-select-proxy]');
   if (!proxy) return false;
   proxy.click();
   return true;
@@ -150,108 +147,60 @@ const JUDGE_SSR_NAV = () => {
   return failures;
 };
 
+
 export async function registerDesignChecks(ctx, { browser, fixture, repoRoot, protoUrl, outputRoot }) {
   const { check } = ctx;
   const evidence = {};
   const record = async (key, value) => { evidence[key] = value; };
 
-  /* ---------------------------------------------------------------- Q11 */
-
-  await check('admin-design: Q11 预览卡（JS 开：按钮收起 + 卡高与原型 ±8px + 选主体原地出判定）', async () => {
-    const context = await browser.newContext({ viewport: WIDE, colorScheme: 'dark' });
-    const proto = await browser.newContext({ viewport: WIDE, colorScheme: 'dark' });
-    const problems = [];
-    try {
-      await login(context, fixture.base, fixture.password);
-      const page = await context.newPage();
-      await page.goto(`${fixture.base}${AUTHZ}`, { waitUntil: 'load' });
-      await page.evaluate('document.fonts ? document.fonts.ready : true');
-      const protoPage = await proto.newPage();
-      await protoPage.goto(protoUrl(repoRoot, '#/authz'), { waitUntil: 'load' });
-      await protoPage.evaluate('document.fonts ? document.fonts.ready : true');
-
-      const protoCard = await protoPage.evaluate(() => Math.round(document.querySelector('#preview .card').getBoundingClientRect().height));
-      const before = await page.evaluate(PROBE_PREVIEW_CARD);
-      assert.ok(before, '实现侧没有 #preview .card');
-      record('q11', { protoCard, live: before });
-      if (Math.abs(protoCard - before.height) > 8) problems.push(`预览卡高度：原型 ${protoCard}px / 实现 ${before.height}px（差 ${Math.abs(protoCard - before.height)}px > 8）`);
-      if (!before.hasSelect) problems.push('实现侧预览卡里没有主体 select');
-      if (!before.selectInForm) problems.push('实现侧的真实 select 不在表单里');
-      if (before.buttonHidden !== true) problems.push('JS 开时无脚本提交按钮没有收起（预览卡因此比原型高一行）');
-      if (before.verdicts !== 0) problems.push('初始状态不应该有判定行');
-
-      // 选主体后原地出判定：不整页导航、URL 不变、焦点仍在控件上。
-      await page.evaluate('window.__waveR = 1');
-      const navigations = await page.evaluate(() => performance.getEntriesByType('navigation').length);
-      await page.evaluate(OPEN_SELECT);
-      await page.waitForSelector('[data-select-popup] .sel-opt[data-value]:not([data-value=""])', { timeout: 5000 });
-      await page.click('[data-select-popup] .sel-opt[data-value]:not([data-value=""])');
-      await page.waitForSelector('#preview .card .verdict', { timeout: 8000 });
-      await page.waitForTimeout(150);
-      const after = await page.evaluate(([keepUrl]) => ({
-        alive: window.__waveR === 1,
-        navigations: performance.getEntriesByType('navigation').length,
-        url: `${location.pathname}${location.search}${location.hash}`,
-        focusOnProxy: document.activeElement === document.querySelector('#preview [data-select-proxy]'),
-        verdicts: document.querySelectorAll('#preview .card .verdict').length,
-        subject: document.querySelector('#preview select.sel')?.value ?? null,
-      }), []);
-      record('q11AfterPick', { after, navigations });
-      if (!after.alive || after.navigations !== navigations) problems.push('选主体触发了整页导航（原型是原地重渲染）');
-      if (after.url !== `${AUTHZ}`) problems.push(`选主体改变了 URL：${after.url}`);
-      if (after.verdicts < 1) problems.push('选主体后没有出现判定行');
-      if (!after.subject) problems.push('选主体后真实 select 的值仍为空（没有镜像回表单）');
-      if (!after.focusOnProxy) problems.push('选主体后焦点没有回到控件上');
-    } finally {
-      await context.close().catch(() => {});
-      await proto.close().catch(() => {});
-    }
-    assert.deepEqual(problems, [], problems.join('\n'));
-  });
-
   /* ---------------------------------------------------------------- Q12 */
 
-  await check('admin-design: Q12 自绘下拉（用户裁决的设计变更，非 parity：弹层/选中态/封闭态仍是原型 .sel）', async () => {
+  await check('admin-design: Q12 自绘下拉（用户裁决的设计变更，非 parity：弹层/选中态/封闭态仍是原型 .sel.sm）', async () => {
     const context = await browser.newContext({ viewport: WIDE, colorScheme: 'dark' });
     const proto = await browser.newContext({ viewport: WIDE, colorScheme: 'dark' });
     const problems = [];
     try {
       await login(context, fixture.base, fixture.password);
       const page = await context.newPage();
-      await page.goto(`${fixture.base}${AUTHZ}`, { waitUntil: 'load' });
+      // The audit page is the surface Q12 moved to: it is the page whose `.sel.sm` controls still exist
+      // (the frozen legacy editor renders no form and no select at all), and the prototype draws the
+      // same toolbar controls as `.sel.sm`.
+      await page.goto(`${fixture.base}${AUDIT}`, { waitUntil: 'load' });
       await page.evaluate('document.fonts ? document.fonts.ready : true');
+      await page.waitForSelector('select.sel[data-select-native]', { timeout: 5000 });
       const protoPage = await proto.newPage();
-      await protoPage.goto(protoUrl(repoRoot, '#/authz'), { waitUntil: 'load' });
+      await protoPage.goto(protoUrl(repoRoot, '#/audit'), { waitUntil: 'load' });
       await protoPage.evaluate('document.fonts ? document.fonts.ready : true');
 
-      // 封闭态 = 原型的 `.sel` 形态：同一测量把原型的原生 select 与我们的自绘控件放在一起比。
-      const boxes = await page.evaluate(PROBE_PREVIEW_CARD);
+      // 封闭态 = 原型的 `.sel.sm` 形态：同一测量把原型的原生 select 与我们的自绘控件放在一起比。
+      // 宽度不比：原型与实现在窄屏/宽屏下的工具栏分配不同，宽度由 flex 决定，不是控件的形态。
       const proxyBox = await page.evaluate(() => {
-        const node = document.querySelector('#preview [data-select-proxy]');
-        if (!node) return null;
+        const select = document.querySelector('select.sel[data-select-native]');
+        const sibling = select ? select.nextElementSibling : null;
+        const node = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : null;
+        if (!select || !node) return null;
         const style = getComputedStyle(node);
         const rect = node.getBoundingClientRect();
-        const select = document.querySelector('#preview select.sel');
-        return { width: Math.round(rect.width), height: Math.round(rect.height), borderRadius: style.borderRadius, fontSize: style.fontSize, background: style.backgroundColor, nativeClipped: Boolean(select?.hasAttribute('data-select-native')), nativeFrozen: select ? getComputedStyle(select).pointerEvents === 'none' : null, tail: String(node.textContent).trim().slice(-12) };
+        return { width: Math.round(rect.width), height: Math.round(rect.height), borderRadius: style.borderRadius, fontSize: style.fontSize, background: style.backgroundColor, nativeClipped: Boolean(select.hasAttribute('data-select-native')), nativeFrozen: getComputedStyle(select).pointerEvents === 'none', tail: String(node.textContent).trim().slice(-12), field: select.name, options: [...select.options].filter((option) => option.value).length };
       });
       const protoBox = await protoPage.evaluate(() => {
-        const node = document.querySelector('#preview select.sel');
+        const node = document.querySelector('select.sel.sm');
         if (!node) return null;
         const style = getComputedStyle(node);
         const rect = node.getBoundingClientRect();
         return { width: Math.round(rect.width), height: Math.round(rect.height), borderRadius: style.borderRadius, fontSize: style.fontSize };
       });
-      record('q12Boxes', { proxyBox, protoBox, card: boxes });
-      if (!proxyBox) problems.push('实现侧没有自绘控件');
-      if (!protoBox) problems.push('原型侧没有可对照的 select.sel');
+      record('q12Boxes', { proxyBox, protoBox });
+      if (!proxyBox) problems.push('实现侧没有自绘控件（select.sel + [data-select-proxy]）');
+      if (!protoBox) problems.push('原型侧没有可对照的 select.sel.sm');
       if (proxyBox && protoBox) {
         if (proxyBox.height !== protoBox.height) problems.push(`封闭态高度不同：原型 ${protoBox.height} / 实现 ${proxyBox.height}`);
-        if (Math.abs(proxyBox.width - protoBox.width) > 2) problems.push(`封闭态宽度不同：原型 ${protoBox.width} / 实现 ${proxyBox.width}`);
         if (proxyBox.borderRadius !== protoBox.borderRadius) problems.push(`封闭态圆角不同：原型 ${protoBox.borderRadius} / 实现 ${proxyBox.borderRadius}`);
         if (proxyBox.fontSize !== protoBox.fontSize) problems.push(`封闭态字号不同：原型 ${protoBox.fontSize} / 实现 ${proxyBox.fontSize}`);
       }
       if (proxyBox && !proxyBox.nativeClipped) problems.push('真实 select 没有被视觉隐藏（aria-hidden + 裁切）');
       if (proxyBox && proxyBox.nativeFrozen !== true) problems.push('真实 select 仍然接收指针事件（会把点击抢走）');
+      if (proxyBox && proxyBox.options < 2) problems.push(`被自绘的控件只有 ${proxyBox.options} 个非空选项，无法证明选择与提交`);
 
       // 弹层：打开 → 判据（含选中态样式）全绿。
       await page.evaluate(OPEN_SELECT);
@@ -262,119 +211,113 @@ export async function registerDesignChecks(ctx, { browser, fixture, repoRoot, pr
       const popupStyles = await page.evaluate(() => {
         const option = document.querySelector('[data-select-popup] .sel-opt.on');
         const popup = document.querySelector('[data-select-popup]');
+        const select = document.querySelector('select.sel[data-select-native]');
+        const sibling = select ? select.nextElementSibling : null;
+        const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : null;
         return {
           position: getComputedStyle(popup).position,
           surface: getComputedStyle(popup).backgroundColor,
           optionHeight: option ? Math.round(option.getBoundingClientRect().height) : null,
           optionPaint: option ? getComputedStyle(option).backgroundColor : null,
+          popupWidth: Math.round(popup.getBoundingClientRect().width),
+          proxyWidth: proxy ? Math.round(proxy.getBoundingClientRect().width) : null,
         };
       });
       record('q12Popup', popupStyles);
-      if (popupStyles.optionHeight !== 32) problems.push(`弹层行高 ${popupStyles.optionHeight} ≠ 32`);
+      // `.sm` 档：行高 28（原型 .sel.sm 的档位）。
+      if (popupStyles.optionHeight !== 28) problems.push(`弹层行高 ${popupStyles.optionHeight} ≠ 28（.sel.sm 档位）`);
       if (popupStyles.position !== 'fixed') problems.push(`弹层 position=${popupStyles.position} ≠ fixed（会被容器裁切）`);
+      // “宽度对齐控件”：弹层的最小宽度跟随控件本身（不是 viewport，也不是内容）。
+      if (popupStyles.popupWidth !== null && popupStyles.proxyWidth !== null && Math.abs(popupStyles.popupWidth - popupStyles.proxyWidth) > 2) {
+        problems.push(`弹层宽度 ${popupStyles.popupWidth} 没有对齐控件 ${popupStyles.proxyWidth}`);
+      }
 
       // Esc 关闭并把焦点还给控件；再开一次，用键盘选一项并验证镜像 + change。
       await page.keyboard.press('Escape');
       await page.waitForTimeout(120);
-      const afterEsc = await page.evaluate(() => ({
-        open: Boolean(document.querySelector('[data-select-popup]')),
-        focusOnProxy: document.activeElement === document.querySelector('#preview [data-select-proxy]'),
-      }));
+      const afterEsc = await page.evaluate(() => {
+        const select = document.querySelector('select.sel[data-select-native]');
+        const sibling = select ? select.nextElementSibling : null;
+        const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : null;
+        return { open: Boolean(document.querySelector('[data-select-popup]')), focusOnProxy: Boolean(proxy) && document.activeElement === proxy };
+      });
       if (afterEsc.open) problems.push('Esc 没有关闭弹层');
       if (!afterEsc.focusOnProxy) problems.push('Esc 关闭后焦点没有还给控件');
 
+      // 键盘选一项：镜像回真实 select，并由工具栏自己的 GET 提交带出去。
+      //
+      // The audit toolbar is a `form[method=get]` and `admin-feature-lists.js` navigates on `change`
+      // (the prototype's scripted `data-af` behaviour), so this block must read the mirror
+      // SYNCHRONOUSLY and the submit evidence is the URL the client navigated to — not a hand-rolled
+      // `requestSubmit()`, which the client's in-place path never uses.
       const keyboard = await page.evaluate(async () => {
-        const select = document.querySelector('#preview select.sel');
-        const proxy = document.querySelector('#preview [data-select-proxy]');
+        const select = document.querySelector('select.sel[data-select-native]');
+        const sibling = select ? select.nextElementSibling : null;
+        const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : null;
+        if (!select || !proxy) return null;
         const changes = [];
         select.addEventListener('change', () => changes.push(select.value));
-        let submitted = null;
-        select.form.addEventListener('submit', (event) => { event.preventDefault(); submitted = new FormData(select.form).get('subject'); }, { once: true });
         proxy.focus();
         const press = (key) => proxy.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
         press('ArrowDown');
         press('ArrowDown');
         press('Enter');
-        await new Promise((resolve) => setTimeout(resolve, 60));
-        // What the form would really carry: the same submit the no-JS button performs.
-        select.form.requestSubmit();
-        await new Promise((resolve) => setTimeout(resolve, 60));
         const wanted = [...select.options].filter((option) => option.value).map((option) => option.value);
-        return { changes, submitted, value: select.value, wanted, proxyText: String(proxy.textContent).trim(), optionLabel: String(select.options[select.selectedIndex]?.label ?? '').trim() };
+        return {
+          changes, value: select.value, wanted, field: select.name, inForm: Boolean(select.form),
+          proxyText: String(proxy.textContent).trim(),
+          optionLabel: String(select.options[select.selectedIndex]?.label ?? '').trim(),
+        };
       });
       record('q12Keyboard', keyboard);
-      if (!keyboard.changes.length) problems.push('键盘选择没有派发 change（镜像失败）');
-      if (!keyboard.value || !keyboard.wanted.includes(keyboard.value)) problems.push(`键盘选择后的值不在选项里：${keyboard.value}`);
-      if (keyboard.proxyText !== keyboard.optionLabel) problems.push(`自绘控件的文案与选中项不一致：${keyboard.proxyText} ≠ ${keyboard.optionLabel}`);
-      if (keyboard.submitted === null) problems.push('提交时表单没有带上 subject');
-      else if (keyboard.submitted !== keyboard.value) problems.push(`提交带的值 ${keyboard.submitted} ≠ select 的值 ${keyboard.value}`);
+      if (!keyboard) problems.push('键盘镜像无法进行：页面上没有可操作的自绘控件');
+      else {
+        if (!keyboard.changes.length) problems.push('键盘选择没有派发 change（镜像失败）');
+        if (!keyboard.value || !keyboard.wanted.includes(keyboard.value)) problems.push(`键盘选择后的值不在选项里：${keyboard.value}`);
+        if (keyboard.proxyText !== keyboard.optionLabel) problems.push(`自绘控件的文案与选中项不一致：${keyboard.proxyText} ≠ ${keyboard.optionLabel}`);
+        if (!keyboard.inForm) problems.push('真实 select 不在表单里（提交拿不到值）');
+        // The picked value has to reach the real form's submission.
+        await page.waitForFunction((field) => new URLSearchParams(location.search).get(field) !== null, keyboard.field, { timeout: 5000 }).catch(() => {});
+        const carried = new URL(page.url()).searchParams.get(keyboard.field);
+        if (carried === null) problems.push('选中后表单没有提交（URL 上没有该字段）');
+        else if (carried !== keyboard.value) problems.push(`提交带的值 ${carried} ≠ select 的值 ${keyboard.value}`);
+      }
 
-      // type-ahead：按一个真实选项的首字母，第一次按键就要跳到以它开头的选项（closed 状态）。
-      const typeahead = await page.evaluate(async () => {
-        const select = document.querySelector('#preview select.sel');
-        const proxy = document.querySelector('#preview [data-select-proxy]');
-        const target = [...select.options].find((option) => option.value && /^[\x20-\x7e\u4e00-\u9fff]/.test(String(option.label).trim()));
+      // type-ahead：按一个真实（未选中）选项的首字母，第一次按键就要跳到以它开头的选项。
+      // A fresh load, because the keyboard step above let the toolbar navigate.
+      await page.goto(`${fixture.base}${AUDIT}`, { waitUntil: 'load' });
+      await page.waitForSelector('select.sel[data-select-native]', { timeout: 5000 });
+      const typeahead = await page.evaluate(() => {
+        const select = document.querySelector('select.sel[data-select-native]');
+        const sibling = select ? select.nextElementSibling : null;
+        const proxy = sibling && sibling.hasAttribute('data-select-proxy') ? sibling : null;
+        if (!select || !proxy) return null;
+        const target = [...select.options].find((option) => option.value && !option.selected && /^[\x20-\x7e\u4e00-\u9fff]/.test(String(option.label).trim()));
+        if (!target) return null;
         const first = String(target.label).trim()[0];
         const before = select.value;
         proxy.focus();
-        const press = (key) => proxy.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-        press(first);
-        await new Promise((resolve) => setTimeout(resolve, 60));
+        proxy.dispatchEvent(new KeyboardEvent('keydown', { key: first, bubbles: true, cancelable: true }));
+        // Synchronous: the mirror runs on the same tick, the toolbar's navigation comes later.
         return { first, before, after: select.value, label: String(select.options[select.selectedIndex]?.label ?? '').trim() };
       });
       record('q12Typeahead', typeahead);
-      if (!typeahead.after || !typeahead.label.toLowerCase().startsWith(String(typeahead.first).toLowerCase())) {
+      if (!typeahead) problems.push('type-ahead 无法进行：没有可跳转的选项');
+      else if (!typeahead.after || !typeahead.label.toLowerCase().startsWith(String(typeahead.first).toLowerCase())) {
         problems.push(`type-ahead 没有跳到以「${typeahead.first}」开头的选项（现在是「${typeahead.label}」）`);
-      }
-
-      // `.sm` 档：行高 28（原型 .sel.sm 的档位）。
-      const page2 = await context.newPage();
-      await page2.goto(`${fixture.base}${AUDIT}`, { waitUntil: 'load' });
-      await page2.evaluate('document.fonts ? document.fonts.ready : true');
-      const small = await page2.evaluate(async () => {
-        const select = document.querySelector('select.sel.sm');
-        const proxy = select?.nextElementSibling;
-        if (!proxy || !proxy.hasAttribute('data-select-proxy')) return { found: false };
-        const before = Math.round(select.getBoundingClientRect().width);
-        proxy.click();
-        await new Promise((resolve) => setTimeout(resolve, 60));
-        const option = document.querySelector('[data-select-popup] .sel-opt');
-        const height = option ? Math.round(option.getBoundingClientRect().height) : null;
-        const popup = document.querySelector('[data-select-popup]');
-        const popupWidth = popup ? Math.round(popup.getBoundingClientRect().width) : null;
-        const proxyWidth = Math.round(proxy.getBoundingClientRect().width);
-        const recorded = Number(proxy.dataset.nativeWidth || 0);
-        const inlineWidth = Number.parseInt(String(proxy.style.width || "0"), 10);
-        // The clipped real control is position:fixed (an absolute box this far down a long list adds
-        // document scroll — the 2026-10-31 blank-page defect); it must still be clipped to ~1px and
-        // unreachable by the pointer, which is what this criterion is about.
-        const selectStyle = getComputedStyle(select);
-        const clipped = (selectStyle.position === 'fixed' || selectStyle.position === 'absolute')
-          && Math.round(select.getBoundingClientRect().width) <= 2
-          && selectStyle.pointerEvents === 'none';
-        proxy.click();
-        return { found: true, height, popupWidth, selectWidth: before, proxyWidth, recorded, inlineWidth, clipped };
-      });
-      record('q12Small', small);
-      if (!small.found) problems.push('.sel.sm 没有被自绘（作用域必须包含 .sm）');
-      else {
-        if (small.height !== 28) problems.push(`.sm 弹层行高 ${small.height} ≠ 28`);
-        if (!small.clipped) problems.push('.sm 的真实 select 没有被裁切（会把点击抢走）');
-        if (small.recorded && small.inlineWidth !== small.recorded) problems.push(`自绘控件的宽度 ${small.inlineWidth} ≠ 增强时 select 的宽度 ${small.recorded}`);
-        // “宽度对齐控件”：弹层的最小宽度跟随控件本身（不是 viewport，也不是内容）。
-        if (small.popupWidth !== null && Math.abs(small.popupWidth - small.proxyWidth) > 2) problems.push(`.sm 弹层宽度 ${small.popupWidth} 没有对齐控件 ${small.proxyWidth}`);
       }
 
       // 负控：三个破坏各自必须让判据真红（顺序从“轻”到“重”：先只断开镜像，再拆弹层，最后把真实
       // select 移出表单，每步只在前一步的破坏上再叠一层，判据必须报出对应那一条）。
       const controls = await context.newPage();
-      await controls.goto(`${fixture.base}${AUTHZ}`, { waitUntil: 'load' });
+      await controls.goto(`${fixture.base}${AUDIT}`, { waitUntil: 'load' });
+      await controls.waitForSelector('select.sel[data-select-native]', { timeout: 5000 });
       await controls.evaluate(OPEN_SELECT);
       await controls.waitForSelector('[data-select-popup]', { timeout: 5000 });
       const clean = await controls.evaluate(JUDGE_SELECT);
       if (clean.length) problems.push(`负控基线不干净（打开弹层后就已经有失败）：${JSON.stringify(clean)}`);
       const breakMirror = await controls.evaluate(() => {
-        const select = document.querySelector('#preview select.sel') || document.querySelector('select.sel[data-select-native]');
+        const select = document.querySelector('select.sel[data-select-native]');
         if (!select || !select.options.length) return false;
         select.selectedIndex = select.options.length - 1;
         return true;
@@ -386,10 +329,13 @@ export async function registerDesignChecks(ctx, { browser, fixture, repoRoot, pr
       const afterRemovePopup = await controls.evaluate(JUDGE_SELECT);
       if (!removePopup) problems.push('负控 2 无法进行：没有弹层可移除');
       else if (!afterRemovePopup.some((line) => line.includes('弹层不存在'))) problems.push(`负控 2（移除弹层）没有被判红：${JSON.stringify(afterRemovePopup)}`);
+      // 负控 3: the real control loses its form association (`form=<missing id>` ⇒ `select.form` is
+      // null). Appending it to `body` instead would work too, but then the FIRST enhanced select in
+      // document order becomes a different control and the judgement would report on that one.
       const moveSelect = await controls.evaluate(() => {
-        const select = document.querySelector('#preview select.sel') || document.querySelector('select.sel[data-select-native]');
+        const select = document.querySelector('select.sel[data-select-native]');
         if (!select) return false;
-        document.body.appendChild(select);
+        select.setAttribute('form', 'no-such-form-for-this-control');
         return true;
       });
       const afterMove = await controls.evaluate(JUDGE_SELECT);
@@ -611,14 +557,27 @@ export async function registerDesignChecks(ctx, { browser, fixture, repoRoot, pr
     }
 
     // A2) 每一页都不许有内部横向滚动（业主 2026-10-20：「所有有表格的页都有问题」）。
-    // 这一条覆盖 access-policy 的 .fut 芯片与 AuthZ editor 的 fieldset，两处都曾让 .content 横向
+    // 这一条覆盖 access-policy 的 .fut 芯片与只读策略视图的 fieldset，两处都曾让 .content 横向
     // 可滚 → scrollIntoView 把左边缘推出视口，正是实机截图里「左侧裁切」的机制。
+    //
+    // The legacy editor is a read-only `?edit=` view now (`?new=1` renders the frozen list: there is no
+    // editor form to open), and a policy id is generated, so it is read from the list page's own rows.
+    let policyViewPath = null;
+    const probeContext = await browser.newContext();
+    try {
+      await login(probeContext, fixture.base, fixture.password);
+      const listHtml = await (await probeContext.request.get(`${fixture.base}/admin/auth/access-policy`)).text();
+      const policyId = /access-policy\?id=([0-9a-fA-F-]{8,})/.exec(listHtml)?.[1] ?? null;
+      if (policyId) policyViewPath = `/admin/auth/access-policy?edit=${policyId}`;
+    } finally {
+      await probeContext.close().catch(() => {});
+    }
     const PAGES_TO_SCAN = [
       ['overview', '/admin/auth?tab=overview'], ['accounts', '/admin/auth?tab=accounts'],
       ['keys', '/admin/auth?tab=keys'], ['clients', '/admin/auth?tab=clients'],
       ['tokens', '/admin/auth?tab=tokens'], ['publishes', '/admin/auth?tab=publishes'],
       ['audit', '/admin/auth?tab=audit'], ['access-policy', '/admin/auth/access-policy'],
-      ['access-policy-editor', '/admin/auth/access-policy?new=1'], ['vault-git', '/admin/auth/vault-git'],
+      ...(policyViewPath ? [['access-policy-view', policyViewPath]] : []), ['vault-git', '/admin/auth/vault-git'],
     ];
     for (const width of [320, 390, 412]) {
       const context = await browser.newContext({ viewport: { width, height: 800 }, colorScheme: 'dark' });

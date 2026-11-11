@@ -212,6 +212,10 @@ export function createVaultCatalogSource({
   readBase,
   toVaultPath,
   maxEntries = Number.MAX_SAFE_INTEGER,
+  // Fires after every successful note read. The publish registry keeps the address of a
+  // `publish: true` note from here. A throw is logged and dropped: this is a side
+  // effect, and index health wins over it.
+  onNoteRead = null,
 }) {
   const absoluteFor = (relPath) => path.join(vaultRoot, ...String(relPath).split("/"));
   const source = {
@@ -234,8 +238,16 @@ export function createVaultCatalogSource({
     },
     // `readNote` already resolves an absolute path; callers pass a vault-relative
     // logical path so the catalog never sees a raw filesystem path.
-    read(relPath) {
-      return readNote(absoluteFor(relPath), { tolerateMalformedFrontmatter: true });
+    async read(relPath) {
+      const read = await readNote(absoluteFor(relPath), { tolerateMalformedFrontmatter: true });
+      if (typeof onNoteRead === "function" && read) {
+        try {
+          await onNoteRead(read);
+        } catch (error) {
+          console.error(`Web Catalog note-read observer failed for ${read.path}: ${error?.message || error}`);
+        }
+      }
+      return read;
     },
     readBase(relPath) {
       return readBase(absoluteFor(relPath));

@@ -109,13 +109,14 @@ async function startServer(t, { recovery }) {
   return { base, vault: path.join(root, "vault") };
 }
 
-async function mcpPost(base, { body, session, key = API_KEY } = {}) {
+async function mcpPost(base, { body, session, key = API_KEY, ua } = {}) {
   const response = await fetch(`${base}/mcp`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
       ...(key ? { "X-API-Key": key } : {}),
+      ...(ua ? { "User-Agent": ua } : {}),
       ...(session ? { "Mcp-Session-Id": session } : {}),
     },
     body: JSON.stringify(body),
@@ -209,6 +210,15 @@ test("a stale session id keeps the conversation working, including writes and au
   assert.equal(writtenThroughRecovery.session, null);
   assert.deepEqual(await noteAuthor("AuthorAfter.md"), { agent: "zcode", model: "glm-5.3" });
 
+  // A different agent sharing the same API key must not inherit zcode's author.
+  const otherAgent = await mcpPost(base, {
+    body: callBody(70, "write_note", { path: "AuthorOther.md", content: "other\n" }),
+    session: randomUUID(),
+    ua: "undici",
+  });
+  assert.equal(otherAgent.status, 200, JSON.stringify(otherAgent.payload));
+  assert.deepEqual(await noteAuthor("AuthorOther.md"), { agent: "mcp-client", model: "unspecified" });
+
   // A host that does re-initialize while still sending a stale header gets a fresh
   // session instead of a 404.
   const reinitialized = await mcpPost(base, { body: initializeBody(8), session: randomUUID() });
@@ -231,7 +241,7 @@ test("a stale session id keeps the conversation working, including writes and au
   const finalHealth = await healthz(base);
   assert.equal(finalHealth.sessions, 2, "only real initialize calls register sessions");
   assert.equal(finalHealth.sessionRecovery.mode, "stateless");
-  assert.equal(finalHealth.sessionRecovery.recovered, 4);
+  assert.equal(finalHealth.sessionRecovery.recovered, 5);
   assert.equal(finalHealth.sessionRecovery.failed, 0);
   assert.equal(finalHealth.sessionRecovery.rejected, 0);
   assert.equal(finalHealth.sessionRecovery.active, 0, "recovered transports close with their response");

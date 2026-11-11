@@ -75,7 +75,9 @@ export function registerAuthRoutes(router, { provider, store, requirePage, curre
       if (!user.allowedVaults?.length) return res.status(403).send(loginPage("login.error.noVault", await loginAppearance(), next, locale));
       const id = token();
       const now = store.now();
-      const created = await store.createSession(id, { userId: user.id, userUpdatedAt: user.updatedAt, csrf: token(), vaultId: user.allowedVaults[0] || defaultWebVaultId(), createdAt: now, expiresAt: now + WEB_SESSION_TTL_MS, lastSeenAt: now });
+      // The account default decides the first screen (owner 2026-11-05); a Vault the person
+      // picks later is remembered by the session and wins over it.
+      const created = await store.createSession(id, { userId: user.id, userUpdatedAt: user.updatedAt, csrf: token(), vaultId: user.defaultVaultId ?? user.allowedVaults[0] ?? defaultWebVaultId(), createdAt: now, expiresAt: now + WEB_SESSION_TTL_MS, lastSeenAt: now });
       if (!created.ok) return res.status(503).send(loginPage("login.error.unavailable", await loginAppearance(), next, locale));
       res.cookie(WEB_SESSION_COOKIE, id, { httpOnly: true, secure: secureCookie, sameSite: "lax", maxAge: WEB_SESSION_TTL_MS, path: "/" });
       res.redirect(303, next);

@@ -3,7 +3,7 @@
 // for a pure grant is avoidable. Any removal (or a changed scope set) cannot be expressed by an old
 // token and must still revoke.
 //
-// Context: on 2026-10-21 granting `secondary-vault` to an account revoked all 255 of its tokens
+// Context: on 2026-10-21 granting `example-vault` to an account revoked all 255 of its tokens
 // (52 access / 203 refresh). That was correct per design and forced every client to re-authorize; the
 // exit from it was a manual restore of `revokedAt`. This file is the "next time" path.
 import test from "node:test";
@@ -14,13 +14,13 @@ import { decideGrantRevocation, isAdditiveGrantChange, sessionCountsFor } from "
 const base = { beforeScopes: ["obsidian.read"], beforeVaults: ["vault"] };
 
 test("adding a Vault is additive, so sessions can be kept", () => {
-  assert.equal(isAdditiveGrantChange({ ...base, afterScopes: ["obsidian.read"], afterVaults: ["vault", "secondary-vault"] }), true);
+  assert.equal(isAdditiveGrantChange({ ...base, afterScopes: ["obsidian.read"], afterVaults: ["vault", "example-vault"] }), true);
   assert.equal(isAdditiveGrantChange({ ...base, afterScopes: ["obsidian.read", "obsidian.write"], afterVaults: ["vault"] }), true);
   assert.equal(isAdditiveGrantChange({ ...base, afterScopes: ["obsidian.read"], afterVaults: ["vault"] }), true, "an unchanged set is trivially additive");
 });
 
 test("removing a Vault or a scope is NOT additive (the old token would keep serving it)", () => {
-  assert.equal(isAdditiveGrantChange({ beforeScopes: ["obsidian.read"], beforeVaults: ["vault", "secondary-vault"], afterScopes: ["obsidian.read"], afterVaults: ["vault"] }), false);
+  assert.equal(isAdditiveGrantChange({ beforeScopes: ["obsidian.read"], beforeVaults: ["vault", "example-vault"], afterScopes: ["obsidian.read"], afterVaults: ["vault"] }), false);
   assert.equal(isAdditiveGrantChange({ beforeScopes: ["obsidian.read", "obsidian.write"], beforeVaults: ["vault"], afterScopes: ["obsidian.read"], afterVaults: ["vault"] }), false);
   assert.equal(isAdditiveGrantChange({ beforeScopes: [], beforeVaults: ["vault", "work"], afterScopes: [], afterVaults: [] }), false);
 });
@@ -48,8 +48,8 @@ test("session counts cover access + refresh and skip revoked records", () => {
 });
 
 test("the save decision: a pure addition keeps sessions automatically, a narrowing always revokes", () => {
-  const additive = { beforeScopes: ["obsidian.read"], afterScopes: ["obsidian.read"], beforeVaults: ["vault"], afterVaults: ["vault", "secondary-vault"] };
-  const narrowed = { beforeScopes: ["obsidian.read"], afterScopes: ["obsidian.read"], beforeVaults: ["vault", "secondary-vault"], afterVaults: ["vault"] };
+  const additive = { beforeScopes: ["obsidian.read"], afterScopes: ["obsidian.read"], beforeVaults: ["vault"], afterVaults: ["vault", "example-vault"] };
+  const narrowed = { beforeScopes: ["obsidian.read"], afterScopes: ["obsidian.read"], beforeVaults: ["vault", "example-vault"], afterVaults: ["vault"] };
   assert.deepEqual(decideGrantRevocation(additive), { keep: true, additive: true, reason: "additive" }, "adding a Vault must not log everyone out");
   assert.deepEqual(decideGrantRevocation(narrowed), { keep: false, additive: false, reason: "narrowed" }, "taking access away must revoke, or old tokens keep serving it");
 });

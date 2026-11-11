@@ -39,8 +39,27 @@ export function createSseBroker({
     if (subscriber.acquiredWatcher) onWatcherRelease(subscriber.vaultId);
   }
 
+  /**
+   * The delivery check: the injected callback re-authorizes this exact frame against
+   * the Vault the stream is bound to. In shadow mode it returns nothing and only a row
+   * is recorded, so a refusal can never close a stream. A decision with
+   * `allowed === false` — only an enforcing caller produces one — closes instead, and
+   * the queued content is never written.
+   */
+  function authorizeFrame(subscriber, event) {
+    if (typeof subscriber.authorizeDelivery !== "function") return true;
+    if (!event?.path) return true; // hello / resync carry no content
+    const decision = subscriber.authorizeDelivery(event);
+    if (decision && decision.allowed === false) {
+      close(subscriber, { end: true });
+      return false;
+    }
+    return true;
+  }
+
   function deliver(subscriber, event) {
     if (!isActive(subscriber)) return false;
+    if (!authorizeFrame(subscriber, event)) return false;
     if (subscriber.res?.writableEnded || subscriber.res?.ended) {
       close(subscriber, { end: true });
       return false;
@@ -118,7 +137,7 @@ export function createSseBroker({
     return { ok: true, count };
   }
 
-  function register({ res, vaultId, sessionId, acquiredWatcher, deferLive = false }) {
+  function register({ res, vaultId, sessionId, acquiredWatcher, deferLive = false, authorizeDelivery = null }) {
     const count = sessionConnections.get(sessionId) || 0;
     sessionConnections.set(sessionId, count + 1);
     const subscriber = {
@@ -127,6 +146,7 @@ export function createSseBroker({
       sessionId,
       heartbeat: null,
       acquiredWatcher,
+      authorizeDelivery: typeof authorizeDelivery === "function" ? authorizeDelivery : null,
       closed: false,
       replaying: Boolean(deferLive),
       replayQueue: [],

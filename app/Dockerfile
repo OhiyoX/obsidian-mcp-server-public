@@ -5,6 +5,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN apk add --no-cache git openssh-client
+# The container runs as `user: "1002:10"` (compose), and alpine has no record for that uid.
+# `ssh` refuses to start without one, so `git push` over SSH fails with "No user exists for
+# uid 1002". This is a name record, not a login: no password, shell /bin/sh, home /data.
+RUN echo "app:x:1002:10:app:/data:/bin/sh" >> /etc/passwd
 
 COPY package.json ./
 ARG NPM_REGISTRY=https://registry.npmmirror.com

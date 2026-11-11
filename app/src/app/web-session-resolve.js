@@ -41,7 +41,9 @@ export async function resolveWebSession({ store, provider, rawToken, ttlMs = WEB
     const allowedScopes = [...(user.allowedScopes || [])];
     const allowedVaults = [...(user.allowedVaults || [])];
     let vaultId = snapshot.record.vaultId;
-    if (!allowedVaults.includes(vaultId)) vaultId = allowedVaults[0];
+    // A stored Vault that is no longer allowed falls back to the account default first, then to
+    // the first allowed Vault — never to an arbitrary one.
+    if (!allowedVaults.includes(vaultId)) vaultId = allowedVaults.includes(user.defaultVaultId) ? user.defaultVaultId : allowedVaults[0];
     // Capture the touch time only after the provider await: a stale pre-await clock
     // could otherwise move lastSeenAt/expiresAt backwards.
     const touchNow = store.now();
@@ -72,6 +74,10 @@ export async function resolveWebSession({ store, provider, rawToken, ttlMs = WEB
     }
     return {
       id: rawToken,
+      // A non-secret key for the authorization plane: the store's SHA-256 token hash.
+      // It identifies this session without carrying the cookie or the raw token (the
+      // pure authorizer never receives a secret), and it cannot authenticate anything.
+      credentialId: `web-session:${snapshot.tokenHash}`,
       version: touch.version,
       userId: snapshot.record.userId,
       userUpdatedAt: snapshot.record.userUpdatedAt,

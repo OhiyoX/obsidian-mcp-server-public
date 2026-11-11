@@ -22,6 +22,7 @@ import { st } from "../presentation/vocab.js";
 import { ic } from "../assets/icons.js";
 import { sessionCountsFor } from "../grants.js";
 import { renderSubjectAuthzSection } from "../subject-authz.js";
+import { renderDefaultVaultPicker } from "../default-vault-picker.js";
 import { readSort, sortRows } from "../table-sort.js";
 import { t } from "../../i18n/context.js";
 
@@ -165,7 +166,7 @@ function accountDrawer(ctx, account, mode) {
     [t("adm.accounts.kv.lastLogin"), account.lastLoginAt ? `${esc(fmtFull(account.lastLoginAt))} <span class="muted mono">· ${esc(account.lastSource || "—")}</span>` : `<span class="muted">${esc(t("adm.accounts.neverLoggedIn"))}</span>`],
     [t("adm.accounts.kv.linkedClients"), linkedCell],
   ])}</div>
-  ${renderSubjectAuthzSection(ctx, { subject: `oauth-user:${account.id}`, tab: "accounts", subjectId: account.id })}
+  ${renderSubjectAuthzSection(ctx, { subject: `oauth-user:${account.id}` })}
   <form class="dsec" method="post" action="/admin/auth/oauth/user/scopes">
     <h3>${esc(t("adm.accounts.permissionsTitle"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
@@ -176,11 +177,18 @@ function accountDrawer(ctx, account, mode) {
     <div class="banner amber" style="margin:12px 0 0">${ic("alert")}<div>${t("adm.accounts.revokeBanner", { total: counts.total, access: counts.access, refresh: counts.refresh, clients: counts.clients || linked.length })}</div></div>
     <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.accounts.savePermissions"))}</button></div>
   </form>
+  <form class="dsec" method="post" action="/admin/auth/oauth/user/default-vault">
+    <h3>${esc(t("adm.accounts.defaultVaultTitle"))}</h3>
+    <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
+    <input type="hidden" name="id" value="${esc(account.id)}">
+    ${renderDefaultVaultPicker(ctx, { current: account.defaultVaultId ?? null, allowedVaults: account.allowedVaults || [] })}
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.accounts.saveDefaultVault"))}</button></div>
+  </form>
   <form class="dsec" method="post" action="/admin/auth/oauth/user/password">
     <h3>${esc(t("adm.accounts.resetPasswordTitle"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="id" value="${esc(account.id)}">
-    <div style="display:flex;gap:8px"><input class="inp grow" type="password" name="password" autocomplete="new-password" placeholder="${esc(t("adm.accounts.newPasswordPlaceholder"))}"${mode === "pw" ? " autofocus" : ""}><button class="btn" type="submit">${esc(t("adm.accounts.reset"))}</button></div>
+    <div style="display:flex;gap:8px"><input class="inp grow" type="password" name="password" autocomplete="new-password" required minlength="12" maxlength="256" placeholder="${esc(t("adm.accounts.newPasswordPlaceholder"))}"${mode === "pw" ? " autofocus" : ""}><button class="btn" type="submit">${esc(t("adm.accounts.reset"))}</button></div>
     <span class="help">${esc(t("adm.accounts.resetPasswordHelp"))}</span>
   </form>
   <div class="dsec"><h3>${esc(t("adm.accounts.dangerTitle"))}</h3><div class="danger-zone">

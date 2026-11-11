@@ -391,7 +391,7 @@ test("the asset route takes the Vault from the session only and maps its domain 
   const deniedApp = express();
   deniedApp.use(express.json());
   registerAssetRoute(deniedApp, {
-    requireApi: (_req, _res, next) => { _req.webSession = { allowedScopes: ["obsidian.write"], allowedVaults: ["other"], vaultId: "vault", userId: "u", username: "owner" }; next(); },
+    requireApi: (_req, _res, next) => { _req.webSession = { credentialId: "web-session:fixture-hash", allowedScopes: ["obsidian.write"], allowedVaults: ["other"], vaultId: "vault", userId: "u", username: "owner" }; next(); },
     requireCsrf: (_req, _res, next) => next(),
     currentVault: async () => { throw new Error("Vault access denied"); },
     provider: { recordAudit: (entry) => audits.push(entry) },
@@ -427,7 +427,7 @@ test("the asset route takes the Vault from the session only and maps its domain 
   const seen = [];
   const stubApp = express();
   registerAssetRoute(stubApp, {
-    requireApi: (req, _res, next) => { req.webSession = { allowedScopes: ["obsidian.write"], allowedVaults: ["session"], vaultId: "session", userId: "u", username: "owner" }; next(); },
+    requireApi: (req, _res, next) => { req.webSession = { credentialId: "web-session:fixture-hash", allowedScopes: ["obsidian.write"], allowedVaults: ["session"], vaultId: "session", userId: "u", username: "owner" }; next(); },
     requireCsrf: (_req, _res, next) => next(),
     currentVault: async (req) => { seen.push({ query: req.query.vaultId, header: req.get("x-vault-id"), body: Buffer.isBuffer(req.body) }); return { id: "session", root: sessionRoot }; },
     provider: { recordAudit() {} },

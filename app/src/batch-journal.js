@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DATA_PATH, HISTORY_PATH, MAX_VERSIONS_PER_FILE, TRASH_PATH, VAULT, VERSION_HISTORY_ENABLED } from "./config.js";
 import { trackGitMutation } from "./git.js";
+import { requestContext } from "./request-context.js";
 import {
   assertVaultBinding,
   currentMutationVaultScope,
@@ -93,6 +94,9 @@ export async function beginBatchJournal(entries, idempotency, options = {}) {
   const manifest = {
     schema: JOURNAL_SCHEMA, vaultId: scope.vaultId ?? null, state: "prepared",
     idempotency: idempotency || null,
+    // #736: the author who made the write, recorded so recovery can attribute the Git mutation
+    // without a request context. Absent in journals written before this field existed.
+    author: requestContext()?.author ?? null,
     entries: entries.map((item, index) => ({
       path: item.rel,
       existed: item.existed,
@@ -448,7 +452,12 @@ export async function finishBatchJournal(journal, hooks = {}) {
           manifest.result.planHash !== manifest.idempotency.planHash) throw new Error("Committed mutation result is missing");
       await saveAppliedRecord({ ...manifest.idempotency, result: manifest.result }, { scope });
     }
-    for (const item of items) trackGitMutation(item.path);
+    // #736: recovery runs outside a request, so `requireRequestAuthor()` inside `trackGitMutation`
+    // threw here and blocked startup after a crash between `committed` and the journal cleanup.
+    // Use the author recorded when the write was made; a journal without one skips Git tracking
+    // instead of inventing an identity.
+    const author = manifest.author || manifest.idempotency?.author || null;
+    if (author) for (const item of items) trackGitMutation(item.path, author);
   }
   for (const item of items) await fs.rm(item.temp, { force: true });
   await fs.rm(journal.dir, { recursive: true });

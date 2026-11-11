@@ -1,3 +1,4 @@
+import { requestUserAgent } from "../agent-identity.js";
 import { ok } from "../result.js";
 import { effectiveVaultId } from "../default-vault.js";
 import { deployedVersion, formatDeployTime } from "../release-version.js";
@@ -33,6 +34,13 @@ function safeVaultMetadata(vault) {
   };
 }
 
+/** Which layer supplied the effective default Vault: the key, the client, the account, or the server. */
+function defaultVaultSourceOf(authInfo) {
+  if (!authInfo?.defaultVaultId) return "server";
+  if (authInfo.type === "api-key") return "api-key";
+  return authInfo.defaultVaultLayer === "account" ? "account" : "client";
+}
+
 /** Caller-filtered inventory: `allowedVaults ∩ registry` (contract §18.1, §34-9). */
 async function visibleVaults(extra) {
   const allowed = extra?.authInfo?.allowedVaults;
@@ -53,25 +61,28 @@ function rememberSessionAuthor(server, args = {}, extra) {
   const label = String(args.client || "").trim();
   const model = String(args.model || "").trim();
   const authClientId = authClientIdFromExtra(extra);
-  if (!label && !model) return getSessionAuthor(extra?.sessionId, authClientId);
+  const clientFingerprint = requestUserAgent(extra);
+  if (!label && !model) return getSessionAuthor(extra?.sessionId, authClientId, clientFingerprint);
 
   const clientName = getInitializedClientInfo(server).name;
   const genericClient = isGenericClientName(clientName);
 
   // Policy `client` is a label. It becomes write agent only when initialize used a
   // generic placeholder (Cursor often sends mcp-client) or it matches clientInfo.name.
+  // The server-wide env default applies only after an initialize; a stateless
+  // request must not take a label that names another agent.
   let agent;
   if (!genericClient && clientName) {
     agent = clientName;
   } else {
-    agent = label || process.env.MCP_DEFAULT_AUTHOR_AGENT || clientName || "mcp-client";
+    agent = label || (clientName ? process.env.MCP_DEFAULT_AUTHOR_AGENT : undefined) || clientName || "mcp-client";
   }
 
   const author = {
     agent: cleanAuthorField(agent, "agent"),
-    model: cleanAuthorField(model || process.env.MCP_DEFAULT_AUTHOR_MODEL || getSessionAuthor(extra?.sessionId, authClientId)?.model || "unspecified", "model"),
+    model: cleanAuthorField(model || (clientName ? process.env.MCP_DEFAULT_AUTHOR_MODEL : undefined) || getSessionAuthor(extra?.sessionId, authClientId, clientFingerprint)?.model || "unspecified", "model"),
   };
-  setSessionAuthor(extra?.sessionId, author, authClientId);
+  setSessionAuthor(extra?.sessionId, author, authClientId, clientFingerprint);
   return author;
 }
 
@@ -118,7 +129,7 @@ export function registerInfoTools(server) {
         deployedAtFormatted: formatDeployTime(release.deployedAt),
         defaultVaultId: DEFAULT_VAULT_ID,
         effectiveDefaultVaultId: effectiveVisible ? effective : null,
-        defaultVaultSource: extra?.authInfo?.defaultVaultId ? "credential" : "server",
+        defaultVaultSource: defaultVaultSourceOf(extra?.authInfo),
         vaults,
         tools: view.exposedToolNames || view.toolNames,
         discovery: discoveryPolicySummary(view),

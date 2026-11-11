@@ -18,6 +18,8 @@ import { AUTH_ADMIN_SESSION_TTL_SECONDS } from "../server-config.js";
 import { LOGIN_LOCK_MAX_FAILURES, LOGIN_LOCK_WINDOW_MS, formatLockRemaining, lockRetryAfterSeconds, setRetryAfter } from "../login-lockout.js";
 import { buildCatalog } from "./catalog.js";
 import { decideGrantRevocation } from "./grants.js";
+import { adminAuthorizationRequest } from "../authorization/adapters/admin.js";
+import { createAuthorizationSeam } from "../authorization/runtime.js";
 import { clean, listField, parseCookies, source } from "./http.js";
 import { renderAuthTab, renderCsrfRejected, renderError, renderLoginFailure, renderLoginLocked, renderLoginPage } from "./pages/index.js";
 import { auditCsv } from "./pages/audit.js";
@@ -25,6 +27,7 @@ import { renderAuthShell } from "./pages/shell.js";
 import { renderDocument } from "./layout.js";
 import { registerAuthorizationTransferRoutes } from "./auth-center-transfer-routes.js";
 import { registerAccessPolicyRoutes } from "./routes/access-policy.js";
+import { registerAuthorizationRoutes } from "./routes/authz.js";
 import { registerVaultGitRoutes } from "./routes/vault-git.js";
 import { registerDefaultVaultRoutes } from "./routes/default-vault.js";
 import { registerLocaleRoutes } from "../app/locale-routes.js";
@@ -54,11 +57,18 @@ export function createAdminRouter({
   publishService = null,
   publicBaseUrl = "",
   accessPolicyAdmin = null,
+  authorizationAdmin = null,
   vaultGitAdmin = null,
   vaultGitStore = null,
+  authorization = null,
+  authorizationShadow = null,
 }) {
   const router = express.Router();
-  const deps = { provider, configuredApiKeyEnabled, listVaults, publishService, publicBaseUrl, accessPolicyAdmin, vaultGitAdmin };
+  const deps = { provider, configuredApiKeyEnabled, listVaults, publishService, publicBaseUrl, accessPolicyAdmin, authorizationAdmin, vaultGitAdmin, authorizationShadow };
+  // The one deployment mode, read where it is decided (`server.js` builds the runtime with it) and
+  // handed to the legacy policy page, whose frozen banner must state it: only `enforce` answers from
+  // the per-Vault model, so the stored legacy policies still decide in the other two modes.
+  const authorizationMode = typeof authorization?.summary === "function" ? authorization.summary().mode ?? null : null;
   const sessions = new Map();
   const failures = new Map();
 
@@ -157,6 +167,27 @@ export function createAdminRouter({
 
   const redirectTab = (res, tab) => res.redirect(303, `/admin/auth?tab=${tab}`);
 
+  // P3: every Admin control action is decided by the authorization runtime, with the console's
+  // own `admin-session` proof — a console session is not a person's credential, so it carries no
+  // subject. `requireAdmin`/`requireCsrf` still run first: without a session this middleware only
+  // lets the request continue to them, so the existing login redirect and CSRF answers are
+  // unchanged. A path that is not a catalog boundary keeps the route's own answer.
+  const decide = createAuthorizationSeam({ authorization });
+  router.use((req, res, next) => {
+    if (authorization === null) return next();
+    if (!currentSession(req)) return next();
+    const request = adminAuthorizationRequest({ routeKey: `ADMIN ${String(req.method || "GET").toUpperCase()} ${String(req.path || "/")}` });
+    if (request === null) return next();
+    let decision;
+    try {
+      decision = decide.authorize(request);
+    } catch {
+      decision = null;
+    }
+    if (decision !== null && decision.allowed === true) return next();
+    res.status(403).type("text/plain").send("Forbidden");
+  });
+
   /** The typed confirmation a danger write must carry, copied from the form and trimmed. */
   const confirmToken = (req) => String(req.body?.confirm ?? "").trim();
 
@@ -215,11 +246,16 @@ export function createAdminRouter({
   // held here and injected late, at render time, through each module's `view` seam (#399).
   let accessPolicyBase = null;
   let vaultGitBase = null;
+  // The sidebar's 「定时授权」 entry leads to the constraint page (Task 7 item B), not to the frozen
+  // legacy page: one entry, the page that works. The frozen page stays reachable from that page as a
+  // read-only link, and `accessPolicyBase` (below) still names it for the surfaces that read it.
+  let constraintsBase = null;
 
   accessPolicyBase = accessPolicyAdmin
     ? registerAccessPolicyRoutes(router, {
       admin: accessPolicyAdmin,
       provider,
+      authorizationMode,
       configuredApiKeyEnabled,
       // Same inventory sources as the tab routes: the sidebar counts are part of this page.
       listVaults,
@@ -234,7 +270,7 @@ export function createAdminRouter({
           // a snapshot captured while the inventory was empty kept being reused long after two Vaults
           // were admitted. A route may also pass its own counts (`authz`); those win over the catalog's.
           const fallback = opts.catalog || lastCatalog;
-          return renderAuthShell({ ...opts, accessPolicyBase: accessPolicyBase ?? opts.accessPolicyBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
+          return renderAuthShell({ ...opts, constraintsBase: constraintsBase ?? opts.constraintsBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
         },
         layout: (title, body) => renderDocument({ title: title || t("adm.doc.title"), theme: lastCatalog?.theme || "dark", bodyHtml: body }),
       },
@@ -256,7 +292,7 @@ export function createAdminRouter({
           // a snapshot captured while the inventory was empty kept being reused long after two Vaults
           // were admitted. A route may also pass its own counts (`authz`); those win over the catalog's.
           const fallback = opts.catalog || lastCatalog;
-          return renderAuthShell({ ...opts, accessPolicyBase: accessPolicyBase ?? opts.accessPolicyBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
+          return renderAuthShell({ ...opts, constraintsBase: constraintsBase ?? opts.constraintsBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
         },
         layout: (title, body) => renderDocument({ title: title || t("adm.doc.title"), theme: lastCatalog?.theme || "dark", bodyHtml: body }),
       },
@@ -265,6 +301,33 @@ export function createAdminRouter({
 
   let lastCatalogRef = null;
   void lastCatalogRef;
+
+  // The per-Vault constraint writes (plan Task 5). Registered from the module rather than behind an
+  // `if` on the service: the boundary inventory derives its rows from the routes that exist, so a
+  // boundary that vanished whenever a service was missing would leave a hole in the manifest.
+  // Without a service the five routes answer 503 `authorization_admin_unavailable`.
+  constraintsBase = registerAuthorizationRoutes(router, {
+    service: authorizationAdmin,
+    requireAdmin,
+    requireCsrf,
+    authorizationMode,
+    actions: {
+      // A POST carries no catalog (one is built for a GET only), and a refused browser write must
+      // render the page again. Building one here keeps the model in this router's hands and the route
+      // module free of a second store read.
+      catalog: (req) => buildCatalog({ deps, req, query: req.query }),
+      // The frozen legacy page, offered from the new page as a read-only link.
+      legacyPolicyBase: accessPolicyBase,
+    },
+    // The page renders inside the same shell the other Admin surfaces use, and the same late-injected
+    // bases: 「定时授权」 is one nav entry, so a page that rendered its own sidebar would fork it.
+    view: {
+      renderAuthShell: (opts) => {
+        const fallback = opts.catalog || lastCatalog;
+        return renderAuthShell({ ...opts, constraintsBase: constraintsBase ?? opts.constraintsBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
+      },
+    },
+  })?.base ?? null;
 
   registerAuthorizationTransferRoutes(router, {
     provider,
@@ -342,14 +405,14 @@ export function createAdminRouter({
     }
     let page;
     try {
-      page = renderAuthTab(activeTab, { ...catalog, req, csrf: req.adminSession.csrf, session: req.adminSession, publicBaseUrl, accessPolicyBase, vaultGitBase });
+      page = renderAuthTab(activeTab, { ...catalog, req, csrf: req.adminSession.csrf, session: req.adminSession, publicBaseUrl, accessPolicyBase, vaultGitBase, constraintBase: constraintsBase, authorizationMode });
     } catch (error) {
       res.status(500).send(renderError({ title: t("adm.router.error.renderTitle"), heading: t("adm.router.error.renderTitle"), message: String(error?.message || error), theme: catalog?.theme }));
       return;
     }
     res.send(renderAuthShell({
       activeTab,
-      accessPolicyBase,
+      constraintsBase,
       vaultGitBase,
       session: req.adminSession,
       request: req,

@@ -197,6 +197,7 @@ export function registerVaultGitRoutes(router, {
   function render(req, model, { notice = null, status = 200, query = req.query || {} } = {}) {
     const page = renderVaultsPage({
       vaultGit: { wired: true, model, error: null },
+      runtime: typeof admin.runtime === "function" ? admin.runtime() : null,
       csrf: req.adminSession?.csrf ?? "",
       actions: urls,
       query,

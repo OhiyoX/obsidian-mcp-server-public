@@ -21,6 +21,11 @@
 //    Node tests drive directly;
 //  - one inline row renderer shared by all three entries (panel-head new note,
 //    folder-row `+`, panel-head new folder).
+//
+// `mode: "rename"` reuses the same row and the same commit decision (an unchanged value is
+// never a write); only its copy differs, so a rename can never grow a second rule.
+import { t } from "../../core/i18n.js";
+
 export const DEFAULT_NOTE_NAME = "未命名笔记";
 export const DEFAULT_FOLDER_NAME = "新建文件夹";
 
@@ -47,10 +52,13 @@ export function createDraftRegistry() {
       current = {
         token: {},
         kind: spec.kind,
+        mode: spec.mode ?? "",
         scope: spec.scope ?? "",
         scopeLabel: spec.scopeLabel ?? "",
         initialValue: spec.initialValue ?? "",
         value: spec.initialValue ?? "",
+        // A rename row belongs at the row it renames; a create row is prepended (no anchor).
+        before: spec.before ?? null,
         onCommit: spec.onCommit ?? null,
         // Optional: a repaint can replace the scope's container (a folder's children are
         // rebuilt from scratch), so the scope resolver lets failure recovery re-target a
@@ -132,7 +140,10 @@ export function isDraftInput(element) {
 export function preserveActiveDraft() {
   const draft = registry.current();
   if (!draft) return null;
-  if (isDraftInput(globalThis.document?.activeElement)) return { ...draft };
+  // The row's own document, not the module-global one: a row can live in another document
+  // (an embedded app, a test harness), and the focus test must look where the row does.
+  const active = draft.row?.ownerDocument?.activeElement ?? globalThis.document?.activeElement;
+  if (isDraftInput(active)) return { ...draft };
   if (!draft.submitting) settleActiveDraft();
   return null;
 }
@@ -166,6 +177,7 @@ export function renderActiveDraft({ host, container, preserved = null } = {}) {
   }
 
   const isFolder = draft.kind === "folder";
+  const renaming = draft.mode === "rename";
   // Every paint of the draft row owns a fresh row token. A background repaint detaches the
   // focused row (the browser then fires `focusout`), and the replaced row's deferred blur
   // must not cancel the draft that very repaint restored. The draft's own token (registry)
@@ -177,12 +189,16 @@ export function renderActiveDraft({ host, container, preserved = null } = {}) {
   input.className = isFolder ? "note-create-input folder-create-input" : "note-create-input";
   input.type = "text";
   input.value = draft.value;
-  input.placeholder = isFolder ? "文件夹名称" : "笔记名称";
+  input.placeholder = renaming
+    ? t("explorer.rename.placeholder")
+    : isFolder ? "文件夹名称" : "笔记名称";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.setAttribute("aria-label", isFolder
-    ? "新建文件夹"
-    : draft.scope ? `在 ${draft.scopeLabel} 中新建笔记` : "新建笔记");
+  input.setAttribute("aria-label", renaming
+    ? t(isFolder ? "explorer.rename.ariaFolder" : "explorer.rename.ariaNote")
+    : isFolder
+      ? "新建文件夹"
+      : draft.scope ? `在 ${draft.scopeLabel} 中新建笔记` : "新建笔记");
   row.append(input);
 
   const cancel = () => {
@@ -246,13 +262,22 @@ export function renderActiveDraft({ host, container, preserved = null } = {}) {
     }
   });
   // Deferred so an Enter in the same tick still wins: the blur of a committed row finds
-  // `submitting` set and does nothing.
-  input.addEventListener("blur", () => setTimeout(cancel, 0));
+  // `submitting` set and does nothing. The cancel also yields to a focus that came back:
+  // a repaint detaches the focused row, the browser fires blur, and the restored row then
+  // holds the focus again. Cancelling there killed a row nobody had left.
+  input.addEventListener("blur", () => setTimeout(() => {
+    const documentRef = input.ownerDocument ?? globalThis.document;
+    if (documentRef?.activeElement === input) return;
+    cancel();
+  }, 0));
 
-  // The row is always the first child of its container: the list itself for a root-scope
-  // draft, the folder's live children for an in-folder one.
+  // The row is the first child of its container (the list itself for a root-scope draft, the
+  // folder's live children for an in-folder one) unless the draft anchors it to a row.
   draft.row = row;
-  target.prepend(row);
+  // The anchor is read from the draft, so a failed commit repaints in place too; a repaint
+  // that replaced the list leaves it detached and the row falls back to the container's top.
+  if (draft.before?.parentNode === target) target.insertBefore(row, draft.before);
+  else target.prepend(row);
   if (preserved) {
     input.focus();
     input.select?.();
@@ -290,15 +315,17 @@ export function beginDraft({
   container,
   resolveContainer = null,
   kind = "note",
+  mode = "",
   scope = "",
   scopeLabel = "",
   initialValue = "",
+  before = null,
   onCommit = null,
 } = {}) {
   if (!host) return false;
   settleActiveDraft();
   host.querySelectorAll(".note-create-row").forEach((node) => node.remove());
-  registry.begin({ kind, scope, scopeLabel, initialValue, onCommit, resolveContainer });
+  registry.begin({ kind, mode, scope, scopeLabel, initialValue, before, onCommit, resolveContainer });
   const target = container ?? resolveContainer?.() ?? host;
   if (!renderActiveDraft({ host, container: target })) return false;
   focusDraftInput(target);

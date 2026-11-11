@@ -180,7 +180,7 @@ test("the Publish handlers take the selected vault from the registrar context, n
     { vaultExists: async () => true },
   );
   registerPublishTools(publishRegistrar);
-  const denied = await publishTools.get("get_publish_status").handler({ path: "a.md", vaultId: "beta" }, { authInfo: { allowedVaults: ["alpha"] } });
+  const denied = await publishTools.get("get_publish_status").handler({ path: "a.md", vaultId: "beta" }, { authInfo: { type: "oauth", clientId: "contract-credential", allowedVaults: ["alpha"] } });
   assert.equal(denied.isError, true);
   assert.deepEqual(denied.structuredContent, { code: "vault_access_denied", vaultId: "beta" });
   assert.equal(DEFAULT_VAULT_ID, "default");

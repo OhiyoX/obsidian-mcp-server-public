@@ -25,6 +25,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { createWebBasesFixtureVault } from '../web-bases-fixtures.mjs';
+import { waitForHealthz } from './readiness.mjs';
 
 // The phone profile of the report. Below the frozen `<=720px` drawer breakpoint.
 const VIEWPORT = { width: 390, height: 844 };
@@ -72,11 +73,7 @@ export async function registerDrawerBleedChecks(ctx) {
   const page = await context.newPage();
   const pageErrors = [];
   try {
-    for (let attempt = 0; attempt < 150; attempt += 1) {
-      try { if ((await fetch(`${base}/healthz`)).ok) break; } catch { /* keep waiting */ }
-      if (child.exitCode !== null) throw new Error('Drawer-bleed test server exited');
-      await sleep(100);
-    }
+    await waitForHealthz({ base, child, serverErrors, label: 'Drawer-bleed test server' });
     page.setDefaultTimeout(15000);
     page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
 

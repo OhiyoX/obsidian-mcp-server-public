@@ -29,14 +29,20 @@
 //      never clobbered (§6, A4 HANDOFF "patch 语义字面").
 //
 // Non-goals (frozen): no session-sticky Vault (§0-3), no handler-level allowlist
-// duplication (§43-4), no Vault selection for `obsidian://vault/*` resources
-// (§19 — resources stay primary-only and must not read the ambient selection), and
-// no per-Vault *runtime factory*: secondary runtimes are Wave D/B wiring, so this
-// module only ever reports a runtime it was given or that already exists for
-// primary. It never hands a secondary Vault the primary runtime.
+// duplication (§43-4), and no per-Vault *runtime factory*: secondary runtimes are
+// Wave D/B wiring, so this module only ever reports a runtime it was given or that
+// already exists for primary. It never hands a secondary Vault the primary runtime.
+//
+// `obsidian://vault/*` resources keep reading the primary Vault and never read the
+// ambient selection (§19), but the same `allowedVaults` gate now covers them (P0
+// finding: a secondary-only credential read the primary Vault's content through
+// them). Instance-level resources such as `obsidian://agent/memory-policy` never
+// touch a Vault and are delegated untouched.
 
 import { z } from "zod/v4";
 import { resolveWebVault } from "./app/vault-registry.js";
+import { mcpAuthorizationRequest } from "./authorization/adapters/mcp.js";
+import { createAuthorizationSeam } from "./authorization/runtime.js";
 import { DEFAULT_VAULT_ID } from "./oauth-provider.js";
 import { effectiveVaultId } from "./default-vault.js";
 import { withRequestContextPatch } from "./request-context.js";
@@ -67,9 +73,16 @@ function lastArg(args) {
   return args.length > 1 ? args[args.length - 1] : undefined;
 }
 
+/** The resource namespace whose handlers read the primary Vault's content. */
+const VAULT_RESOURCE_PREFIX = "obsidian://vault/";
+
 /** Refusal payload: the code plus the id the caller itself asked for, never inventory facts. */
+function denyPayload(code, vaultId) {
+  return { code, vaultId };
+}
+
 function denyResult(code, vaultId) {
-  const payload = { code, vaultId };
+  const payload = denyPayload(code, vaultId);
   return {
     content: [{ type: "text", text: JSON.stringify(payload) }],
     structuredContent: { ...payload },
@@ -78,18 +91,17 @@ function denyResult(code, vaultId) {
 }
 
 /**
- * The declared allowlist of one request. `undefined` means "no credential
- * allowlist is in play" (no-auth mode or a direct in-process call), which is the
- * only case this layer does not restrict; an existing `authInfo` must carry a
- * list that contains the selected Vault (contract §9: 有 authInfo 时 selected
- * vault ∈ allowedVaults，否则结构化拒绝).
+ * A refused resource read must still answer in the resource shape (`contents`): the SDK client
+ * validates every read against it, so the tool shape would arrive as a parse error and lose the
+ * code.
  */
-function declaredAllowedVaults(extra) {
-  const authInfo = extra?.authInfo;
-  if (!authInfo || typeof authInfo !== "object") return undefined;
-  const values = authInfo.allowedVaults ?? authInfo.extra?.allowedVaults;
-  if (!Array.isArray(values)) return [];
-  return values.map((value) => String(value));
+function denyResourceResult(uri, code, vaultId) {
+  const payload = denyPayload(code, vaultId);
+  return {
+    contents: [{ uri: String(uri), mimeType: "application/json", text: JSON.stringify(payload) }],
+    structuredContent: { ...payload },
+    isError: true,
+  };
 }
 
 /** Canonical inventory check (§34-9). Injectable so tests never touch a filesystem. */
@@ -123,10 +135,83 @@ function defaultResolveVaultRuntime(vaultId) {
  * @param {object} [options]
  * @param {(vaultId: string) => (object|undefined)} [options.resolveVaultRuntime]
  * @param {(vaultId: string) => Promise<boolean>} [options.vaultExists]
+ * @param {object} [options.authorizationShadow] P2 shadow observer; observation only
  */
-export function createVaultScopeRegistrar(server, { resolveVaultRuntime, vaultExists } = {}) {
+export function createVaultScopeRegistrar(server, { resolveVaultRuntime, vaultExists, authorization = null, accessRuntime = null, authorizationShadow = null } = {}) {
   const runtimeFor = typeof resolveVaultRuntime === "function" ? resolveVaultRuntime : defaultResolveVaultRuntime;
   const exists = typeof vaultExists === "function" ? vaultExists : canonicalVaultExists;
+  const shadow = authorizationShadow;
+  // P3: the runtime decides the Vault allowlist of this layer too — a duplicate defence
+  // that calls the same `authorize()`, never a second rule.
+  const decide = createAuthorizationSeam({ authorization, accessRuntime });
+
+  /**
+   * The selected Vault's admission decision. Repeating the transport's static rule is the
+   * point: the wrapper re-asks, so a decision made earlier in the request cannot be spent.
+   */
+  function decideVault({ extra, name, args }) {
+    const authInfo = extra?.authInfo;
+    const request = mcpAuthorizationRequest({
+      authInfo,
+      name,
+      args,
+      primaryVaultId: DEFAULT_VAULT_ID,
+      legacy: {
+        phase: "vault-scope",
+        scopes: [...(authInfo?.scopes ?? authInfo?.extra?.scopes ?? [])],
+        allowedVaults: [...(authInfo?.allowedVaults ?? authInfo?.extra?.allowedVaults ?? [])],
+      },
+    });
+    if (request === null) return null;
+    return { request, decision: decide.authorize(request) };
+  }
+
+  /**
+   * A Vault resource's admission decision. The read target is fixed (primary), so the
+   * canonical request states it explicitly and the same runtime answers; the resource
+   * namespace never reads the ambient selection (§19).
+   */
+  function decideResource({ extra, resourceUri }) {
+    const authInfo = extra?.authInfo;
+    const request = mcpAuthorizationRequest({
+      authInfo,
+      resourceUri,
+      primaryVaultId: DEFAULT_VAULT_ID,
+      legacy: {
+        phase: "vault-scope",
+        scopes: [...(authInfo?.scopes ?? authInfo?.extra?.scopes ?? [])],
+        allowedVaults: [...(authInfo?.allowedVaults ?? authInfo?.extra?.allowedVaults ?? [])],
+      },
+    });
+    if (request === null) return null;
+    return { request, decision: decide.authorize(request) };
+  }
+
+  // One row per Vault-scope unit. The old verdict is either this layer's own decision or
+  // the target-schema refusal below; the new verdict is computed from the same request.
+  function observe({ extra, name, args, legacyDecision, request = null }) {
+    if (shadow === null || typeof shadow.compare !== "function") return;
+    const built = request ?? mcpAuthorizationRequest({ authInfo: extra?.authInfo, name, args, primaryVaultId: DEFAULT_VAULT_ID });
+    if (built === null) return;
+    shadow.compare({ request: built, legacyDecision, boundaryKey: name, phase: "vault-scope" });
+  }
+
+  /**
+   * The same row, for a resource unit: the boundary key is the URI, and this layer is the
+   * one that decided, so the record names its own verdict instead of leaving the outer
+   * layer's allow standing.
+   */
+  function observeResource({ entry, resourceUri }) {
+    if (shadow === null || typeof shadow.compare !== "function" || entry === null) return;
+    shadow.compare({ request: entry.request, legacyDecision: entry.decision, boundaryKey: resourceUri, phase: "vault-scope" });
+  }
+
+  /** The existing refusal code for a decision, so no client sees a new family. */
+  function vaultScopeCode(decision) {
+    if (decision.code === "vault_id_invalid") return VAULT_SCOPE_DENY_CODES.INVALID_ID;
+    if (decision.code === "vault_unavailable") return VAULT_SCOPE_DENY_CODES.UNAVAILABLE;
+    return VAULT_SCOPE_DENY_CODES.ACCESS_DENIED;
+  }
 
   const registrar = {
     server: server.server,
@@ -148,22 +233,30 @@ export function createVaultScopeRegistrar(server, { resolveVaultRuntime, vaultEx
         try {
           validateVaultId(selected);
         } catch {
+          observe({ extra, name, args: args[0], legacyDecision: { allowed: false, code: VAULT_SCOPE_DENY_CODES.INVALID_ID } });
           return denyResult(VAULT_SCOPE_DENY_CODES.INVALID_ID, selected);
         }
-        // Authorization before any Vault I/O (contract §8/§9, brief §2.3).
-        const allowed = declaredAllowedVaults(extra);
-        if (allowed && !allowed.includes(selected)) {
-          return denyResult(VAULT_SCOPE_DENY_CODES.ACCESS_DENIED, selected);
+        // Authorization before any Vault I/O (contract §8/§9, brief §2.3). The runtime
+        // decides the Vault admission; this layer only repeats the same call.
+        const entry = decideVault({ extra, name, args: args[0] });
+        if (entry !== null && entry.decision.allowed !== true) {
+          observe({ extra, name, args: args[0], request: entry.request, legacyDecision: entry.decision });
+          return denyResult(vaultScopeCode(entry.decision), selected);
         }
         if (selected !== DEFAULT_VAULT_ID) {
           let known;
           try {
             known = await exists(selected);
           } catch {
+            observe({ extra, name, args: args[0], legacyDecision: { allowed: false, code: VAULT_SCOPE_DENY_CODES.UNAVAILABLE } });
             return denyResult(VAULT_SCOPE_DENY_CODES.UNAVAILABLE, selected);
           }
-          if (!known) return denyResult(VAULT_SCOPE_DENY_CODES.UNAVAILABLE, selected);
+          if (!known) {
+            observe({ extra, name, args: args[0], legacyDecision: { allowed: false, code: VAULT_SCOPE_DENY_CODES.UNAVAILABLE } });
+            return denyResult(VAULT_SCOPE_DENY_CODES.UNAVAILABLE, selected);
+          }
         }
+        if (entry !== null) observe({ extra, name, args: args[0], request: entry.request, legacyDecision: entry.decision });
         const vaultRuntime = runtimeFor(selected);
         return withRequestContextPatch(
           { vaultId: selected, vaultRuntime },
@@ -172,11 +265,26 @@ export function createVaultScopeRegistrar(server, { resolveVaultRuntime, vaultEx
       };
       return server.registerTool(name, { ...config, inputSchema }, wrapped);
     },
+    registerResource(name, uri, config, handler) {
+      if (typeof uri !== "string" || !uri.startsWith(VAULT_RESOURCE_PREFIX)) {
+        return server.registerResource(name, uri, config, handler);
+      }
+      const wrapped = async (...args) => {
+        // Before any Vault I/O. The runtime decides; this layer only repeats the same call,
+        // so the resource can never carry its own allowlist rule.
+        const entry = decideResource({ extra: lastArg(args), resourceUri: uri });
+        observeResource({ entry, resourceUri: uri });
+        if (entry !== null && entry.decision.allowed !== true) {
+          return denyResourceResult(uri, vaultScopeCode(entry.decision), DEFAULT_VAULT_ID);
+        }
+        return handler(...args);
+      };
+      return server.registerResource(name, uri, config, wrapped);
+    },
   };
 
-  // `registerResource` is deliberately absent: resources stay primary-only and
-  // must not read the ambient Vault selection (§19). The generic delegation below
-  // passes the upstream resource/prompt registration straight through.
+  // The generic delegation below passes prompt registration (and any registrar
+  // member not overridden above) straight through.
 
   for (const key of Object.keys(server)) {
     if (key in registrar) continue;

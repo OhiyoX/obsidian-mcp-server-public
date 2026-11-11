@@ -42,18 +42,24 @@ export function resolveRequestAuthor(server, extra) {
   const raw = metadata[AUTHOR_META_KEY] || metadata["obsidian.author"] || metadata.author;
   const clientName = getInitializedClientInfo(server).name;
   const genericClient = isGenericClientName(clientName);
-  const session = getSessionAuthor(extra?.sessionId, authClientIdFromExtra(extra));
-  const userAgentAgent = identifyAgentFromUserAgent(requestUserAgent(extra));
-  // Real clientInfo.name always wins for agent. Env default / session only
-  // apply when the host used a generic placeholder (e.g. Cursor mcp-client).
+  const initialized = clientName !== "";
+  const userAgent = requestUserAgent(extra);
+  const session = getSessionAuthor(extra?.sessionId, authClientIdFromExtra(extra), userAgent);
+  const userAgentAgent = identifyAgentFromUserAgent(userAgent);
+  // Real clientInfo.name always wins for agent. The env default belongs to a host
+  // that initialized with a generic placeholder (e.g. Cursor mcp-client), not to a
+  // stateless request that never initialized: such a request must not take a
+  // server-wide label that names a different agent.
   const fallback = raw && typeof raw === "object" ? raw : {
     agent: (!genericClient && clientName)
       || session?.agent
       || userAgentAgent
-      || process.env.MCP_DEFAULT_AUTHOR_AGENT
+      || (initialized ? process.env.MCP_DEFAULT_AUTHOR_AGENT : undefined)
       || clientName
       || "mcp-client",
-    model: session?.model || process.env.MCP_DEFAULT_AUTHOR_MODEL || "unspecified",
+    model: session?.model
+      || (initialized ? process.env.MCP_DEFAULT_AUTHOR_MODEL : undefined)
+      || "unspecified",
   };
   const author = { agent: cleanAuthorField(fallback.agent, "agent"), model: cleanAuthorField(fallback.model, "model") };
   // Strict bind only when the host declared a real client identity.

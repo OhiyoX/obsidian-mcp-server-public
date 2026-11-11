@@ -12,6 +12,8 @@
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import fsp from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -21,6 +23,8 @@ import { parseBool, TOOL_NAMES } from "../src/config.js";
 import { capabilitiesForTool } from "../src/access-policy/capabilities.js";
 import { ACCESS_POLICY_CODES } from "../src/access-policy/errors.js";
 import { createAccessPolicyRuntime } from "../src/access-policy/runtime.js";
+import { WEB_ROUTE_GATE } from "../src/app/access-policy.js";
+import { authorizationOperation, capabilityForBoundary, isOutsideTemporalPlane, surfaceForBoundary } from "../src/authorization/catalog.js";
 import {
   ACCESS_POLICY_SCHEMA_VERSION,
   validateAccessPolicyDocument,
@@ -98,15 +102,25 @@ test("schedule and timezone decisions stay inside src/access-policy", () => {
   const decisionCoreMarkers = ["time.js", "evaluate.js"].map((name) => `access-policy/${name}`);
   const productionFiles = [...listFiles(SRC_ROOT, isJavaScript), path.join(APP_ROOT, "server.js")];
   assert.ok(productionFiles.length > 0, "the production scan must inspect real files");
+  // Design §8 requires the unified model to reuse the ONE time algebra and to never call the
+  // legacy runtime. So `access-policy/time.js` is importable by exactly two files, and
+  // `access-policy/evaluate.js` stays off-limits everywhere outside the module.
+  const TIME_ALGEBRA_REUSERS = new Set([
+    path.join(SRC_ROOT, "authorization", "evaluate.js"),
+    path.join(SRC_ROOT, "authorization", "schema.js"),
+  ]);
   const offenders = [];
+  const reusers = [];
   for (const file of productionFiles) {
     for (const specifier of importSpecifiers(readSource(file))) {
       const normalized = normalizeSpecifier(specifier);
-      if (decisionCoreMarkers.some((marker) => normalized.endsWith(marker)) && !isUnderAccessPolicy(file)) {
-        offenders.push(`${relativeToApp(file)} -> ${specifier}`);
-      }
+      if (!decisionCoreMarkers.some((marker) => normalized.endsWith(marker)) || isUnderAccessPolicy(file)) continue;
+      const isTimeAlgebra = normalized.endsWith("access-policy/time.js") && TIME_ALGEBRA_REUSERS.has(file);
+      if (isTimeAlgebra) reusers.push(relativeToApp(file));
+      else offenders.push(`${relativeToApp(file)} -> ${specifier}`);
     }
   }
+  assert.deepEqual([...new Set(reusers)].sort(), [...TIME_ALGEBRA_REUSERS].map(relativeToApp).sort(), "only the unified model may reuse the time algebra");
   assert.deepEqual(offenders, [], `only src/access-policy may import time.js/evaluate.js: ${offenders.join(", ")}`);
 
   // Sanity: the scan sees real decision-core imports inside the module.
@@ -267,29 +281,120 @@ test("authz wiring targets stay within the canonical architecture line budget", 
   }
 });
 
-// ⑪ Every Web content-plane registrar keeps the temporal `readGate` in its
-// middleware chain (`requireApi: [requireApi, readGate]`). Dropping it for a bare
-// `requireApi` would silently bypass the authorization window for that route, so
-// the wiring is locked at the source level as well as by the HTTP gate tests.
-// Scanned by slicing the registrar call's parentheses, never by line number.
-test("the Web content route registrations keep the readGate in their middleware chain", () => {
-  const text = readSource(path.join(SRC_ROOT, "app", "routes.js"));
-  const registrars = [
-    "registerSearchRoute",
-    "registerTreeRoute",
-    "registerBaseRoute",
-    "registerNoteContextRoute",
-    "registerTagsRoute",
-  ];
-  const offenders = [];
-  for (const registrar of registrars) {
-    const args = callArguments(text, registrar);
-    if (args === null) offenders.push(`${registrar}: call not found`);
-    else if (!args.includes("requireApi: [requireApi, readGate]")) {
-      offenders.push(`${registrar}: requireApi is not [requireApi, readGate]`);
+// ⑪ Every Web route that performs a READ or a MUTATION carries its own temporal gate.
+//
+// P2 / Task 12-13 moved the gate into the file that owns the route, so a per-file text
+// match is not enough: one gated route would mask an ungated sibling in the same file. The
+// check is structural instead: the real Web router is mounted with inert dependencies, and
+// every mounted route whose catalog key is a `web` read or mutation must carry, in its own
+// handler chain, a gate that names THAT key. A route that needs no gate must be named in
+// `EXEMPT_WEB_ROUTES` with a reason, and that list stays small.
+//
+// The composition root must still not pre-compose a gate: it hands the policy and shadow
+// seams to the registrars, which build their own gate for their own key.
+const EXEMPT_WEB_ROUTES = Object.freeze([
+  { key: "GET /api/web/v1/session", reason: "vault_select: the session route carries no content gate (§4.1a)" },
+  { key: "POST /api/web/v1/vault/select", reason: "vault_select: switching the current Vault is not a content read" },
+  { key: "GET /app", reason: "session_bootstrap: the app shell authorizes no content" },
+  { key: "GET /app/", reason: "session_bootstrap: the app shell authorizes no content" },
+  { key: "GET /app/language", reason: "session_bootstrap: the locale shell asset" },
+  { key: "GET /auth/login", reason: "session_bootstrap: the public login page" },
+  { key: "POST /auth/login", reason: "session_bootstrap: the public login form" },
+  { key: "POST /auth/logout", reason: "session_bootstrap: logout runs before any content" },
+  { key: "GET /auth/theme.css", reason: "session_bootstrap: the public login style asset" },
+  { key: "GET /auth/theme-asset", reason: "session_bootstrap: the public login asset" },
+  { key: "GET /publish/:id", reason: "publish: the anonymous delegation has its own boundary" },
+  { key: "GET /publish/d/:id", reason: "publish: the folder index has its own boundary" },
+  { key: "GET /publish/d/:id/n/:token", reason: "publish: the folder note read has its own boundary" },
+]);
+
+/** Every route mounted on the real Web router: method, path and handler chain. */
+async function mountedWebRoutes() {
+  const root = await fsp.mkdtemp(path.join(os.tmpdir(), "arch-web-routes-"));
+  process.env.VAULT_PATH = path.join(root, "vault");
+  process.env.DATA_PATH = path.join(root, "data");
+  process.env.WEB_DEFAULT_VAULT = "vault";
+  process.env.GIT_ENABLED = "false";
+  process.env.EMBEDDING_PROVIDER = "disabled";
+  await fsp.mkdir(path.join(root, "vault"), { recursive: true });
+  const { createWebAppRouter } = await import("../src/app/routes.js");
+  const inertRuntime = { status: "ready", evaluate: () => ({ allowed: true }), explain: () => ({}), audit: () => {} };
+  const router = createWebAppRouter({
+    provider: { recordAudit() {} },
+    secureCookie: false,
+    publishService: { resolve: async () => null, list: async () => [], status: async () => ({}) },
+    accessRuntime: inertRuntime,
+    authorizationShadow: null,
+  });
+  const routes = [];
+  for (const layer of router.stack) {
+    if (!layer.route) continue;
+    for (const method of Object.keys(layer.route.methods)) {
+      for (const routePath of String(layer.route.path).split(",")) {
+        routes.push({
+          key: `${method.toUpperCase()} ${routePath}`,
+          chain: layer.route.stack.map((entry) => entry.handle),
+        });
+      }
     }
   }
-  assert.deepEqual(offenders, [], `every Web content registrar must keep the readGate: ${offenders.join(", ")}`);
+  await fsp.rm(root, { recursive: true, force: true });
+  return routes;
+}
+
+test("every_web_read_and_mutation_route_carries_its_own_gate", async () => {
+  const routes = await mountedWebRoutes();
+  assert.ok(routes.length >= 30, `the router must really be mounted: ${routes.length} routes`);
+
+  const offenders = [];
+  const allowed = new Set(EXEMPT_WEB_ROUTES.map((entry) => entry.key));
+  for (const route of routes) {
+    const capability = capabilityForBoundary(route.key);
+    const surface = surfaceForBoundary(route.key);
+    const operation = capability === null ? null : authorizationOperation(capability);
+    const needsGate = operation !== null
+      && surface === "web"
+      && (operation.contentEffect === "read" || operation.contentEffect === "mutate")
+      && !isOutsideTemporalPlane(capability);
+    if (needsGate) {
+      const gate = route.chain.find((handle) => handle && handle[WEB_ROUTE_GATE] !== undefined);
+      if (gate === undefined) offenders.push(`${route.key}: no temporal gate in the handler chain`);
+      else if (gate[WEB_ROUTE_GATE] !== route.key) offenders.push(`${route.key}: carries the gate of ${gate[WEB_ROUTE_GATE]}`);
+      continue;
+    }
+    // No gate needed: the route must be a named exemption, never an anonymous bypass.
+    if (!allowed.has(route.key)) offenders.push(`${route.key}: needs no gate but is not in EXEMPT_WEB_ROUTES`);
+  }
+  assert.deepEqual(offenders, [], `every Web read/mutation route must carry its own gate: ${offenders.join("; ")}`);
+
+  // The exempt list stays short and every entry names a route the router really mounts.
+  assert.ok(EXEMPT_WEB_ROUTES.length <= 13, "the exempt list must stay small: the shell routes plus the three anonymous Publish routes");
+  for (const entry of EXEMPT_WEB_ROUTES) {
+    assert.ok(typeof entry.reason === "string" && entry.reason.length > 0, `${entry.key} needs a reason`);
+    assert.ok(routes.some((route) => route.key === entry.key), `${entry.key} is not mounted`);
+  }
+  for (const route of routes) {
+    if (!allowed.has(route.key)) continue;
+    const capability = capabilityForBoundary(route.key);
+    const operation = capability === null ? null : authorizationOperation(capability);
+    const gatedRoute = operation !== null
+      && surfaceForBoundary(route.key) === "web"
+      && (operation.contentEffect === "read" || operation.contentEffect === "mutate")
+      && !isOutsideTemporalPlane(capability);
+    assert.equal(gatedRoute, false, `${route.key} is exempt but needs a gate`);
+  }
+
+  // The composition root still must not pre-compose a gate.
+  const text = readSource(path.join(SRC_ROOT, "app", "routes.js"));
+  const registrars = ["registerSearchRoute", "registerTreeRoute", "registerBaseRoute", "registerNoteContextRoute", "registerTagsRoute"];
+  const premature = [];
+  for (const registrar of registrars) {
+    const args = callArguments(text, registrar);
+    if (args === null) premature.push(`${registrar}: call not found`);
+    else if (!args.includes("...routeDeps")) premature.push(`${registrar}: the policy/shadow seam is not passed`);
+    else if (args.includes("readGate")) premature.push(`${registrar}: the composition root must not pre-compose the gate`);
+  }
+  assert.deepEqual(premature, [], `every Web content registrar must keep its readGate: ${premature.join(", ")}`);
 });
 
 // ⑦ Policy state lives only in the caller-supplied file: the access-policy core

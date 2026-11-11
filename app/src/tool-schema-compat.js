@@ -92,6 +92,15 @@ export const WAVE1_INPUT_SCHEMA_WIDENINGS = Object.freeze(Object.fromEntries(
  * canonical evaluator, and a second JSON-Schema copy of them would be a second rule set to drift.
  */
 export const WAVE1_INPUT_SCHEMA_ADDITIONS = Object.freeze({
+  // Task 8 (2026-11-08 folder publish): `manage_publish` publishes a directory when it is told
+  // `kind: "folder"`. Optional, so the historical "one Markdown note" call is byte-identical.
+  manage_publish: Object.freeze([
+    Object.freeze({
+      property: "kind",
+      spec: Object.freeze({ type: "string", enum: Object.freeze(["document", "folder"]) }),
+      reason: "Task 8: publish a folder; the default (absent) is a document record.",
+    }),
+  ]),
   query_base: Object.freeze([
     Object.freeze({
       property: "format",
@@ -116,7 +125,22 @@ export const WAVE1_INPUT_SCHEMA_ADDITIONS = Object.freeze({
   ]),
 });
 
+/**
+ * Task 8 (2026-11-08 folder publish): a Publish record now has a `kind` (`document` / `folder`),
+ * and its public address shape depends on it (`/publish/<id>` vs `/publish/d/<id>`). Both tools
+ * report it, and it is `null` when no record exists (a revoke), so the property is a nullable
+ * union rather than the default `string`. Declared here so the frozen Wave 1 output contract
+ * stays byte-identical while any other output drift still fails.
+ */
+const PUBLISH_KIND_OUTPUT = Object.freeze({
+  property: "kind",
+  spec: Object.freeze({ type: Object.freeze(["string", "null"]), description: "kind value returned by the tool." }),
+  reason: "Task 8: the record kind explains the public-path shape; document records are unchanged.",
+});
+
 export const WAVE1_OUTPUT_SCHEMA_ADDITIONS = Object.freeze({
+  get_publish_status: PUBLISH_KIND_OUTPUT,
+  manage_publish: PUBLISH_KIND_OUTPUT,
   get_base: Object.freeze({
     property: "revision",
     spec: Object.freeze({ type: "string", description: "revision value returned by the tool." }),

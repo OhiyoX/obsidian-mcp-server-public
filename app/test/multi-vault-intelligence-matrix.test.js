@@ -351,7 +351,7 @@ test("§34/§47: an unauthorized Vault selection is refused before any handler r
     { description: "Wave D / D-intelligence authorization probe.", inputSchema: {} },
     () => { handlerRuns += 1; return { content: [{ type: "text", text: "{}" }], structuredContent: {} }; },
   );
-  const denied = await handlers.get("memory_capture").handler({ vaultId: SECONDARY }, { authInfo: { allowedVaults: [DEFAULT_VAULT_ID] } });
+  const denied = await handlers.get("memory_capture").handler({ vaultId: SECONDARY }, { authInfo: { type: "oauth", clientId: "matrix-credential", allowedVaults: [DEFAULT_VAULT_ID] } });
   assert.equal(denied.isError, true);
   assert.equal(denied.structuredContent.code, VAULT_SCOPE_DENY_CODES.ACCESS_DENIED);
   assert.equal(handlerRuns, 0, "an unauthorized Vault must never reach the handler (§34/§47)");

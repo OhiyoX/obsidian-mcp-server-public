@@ -23,6 +23,7 @@
 // error, never a 500.
 import { encodeDocumentRoute } from "../publish/service.js";
 import { CanvasDocumentError, readCanvasDocument } from "./canvas-reader.js";
+import { chainWith, webReadRouteGate } from "./access-policy.js";
 import { BaseReaderError } from "./base-reader.js";
 import { BaseHttpError } from "./base-params.js";
 
@@ -56,7 +57,8 @@ function sendCanvasError(res, error) {
 }
 
 export function registerCanvasRoute(router, deps) {
-  router.get("/api/web/v1/canvas", deps.requireApi, async (req, res) => {
+  const readGate = webReadRouteGate(deps.policy ?? null, "GET /api/web/v1/canvas", { shadow: deps.authorizationShadow ?? null });
+  router.get("/api/web/v1/canvas", chainWith(deps.requireApi, readGate), async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
       // Validate before any Vault/filesystem access so a malformed request never

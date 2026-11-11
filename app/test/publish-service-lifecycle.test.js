@@ -108,7 +108,7 @@ test("§12.2 rejects non-Markdown/missing/directory/oversize/absolute targets wi
   assert.deepEqual(await service.list({ includeInactive: true }), [], "no rejected target may be recorded");
 });
 
-test("§12.3 a v1 state migrates fail-closed and persists as v2", async () => {
+test("§12.3 a v1 state migrates fail-closed and persists as v3", async () => {
   await write("Notes/ok.md", "# ok\n");
   await write("Notes/diagram.canvas", "{}");
   const file = path.join(dataRoot, "publish", "legacy.json");
@@ -136,7 +136,7 @@ test("§12.3 a v1 state migrates fail-closed and persists as v2", async () => {
   assert.equal(await service.resolve(ids.nonMd), null, "a non-Markdown record fails closed (§15 S07)");
   assert.equal(await service.resolve(ids.orphan), null, "a missing record fails closed");
   assert.equal((await service.resolve(ids.healthy)).record.id, ids.healthy);
-  assert.equal(JSON.parse(await fs.readFile(file, "utf8")).version, 2, "the migrated state is persisted as v2");
+  assert.equal(JSON.parse(await fs.readFile(file, "utf8")).version, 3, "the migrated state is persisted as v3");
 });
 
 test("§8.1 a single bad record is dropped without stopping the service; a broken file is fatal", async () => {

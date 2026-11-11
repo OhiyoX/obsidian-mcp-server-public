@@ -3,6 +3,11 @@ import { clampSessionRecoveryMaxInFlight, normalizeSessionRecoveryMode } from ".
 
 export const PORT = parseInteger(process.env.PORT || process.env.MCP_PORT, 18923);
 export const HOST = process.env.HOST || "0.0.0.0";
+// Optional second listen port for an encrypted (proxy -> process) hop. Both files or neither:
+// the listener refuses a half-configured pair instead of answering plaintext.
+export const TLS_CERT_FILE = process.env.TLS_CERT_FILE || "";
+export const TLS_KEY_FILE = process.env.TLS_KEY_FILE || "";
+export const TLS_PORT = parseInteger(process.env.TLS_PORT, 18924);
 export const MCP_PATH = process.env.MCP_PATH || "/mcp";
 export const MCP_SERVER_NAME = process.env.MCP_SERVER_NAME || "obsidian-mcp-server";
 export const MCP_SERVER_VERSION = process.env.MCP_SERVER_VERSION || "1.0.0";

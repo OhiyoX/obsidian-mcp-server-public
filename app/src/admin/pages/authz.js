@@ -1,26 +1,24 @@
-// 定时授权 (timed authorization) — list page + `?id=` detail drawer.
+// 定时授权 (timed authorization) — the legacy list page + `?id=` detail drawer, read-only.
 //
 // Prototype source of truth: `docs/admin-ui-proto/src/5-render.js` — `renderAuthz()` (list table,
-// banners, 当前状态预览) and the shared drawer vocabulary of `6-app.js` (`dhead` / `.dsec` /
-// `.kv` / `.danger-zone` / `.dz`); interaction rules in `docs/admin-ui-proto/README.md`
-// ("定时授权" row of the 功能对照表, and 「Row operations / danger hierarchy」).
+// banners) and the shared drawer vocabulary of `6-app.js` (`dhead` / `.dsec` / `.kv`); interaction
+// rules in `docs/admin-ui-proto/README.md` ("定时授权" row of the 功能对照表).
 //
-// No script (CSP `default-src 'none'`, D0 HOLD). Every prototype interaction is reproduced by
-// server state:
-//   * opening a row  -> `?id=<policyId>` renders the detail drawer (`?window=` is kept as an alias,
-//     so the previous "window detail card" entry point still resolves);
-//   * the ⋯ row menu -> `<details class="mn">` (never a scripted popover);
-//   * switches       -> POST forms carrying the session CSRF;
-//   * results        -> a `.result` line (the prototype shows a toast);
-//   * danger actions -> a separate confirm page (`ui.confirmPage`, rendered by the route module).
-// Nothing here renders an affordance that cannot work without script.
+// FROZEN (design §7 step 2 + step 5, plan Task 3): the per-Vault document decides now, so this page is
+// the legacy document's history view. It keeps the prototype's table, window summary and 现在（…）判定
+// and renders no write affordance at all — no 新建 CTA, no editor/copy/toggle/delete entry point, no
+// POST form, and no danger zone in the drawer. `frozenBanner()` names the fact and points at the new
+// constraint page; the route module refuses every legacy write with the same code.
 //
-// Row/card primary link: the prototype row is `data-open="policy" data-id=…` and the click handler in
-// `6-app.js` routes it to `#/authz/<id>` — the *editor* (`docs/admin-ui-proto/src/5-render.js:352`,
-// `6-app.js:301`). The 查看详情 item in the ⋯ menu keeps the read-only detail drawer (`?id=`, the
-// Admin-plane rule of `docs/admin/README.md`). The order matters beyond looks: an editor-discovery
-// probe (the Admin layout browser gate) takes the page's *first* `?edit=`/`?id=` link, so the primary
-// link has to be the editor and never a surface without the capability picker.
+// No script (CSP `default-src 'none'`, D0 HOLD):
+//   * opening a row  -> `?id=<policyId>` renders the read-only drawer (`?window=` stays an alias);
+//   * the ⋯ row menu -> `<details class="mn">` (never a scripted popover), two read-only items;
+//   * nothing here renders an affordance that cannot work without script.
+//
+// Row/card link: the prototype row is `data-open="policy" data-id=…` and `6-app.js` routes it to the
+// *editor*. The editor is frozen, so the primary link is the read-only drawer (`?id=`, the Admin-plane
+// rule of `docs/admin/README.md`) — a link to a surface that can no longer save would be a promise the
+// page cannot keep.
 //
 // Window data: the frozen #434 presentation model (`presentAccessPolicyWindow`) is the single
 // source for the summary text, the constraint markers and the 7-day detail. `ctx.model`'s
@@ -37,6 +35,15 @@ import { readSort, sortRows } from "../table-sort.js";
 
 /** Weekday keys in display order (prototype `[1,2,3,4,5,6,0]` = 一…日). */
 export const WEEK_DAYS = Object.freeze(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+
+/**
+ * The legacy `access-policy` document is frozen (design §7 step 2 + step 5): the route module answers
+ * this code, and the page renders it on the read-only banner, so one string names one fact.
+ */
+export const LEGACY_POLICY_FROZEN_CODE = "access_policy_frozen";
+
+/** Where the operator configures timed authorization now (the per-Vault constraint page). */
+export const LEGACY_POLICY_REPLACEMENT = "/admin/auth/authz";
 
 const FULL_DAY = Object.freeze({ start: "00:00", end: "24:00" });
 
@@ -154,99 +161,72 @@ export function policySubjectsCell(model, policy) {
   return `<div class="nm" style="gap:2px">${rows}</div>`;
 }
 
-/** 允许时间窗口 cell: summary, constraint markers, and the honest now verdict. */
-export function policyWindowCell(policy, now = Date.now()) {
+/**
+ * 允许时间窗口 cell: summary, constraint markers, and the honest now verdict.
+ *
+ * `decide` is `legacyPoliciesDecide(mode)` of the served mode: a stored policy decides nothing in
+ * `enforce`, so its 现在 verdict may not be drawn there (see `legacyPoliciesDecide`).
+ */
+export function policyWindowCell(policy, now = Date.now(), decide = true) {
   const win = presentAccessPolicyWindow(policy);
   const marks = win.summary.markers.map((marker) => `<span class="tag">${esc(marker)}</span>`).join("");
   const state = policyNowState(policy, now);
-  const verdict = policy.enabled === false
+  const verdict = !decide || policy.enabled === false
     ? ""
     : `<span style="color:${state.ok === true ? "var(--ok)" : state.ok === false ? "var(--amber)" : "var(--tx3)"}" title="${esc(state.why)}">${esc(state.ok === true ? t("adm.authz.nowAllowed") : state.ok === false ? t("adm.authz.nowRestricted") : t("adm.authz.undetermined"))}</span>`;
   return `<div class="nm"><span class="ell">${esc(win.summary.text)}</span><span class="sub2">${marks}${verdict}</span></div>`;
 }
 
-/** Row ⋯ menu — prototype `menuItems("policy", id)`, danger items routed through a confirm page. */
-export function policyRowMenu({ base, policy, csrf, revision }) {
+/** Row ⋯ menu — prototype `menuItems("policy", id)`, reduced to the two read-only views (frozen). */
+export function policyRowMenu({ base, policy }) {
   const id = encodeURIComponent(policy.id);
-  const enabled = policy.enabled !== false;
   return moreMenu([
     { href: `${base}?id=${id}`, label: t("adm.authz.menu.view"), icon: "eye" },
-    { href: `${base}?edit=${id}`, label: t("adm.authz.menu.edit"), icon: "edit" },
-    {
-      action: `${base}/toggle`,
-      label: enabled ? t("adm.authz.menu.disable") : t("adm.authz.menu.enable"),
-      icon: enabled ? "pause" : "play",
-      csrf,
-      fields: { id: policy.id, enabled: enabled ? "false" : "true", expectedRevision: revision ?? "" },
-    },
-    { href: `${base}?copy=${id}`, label: t("adm.authz.menu.copy"), icon: "copy" },
     { href: `${base}?window=${id}`, label: t("adm.authz.menu.window"), icon: "cal" },
-    { href: `${base}?confirm=delete&id=${id}`, label: t("adm.authz.menu.delete"), icon: "trash", danger: true },
   ]);
 }
 
-/** The 当前状态预览 section — a real POST form (no script) plus the verdict lines. */
-function previewSection(ctx) {
-  const { authz, model, csrf, query = {}, accessPolicyBase: base, now = Date.now(), preview = null } = ctx;
-  const policies = Array.isArray(authz?.policies) ? authz.policies : [];
-  const known = Array.isArray(ctx.subjects) ? ctx.subjects : [];
-  const referenced = policies.flatMap((policy) => (Array.isArray(policy.subjects) ? policy.subjects : []));
-  const options = [...new Set([...known, ...referenced])].sort();
-  const selected = typeof preview?.subject === "string" ? preview.subject : String(query.subject ?? "");
-  const option = (subject) => {
-    const view = model.subjectView(subject);
-    const on = subject === selected ? " selected" : "";
-    return `<option value="${esc(subject)}"${on}>${esc(`${view.name} · ${view.kindLabel} · ${view.shortId}`)}</option>`;
-  };
-  // Prototype `renderAuthz` 当前状态预览: `<div class="card"><div style="display:flex;gap:8px;
-  // flex-wrap:wrap"><select class="sel" …>…</select></div>…</div>`. The select must be submittable
-  // without script, so it sits in a real `form.inline-form` around the same inner row; the 查看 button
-  // is the no-JS submit a `<select>` cannot provide by itself and is marked `hide-when-scripted`: the
-  // D0 client drops it once the select enhancement really ran, and `data-autosubmit` restores the
-  // prototype's "pick and it submits" behaviour. Without script both stay and the form works.
-  //
-  // `form-block` is load-bearing (Q11): `form.inline-form` is `display:inline-flex` (shrink-to-fit), and
-  // inside it a `width:100%` select has no definite width to resolve, so the row wrapped and the card
-  // measured 132px where the prototype's is 92px. As a block, the inner flex row takes the card's own
-  // width and stays one line — the button's 40px was a second LINE, not the button itself.
-  const form = `<form class="inline-form form-block" method="post" action="${esc(`${base}/preview`)}" data-preview-form><input type="hidden" name="csrf" value="${esc(csrf || "")}"><input type="hidden" name="view" value="list"><div style="display:flex;gap:8px;flex-wrap:wrap"><select class="sel" name="subject" style="max-width:420px" aria-label="${esc(t("adm.authz.preview.subjectAria"))}" data-autosubmit><option value="">${esc(t("adm.authz.preview.choose"))}</option>${options.map(option).join("")}</select><button class="btn" type="submit" data-enhance="hide-when-scripted">${esc(t("adm.authz.preview.view"))}</button></div></form>`;
-  const detail = preview && selected ? previewVerdicts(preview, policies, selected, model, now) : `<p class="help" style="margin:8px 0 0">${esc(t("adm.authz.preview.hint"))}</p>`;
-  return `<div class="sect" id="preview"><div class="sect-h"><h2>${esc(t("adm.authz.preview.title"))}</h2><span class="muted">${esc(t("adm.authz.preview.subtitle"))}</span></div><div class="card" style="padding:16px">${form}${detail}</div></div>`;
+/** The three deployment modes (`src/authorization/runtime.js`), in the order the release uses them. */
+export const AUTHORIZATION_MODES = Object.freeze(["legacy", "shadow", "enforce"]);
+
+/**
+ * Do the stored legacy policies still decide?
+ *
+ * Every mode except `enforce` answers from the legacy backend (`src/authorization/runtime.js`), so the
+ * verdicts are true there and stay. A mode that cannot be read is not `enforce` either — its banner
+ * states that the mode could not be read, so the page claims nothing about which backend decides.
+ */
+export function legacyPoliciesDecide(mode = null) {
+  return String(mode ?? "") !== "enforce";
 }
 
-/** Verdicts for one subject: the runtime's own answer first, then the per-policy estimate. */
-function previewVerdicts(preview, policies, subject, model, now) {
-  const decision = preview?.decision ?? null;
-  const lines = [];
-  if (decision) {
-    const allowed = decision.allowed === true;
-    const reason = String(decision.reason ?? "");
-    const mode = decision.mode ? ` · ${esc(t("adm.authz.preview.mode", { mode: model.mode(decision.mode).n }))}` : "";
-    const matched = Array.isArray(decision.matchedPolicyIds) ? decision.matchedPolicyIds.length : 0;
-    lines.push(t("adm.authz.preview.verdict", { icon: ic(allowed ? "checkc" : "ban"), cls: allowed ? "ok" : "no", decision: esc(allowed ? t("adm.authz.preview.allowed") : t("adm.authz.preview.denied")), mode, reason: esc(reason || "—"), matched: esc(String(matched)) }));
-  }
-  const matching = policies.filter((policy) => policy.enabled !== false && Array.isArray(policy.subjects) && policy.subjects.includes(subject));
-  if (!matching.length) {
-    lines.push(`<div class="verdict ok">${ic("checkc")}<span>${esc(t("adm.authz.preview.unrestricted"))}</span></div>`);
-  } else {
-    for (const policy of matching) {
-      const state = policyNowState(policy, now);
-      const label = state.ok === true ? t("adm.authz.preview.allowedNow") : state.ok === false ? t("adm.authz.preview.modeNow", { mode: model.mode(policy.mode).n }) : t("adm.authz.preview.notDecidable");
-      const caps = (Array.isArray(policy.capabilities) ? policy.capabilities : []).map((key) => model.capName(key)).join(esc(t("adm.ui.listSeparator"))) || "—";
-      lines.push(`<div class="verdict ${verdictClass(state.ok)}">${ic(state.ok === false ? "ban" : "checkc")}<span><b>${esc(policy.label)}</b> · ${esc(label)}（${esc(state.why)}）· ${esc(t("adm.authz.preview.impact"))} ${esc(caps)}</span></div>`);
-    }
-  }
-  const meta = preview
-    ? `<p class="help" style="margin:8px 0 0">${esc(t("adm.authz.preview.metaNow"))} <span class="mono">${esc(preview.now ?? "—")}</span> · ${esc(t("adm.authz.preview.metaZone"))} <span class="mono">${esc(preview.timezone ?? "—")}</span> · ${esc(t("adm.authz.preview.metaNextChange"))} <span class="mono">${esc(preview.nextChangeAt ?? "—")}</span> · ${esc(t("adm.authz.preview.metaNextAllowed"))} <span class="mono">${esc(preview.nextAllowedAt ?? "—")}</span></p>`
-    : "";
-  return `${lines.join("")}${meta}`;
+/**
+ * The frozen notice every surface of this legacy page carries; `data-frozen` names the fact and
+ * `data-authorization-mode` names the mode the request was served in.
+ *
+ * The copy depends on that mode, because the same sentence cannot be true in all three
+ * (`src/authorization/runtime.js`: only `enforce` answers from the per-Vault model, `legacy` and
+ * `shadow` still answer from the legacy backend, and `legacy` is the deployed default). A banner that
+ * said "they no longer decide anything" in `legacy` mode would be false in the one mode this release
+ * ships, and an operator could then fail to re-create a window that is still restricting access.
+ * When the mode cannot be read the page says exactly that instead of guessing.
+ */
+export function frozenBanner(mode = null) {
+  const link = `<a href="${esc(LEGACY_POLICY_REPLACEMENT)}">${esc(t("adm.authz.frozen.link"))}</a>`;
+  const served = AUTHORIZATION_MODES.includes(String(mode ?? "")) ? String(mode) : null;
+  const key = served === null
+    ? "adm.authz.frozen.bannerNoMode"
+    : served === "enforce" ? "adm.authz.frozen.bannerEnforce" : "adm.authz.frozen.banner";
+  const modeHtml = served === null ? esc(t("adm.authz.notProvided")) : esc(served);
+  return `<div class="banner amber" data-frozen="${esc(LEGACY_POLICY_FROZEN_CODE)}" data-authorization-mode="${esc(served ?? "unknown")}">${ic("info")}<div>${t(key, { href: link, mode: modeHtml })}</div></div>`;
 }
 
-/** The `?id=` detail drawer: fields, consequence banners, window detail, danger zone. */
+/** The `?id=` detail drawer, read-only: fields, consequence banners, window detail, now verdict. */
 function policyDrawer(ctx, policy) {
-  const { model, csrf, accessPolicyBase: base, authz, now = Date.now() } = ctx;
+  const { model, accessPolicyBase: base, authz, now = Date.now() } = ctx;
   const mode = model.mode(policy.mode);
   const win = presentAccessPolicyWindow(policy);
+  const decide = legacyPoliciesDecide(ctx.authorizationMode);
   const state = policyNowState(policy, now);
   const enabled = policy.enabled !== false;
   const revision = authz?.revision ?? null;
@@ -277,21 +257,14 @@ function policyDrawer(ctx, policy) {
     : `<p class="help" style="margin:0">${esc(t("adm.authz.noSubjects"))}</p>`;
   const marks = win.summary.markers.map((marker) => `<span class="tag" style="margin:4px 4px 0 0">${esc(marker)}</span>`).join("");
   const caps = (Array.isArray(policy.capabilities) ? policy.capabilities : []).map((key) => `<span class="tag ${key === "all" ? "amber" : ""}" title="${esc(key)}">${esc(model.capName(key))}</span>`).join("");
-  const verdict = `<div class="verdict ${verdictClass(state.ok)}" style="margin-top:12px">${ic(state.ok === false ? "ban" : "checkc")}<span>${esc(t("adm.authz.drawer.now"))} ${esc(policyNowLabel(policy, now))} <span class="mono">${esc(String(policy.timezone ?? ""))}</span> <b>${esc(state.ok === true ? t("adm.authz.drawer.allowedAccess") : state.ok === false ? mode.n : t("adm.authz.undetermined"))}</b> · ${esc(state.why)}</span></div>`;
-  const toggle = enabled
-    ? `<form class="inline-form" method="post" action="${esc(`${base}/toggle`)}"><input type="hidden" name="csrf" value="${esc(csrf || "")}"><input type="hidden" name="id" value="${esc(policy.id)}"><input type="hidden" name="enabled" value="false"><input type="hidden" name="expectedRevision" value="${esc(revision ?? "")}"><button class="btn danger-o" type="submit">${esc(t("adm.authz.drawer.disableAction"))}</button></form>`
-    : `<form class="inline-form" method="post" action="${esc(`${base}/toggle`)}"><input type="hidden" name="csrf" value="${esc(csrf || "")}"><input type="hidden" name="id" value="${esc(policy.id)}"><input type="hidden" name="enabled" value="true"><input type="hidden" name="expectedRevision" value="${esc(revision ?? "")}"><button class="btn" type="submit">${esc(t("adm.authz.status.enabled"))}</button></form>`;
-  const dangerZone = `<div class="dsec"><h3>${esc(t("adm.accounts.dangerTitle"))}</h3><div class="danger-zone">
-  <div class="dz"><div class="t"><b>${enabled ? esc(t("adm.authz.menu.disable")) : esc(t("adm.authz.menu.enable"))}</b>${enabled ? esc(t("adm.authz.drawer.disableDesc")) : esc(t("adm.authz.drawer.enableDesc"))}</div>${toggle}</div>
-  <div class="dz"><div class="t"><b>${esc(t("adm.authz.drawer.deleteTitle"))}</b>${esc(t("adm.authz.drawer.deleteDesc"))}</div><a class="btn danger-o" href="${esc(`${base}?confirm=delete&id=${encodeURIComponent(policy.id)}`)}">${esc(t("adm.accounts.deleteAction"))}</a></div>
-</div></div>`;
+  const verdict = !decide ? "" : `<div class="verdict ${verdictClass(state.ok)}" style="margin-top:12px">${ic(state.ok === false ? "ban" : "checkc")}<span>${esc(t("adm.authz.drawer.now"))} ${esc(policyNowLabel(policy, now))} <span class="mono">${esc(String(policy.timezone ?? ""))}</span> <b>${esc(state.ok === true ? t("adm.authz.drawer.allowedAccess") : state.ok === false ? mode.n : t("adm.authz.undetermined"))}</b> · ${esc(state.why)}</span></div>`;
   const bodyHtml = `${lastEnabledOrphanBanner}${revokeBanner}
 <div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionPolicy"))}</h3>${fields}</div>
 <div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionSubjects"))} <span class="muted" style="font-weight:400">${subjects.length}</span></h3>${subjectList}</div>
 <div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionCaps"))}</h3><div class="tags">${caps || `<span class="muted">—</span>`}</div></div>
-<div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionWindow"))}</h3><div class="sumbox"><b>${esc(win.summary.text)}</b>${marks ? `<div>${marks}</div>` : ""}<div class="muted" style="margin-top:4px">${esc(WINDOW_SCOPE_DISCLAIMER)}</div></div><div style="margin-top:16px">${policyTimelineHtml(policy, now)}</div>${verdict}</div>
-${dangerZone}`;
-  const footHtml = `<a class="btn primary" href="${esc(`${base}?edit=${encodeURIComponent(policy.id)}`)}">${esc(t("adm.authz.drawer.edit"))}</a><a class="btn ghost" href="${esc(base)}">${esc(t("adm.ui.close"))}</a>`;
+<div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionWindow"))}</h3><div class="sumbox"><b>${esc(win.summary.text)}</b>${marks ? `<div>${marks}</div>` : ""}<div class="muted" style="margin-top:4px">${esc(WINDOW_SCOPE_DISCLAIMER)}</div></div><div style="margin-top:16px">${policyTimelineHtml(policy, now)}</div>${verdict}</div>`;
+  // Frozen: the drawer is a read-only detail view — no 编辑, no 停用/启用, no 删除.
+  const footHtml = `<a class="btn ghost" href="${esc(base)}">${esc(t("adm.ui.close"))}</a>`;
   return drawer({
     title: policy.label,
     subtitle: t("adm.authz.drawer.subtitle", { status: enabled ? t("adm.authz.status.enabled") : t("adm.authz.status.disabled"), mode: mode.n }),
@@ -301,24 +274,18 @@ ${dangerZone}`;
   });
 }
 
-/** Message for `?done=<action>` — a fixed map, so a crafted query can never echo text back. */
-const DONE_MESSAGE_KEYS = Object.freeze({
-  create: "adm.authz.done.create",
-  update: "adm.authz.done.update",
-  toggle: "adm.authz.done.toggle",
-  delete: "adm.authz.done.delete",
-  repair: "adm.authz.done.repair",
-});
-
-/** The 定时授权 tab: list + banners + 当前状态预览 (+ the `?id=` drawer). */
+/** The 定时授权 tab, frozen: the stored list, the banners and the `?id=` read-only drawer. */
 export function renderAuthzPage(ctx) {
-  const { model, authz, csrf, query = {}, accessPolicyBase: base, now = Date.now(), preview = null } = ctx;
+  const { model, authz, query = {}, accessPolicyBase: base, now = Date.now() } = ctx;
   const policies = Array.isArray(authz?.policies) ? authz.policies : [];
   const revision = authz?.revision ?? null;
   const broken = authz?.status === "broken";
   const orphans = Array.isArray(authz?.orphaned) ? authz.orphaned : [];
   const runtime = ctx.runtimeState ?? null;
   const masterOn = runtime ? runtime.enabled === true : authz?.enabled === true;
+  // The stored policies decide unless the mode is `enforce` (`legacyPoliciesDecide`): then this page
+  // renders their history and states no verdict, because the constraints decide instead.
+  const decide = legacyPoliciesDecide(ctx.authorizationMode);
 
   // Sorting is server state (`table-sort.js`). No column is pre-selected: the list keeps the store's
   // own order until the operator clicks a header (the #406 probe follows the first editor link, so a
@@ -333,46 +300,39 @@ export function renderAuthzPage(ctx) {
   });
   const columns = [[t("adm.authz.col.policy"), "22%", "", "policy"], [t("adm.authz.col.status"), "12%", "", "status"], [t("adm.authz.col.subjects"), "22%", "", "subjects"], [t("adm.authz.col.caps"), "16%", "", "caps"], [t("adm.authz.col.window"), "24%", "", "window"], ["", "", "act"]];
   const rows = listed.map((policy) => `<tr class="click ${policy.enabled !== false ? "" : "dim"}">
-<td><a class="cell-link block" href="${esc(`${base}?edit=${encodeURIComponent(policy.id)}`)}"><div class="nm"><b>${esc(policy.label)}</b><span class="sub2">${idc(policy.id)}<span>${esc(t("adm.authz.row.updatedAt", { time: relTitle(policy.updatedAt, now) }))}</span></span></div></a></td>
+<td><a class="cell-link block" href="${esc(`${base}?id=${encodeURIComponent(policy.id)}`)}"><div class="nm"><b>${esc(policy.label)}</b><span class="sub2">${idc(policy.id)}<span>${esc(t("adm.authz.row.updatedAt", { time: relTitle(policy.updatedAt, now) }))}</span></span></div></a></td>
 <td>${policyStatusCell(model, policy)}</td>
 <td>${policySubjectsCell(model, policy)}</td>
 <td><div class="tags">${model.capTags(policy.capabilities)}</div></td>
-<td>${policyWindowCell(policy, now)}</td>
-<td class="act">${policyRowMenu({ base, policy, csrf, revision })}</td></tr>`);
+<td>${policyWindowCell(policy, now, decide)}</td>
+<td class="act">${policyRowMenu({ base, policy })}</td></tr>`);
   const cards = listed.map((policy) => {
     const win = presentAccessPolicyWindow(policy);
     const subjects = (Array.isArray(policy.subjects) ? policy.subjects : []).map((subject) => model.subjectView(subject).name);
-    return `<div class="mc"><div class="b"><div class="nm"><a class="cell-link block" href="${esc(`${base}?edit=${encodeURIComponent(policy.id)}`)}"><b>${esc(policy.label)}</b></a><span class="sub2">${esc(t("adm.authz.drawer.subtitle", { status: policy.enabled !== false ? t("adm.authz.status.enabled") : t("adm.authz.status.disabled"), mode: model.mode(policy.mode).n }))}</span></div><span class="tx2" style="font-size:13px">${esc(win.summary.text)}</span><div class="meta">${subjects.map((name) => `<span>${esc(name)}</span>`).join("")}</div></div>${policyRowMenu({ base, policy, csrf, revision })}</div>`;
+    return `<div class="mc"><div class="b"><div class="nm"><a class="cell-link block" href="${esc(`${base}?id=${encodeURIComponent(policy.id)}`)}"><b>${esc(policy.label)}</b></a><span class="sub2">${esc(t("adm.authz.drawer.subtitle", { status: policy.enabled !== false ? t("adm.authz.status.enabled") : t("adm.authz.status.disabled"), mode: model.mode(policy.mode).n }))}</span></div><span class="tx2" style="font-size:13px">${esc(win.summary.text)}</span><div class="meta">${subjects.map((name) => `<span>${esc(name)}</span>`).join("")}</div></div>${policyRowMenu({ base, policy })}</div>`;
   });
+  // Frozen: no 新建 CTA and no empty-state action — this surface can create nothing.
   const empty = emptyState(
     "cal",
     policies.length ? t("adm.authz.empty.noMatch") : t("adm.authz.empty.none"),
     t("adm.authz.empty.hint"),
-    broken ? "" : `<a class="btn primary" href="${esc(`${base}?new=1`)}">${ic("plus")}${esc(t("adm.authz.new"))}</a>`,
+    "",
   );
-
-  const newCta = broken
-    ? `<span class="btn primary" aria-disabled="true" title="${esc(t("adm.authz.newDisabledTitle"))}">${ic("plus")}<span class="hide-m">${esc(t("adm.authz.new"))}</span></span>`
-    : `<a class="btn primary" href="${esc(`${base}?new=1`)}">${ic("plus")}<span class="hide-m">${esc(t("adm.authz.new"))}</span></a>`;
   // The prototype's master switch is scripted and marked 规划中 (Stage 5): it is rendered as a
   // non-interactive state indicator with the planned marker — never as a fake CTA. Its *state* is
   // real (the runtime summary), so the banner tone and the label are honest. The banner is built
   // directly (not through `banner()`), because the prototype puts the switch next to the text as a
   // sibling of the flex-1 text block.
   const masterSwitch = `<div class="futonly bm" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="muted" style="font-size:13px">${esc(t("adm.authz.master.label"))}</span><span class="switch ${masterOn ? "on" : ""}" role="img" aria-label="${esc(t("adm.authz.master.aria"))}" title="${esc(t("adm.authz.master.title", { state: masterOn ? t("adm.authz.master.on") : t("adm.authz.master.off") }))}"></span>${fut("Stage 5")}</div>`;
-  const masterBanner = `<div class="banner ${masterOn ? "acc" : ""}">${ic("shield")}<div style="flex:1">${t("adm.authz.master.banner")}<details style="margin-top:4px"><summary class="muted" style="cursor:pointer">${esc(t("adm.authz.master.details"))}</summary><span class="muted">${t("adm.authz.master.detailsBody", { revision: esc(revision === null ? t("adm.authz.notProvided") : String(revision)) })}</span></details></div>${masterSwitch}</div>`;
+  const masterBanner = `<div class="banner ${decide && masterOn ? "acc" : ""}">${ic("shield")}<div style="flex:1">${t("adm.authz.master.banner")}<details style="margin-top:4px"><summary class="muted" style="cursor:pointer">${esc(t("adm.authz.master.details"))}</summary><span class="muted">${t("adm.authz.master.detailsBody", { revision: esc(revision === null ? t("adm.authz.notProvided") : String(revision)) })}</span></details></div>${decide ? masterSwitch : ""}</div>`;
+  // Frozen: the broken-store banner keeps naming the damage but offers no repair (ruling R6).
   const brokenBanner = broken
-    ? banner(`${t("adm.authz.banner.broken", { error: authz?.error ? `（${esc(String(authz.error).slice(0, 200))}）` : "" })}${t("adm.authz.banner.brokenForm", { action: esc(`${base}/repair`), csrf: esc(csrf || ""), document: esc(ctx.repairDocument ?? "") })}`, { tone: "danger" })
+    ? banner(`${t("adm.authz.banner.broken", { error: authz?.error ? `（${esc(String(authz.error).slice(0, 200))}）` : "" })}${esc(t("adm.authz.frozen.repairNote"))}`, { tone: "danger" })
     : "";
   const orphanBanner = orphans.length
     ? banner(t("adm.authz.banner.orphans", { count: orphans.length, ids: orphans.map((subject) => `<span class="mono" title="${esc(subject)}">${esc(model.subjectView(subject).shortId)}</span>`).join(esc(t("adm.ui.listSeparator"))) }), { tone: "amber" })
     : "";
-  const conflict = ctx.conflict
-    ? banner(t("adm.authz.banner.conflict"), { tone: "danger" })
-    : "";
-  const doneKey = typeof query.done === "string" ? DONE_MESSAGE_KEYS[query.done] : null;
-  const done = doneKey ? t(doneKey) : null;
-  const notice = [done ? result(true, esc(done)) : "", ctx.failure ? result(false, esc(String(ctx.failure))) : ""].join("");
+  const notice = ctx.failure ? result(false, esc(String(ctx.failure))) : "";
 
   const wanted = typeof query.id === "string" && query.id.trim()
     ? query.id.trim()
@@ -387,14 +347,13 @@ export function renderAuthzPage(ctx) {
     : "";
   const detailPanel = selected ? policyDrawer(ctx, selected) : missingDrawer;
 
-  const content = `${pageBar({ title: t("adm.nav.accessPolicy"), count: policies.length, actions: newCta })}<div class="content scroll"><div class="page wide">
+  const content = `${pageBar({ title: t("adm.nav.accessPolicy"), count: policies.length })}<div class="content scroll"><div class="page wide">
 ${notice}
+${frozenBanner(ctx.authorizationMode)}
 ${masterBanner}
-${conflict}
 ${brokenBanner}
 ${orphanBanner}
 ${table(columns, rows, empty, { ...sort, base })}${mcards(cards)}
-${previewSection(ctx)}
 </div></div>`;
   return { content, detailPanel };
 }

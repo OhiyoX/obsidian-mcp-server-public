@@ -1,5 +1,6 @@
 """Exercise the file-only release path without touching Docker or a real NAS."""
 
+import importlib.util
 import io
 import json
 from pathlib import Path
@@ -8,6 +9,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 
 SCRIPT = Path(__file__).with_name("nas_deploy.py")
@@ -93,6 +95,60 @@ class NasDeployTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('"changes": []', result.stdout)
         self.assertIn('"action": "files-only"', result.stdout)
+
+
+    def test_health_url_is_the_published_loopback_port(self):
+        spec = importlib.util.spec_from_file_location("nas_deploy_for_test", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        # The plaintext port is published on 127.0.0.1 only, so the deploy checks it there.
+        (self.project / ".env").write_text(
+            "MCP_BIND_ADDR=192.0.2.9\nMCP_PORT=18923\n", encoding="utf-8")
+        self.assertEqual(module.health_url(self.project), "http://127.0.0.1:18923/healthz")
+
+        (self.project / ".env").write_text("MCP_BIND_ADDR=0.0.0.0\n", encoding="utf-8")
+        self.assertEqual(module.health_url(self.project), "http://127.0.0.1:18923/healthz")
+
+    def test_a_code_change_rebuilds_the_image(self):
+        # Compose mounts no source over /app, so a restart would serve the previous image.
+        (self.project / "app").mkdir()
+        (self.project / "app" / "server.js").write_bytes(b"old server\n")
+        for name in ("app/server.js", "app/src/app/routes.js", "app/src/app/assets/app.js"):
+            with self.subTest(name=name):
+                self.make_archive({"docker-compose.yaml": b"services: {}\n", name: b"new bytes\n"})
+                result = self.command("check")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('"action": "rebuild"', result.stdout)
+
+    def test_non_code_changes_do_not_rebuild(self):
+        self.make_archive({"docker-compose.yaml": b"services: {}\n", "README.md": b"new\n"})
+        result = self.command("check")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"action": "files-only"', result.stdout)
+
+    def test_rebuild_override_is_reported_in_the_preview(self):
+        # The one-off case: the image predates the payload, so compose and code are unchanged and
+        # the inventory alone would only sync files.
+        self.make_archive({"docker-compose.yaml": b"services: {}\n", "README.md": b"new\n"})
+        result = self.command("check", "v2026.09.24", "--rebuild")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"action": "rebuild"', result.stdout)
+
+    def test_ops_log_directory_is_prepared_for_the_runtime_uid(self):
+        spec = importlib.util.spec_from_file_location("nas_deploy_for_test", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        target = self.project / "data" / "ops-log"
+        module.ensure_ops_log_dir(self.project)
+        self.assertTrue(target.is_dir(), "a missing bind source would be created as root:root")
+
+        with mock.patch.object(module.os, "geteuid", return_value=0), \
+                mock.patch.object(module.os, "chown") as chown:
+            module.ensure_ops_log_dir(self.project)
+            chown.assert_called_once()
+            self.assertEqual(chown.call_args[0][1:], (1002, 10))
 
     def test_pending_mutation_journal_blocks_code_rollback(self):
         applied = self.command("apply", "v2026.09.24", "--adopt")

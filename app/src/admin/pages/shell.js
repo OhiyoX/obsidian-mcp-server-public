@@ -44,7 +44,7 @@ function releaseLabel() {
 
 export function renderAuthShell({
   activeTab,
-  accessPolicyBase,
+  constraintsBase,
   vaultGitBase,
   session,
   flashKey,
@@ -73,7 +73,7 @@ export function renderAuthShell({
     theme,
     counts: navCounts,
     attention: navAttention,
-    accessPolicyBase,
+    constraintsBase,
     vaultGitBase,
     csrf: session?.csrf || "",
     release: releaseLabel(),

@@ -5,11 +5,13 @@
 // the catalog flag/runtime/store. WEB_CATALOG_ENABLED=false (or an unavailable
 // runtime) returns 503 catalog-unavailable -- never a v1/full-scan fallback.
 import { classifyWebApiError } from "../web-api-error.js";
+import { chainWith, webReadRouteGate } from "../access-policy.js";
 import { getWebCatalogRuntime } from "./runtime.js";
 import { WebCatalogHttpError, resolveTreePage } from "./tree-api.js";
 
-export function registerTreeRoute(router, { requireApi, currentVault, metrics = null }) {
-  router.get("/api/web/v2/tree", requireApi, async (req, res, next) => {
+export function registerTreeRoute(router, { requireApi, currentVault, metrics = null, policy = null, authorizationShadow = null }) {
+  const readGate = webReadRouteGate(policy, "GET /api/web/v2/tree", { shadow: authorizationShadow });
+  router.get("/api/web/v2/tree", chainWith(requireApi, readGate), async (req, res, next) => {
     try {
       const vault = await currentVault(req);
       // Counted after auth: this is authenticated first-party usage, not a scanner.

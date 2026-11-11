@@ -115,7 +115,7 @@ curl -sS -X DELETE "http://127.0.0.1:${MCP_PORT:-18923}/mcp" \
 ## Common Tool Choices
 
 - `server_info`: confirm vault path, data path, read-only mode, and available tools.
-- `list_notes`: list Markdown notes and folders, optionally scoped with the vault-relative `pathPrefix` argument (`directory` is **not** a supported input).
+- `list_notes`: browse Markdown notes and folders; input `pathPrefix` selects the Vault-relative directory.
 - `list_files`: list all Obsidian-supported files, including `.canvas`, `.base`, media, and PDFs.
 - `get_note`: read note content, full structure, document map, metadata, or a section.
 - `get_metadata`: get best-effort Obsidian `CachedMetadata` shape.
@@ -132,19 +132,19 @@ Read responses return SHA-256 `revision` values where applicable. Pass the lates
 
 Prefer read-only tools first. Use mutating tools only when the user explicitly asks to edit the vault or the current task clearly requires it.
 
-## Directory Browsing With `list_notes`
+## `list_notes` Directory Contract
 
-Use the **advertised input schema** and the canonical `pathPrefix` argument to drill into a directory. Example native MCP tool call:
+Use **one canonical input** for directory selection: `pathPrefix` (Vault-relative). For example:
 
 ```json
-{"name":"list_notes","arguments":{"pathPrefix":"_Workspace/40-Projects","recursive":false,"limit":100}}
+{"name":"list_notes","arguments":{"pathPrefix":"_Workspace/40-Projects","limit":100}}
 ```
 
-- `pathPrefix` is Vault-relative; omitted or `""` selects the Vault root. **There is no `directory` input alias** in the current server tool schema. Previous versions of this skill incorrectly described it as a deprecated compatibility alias.
-- `recursive` is false by default. Set `recursive:true` to descend; `depth` controls the recursion depth (0–20) and does not enable recursion on its own.
-- `limit` (1–1000) caps one page. If `truncated:true`, pass the returned `nextCursor` as `cursor` with the same path and filters to continue; a short root listing is not a complete Vault inventory.
-- `directory`, `path`, `dir`, `folder`, `subdir` and `relativePath` are **not** supported `list_notes` input names. Do not infer parameter support from a successful call: clients may strip unrecognized fields before handler execution.
-- If browsing differs across machines, compare each deployment's `tools/list` schema and service version before recording a server regression. `search_notes` (`query` / `pathPrefix`) and `get_note` (full Vault-relative `path`) remain useful alternatives.
+The response field `directory` reports the resolved directory that was actually listed. It is **output only**, not another accepted input name. Treat this as an input/output distinction, not two interchangeable parameter names.
+
+By default, `recursive:false` lists the selected directory without descending. To descend, set `recursive:true`; only then does `depth` control recursion (0–20). `limit` caps a page (1–1000). When `truncated:true`, continue with the returned `nextCursor` as `cursor` while preserving the directory and filters.
+
+If a directory request unexpectedly lists the Vault root, verify that `pathPrefix` actually reached the tool and compare the deployed `tools/list` schema before diagnosing a server bug. `search_notes` also accepts `pathPrefix`; `get_note` accepts a full Vault-relative `path`.
 
 ## Troubleshooting
 

@@ -78,7 +78,9 @@ test("one live handler routes separate credential identities to independent defa
 
 test("removed permission and invalid explicit target refuse before any Vault runtime", async () => {
   const { handler, calls } = makeRegistrar();
-  const authInfo = { defaultVaultId: "research", allowedVaults: [DEFAULT_VAULT_ID] };
+  // A real request always arrives with a verified credential identity; the identity is
+  // what the authorization runtime decides on.
+  const authInfo = { clientId: "default-vault-test", defaultVaultId: "research", allowedVaults: [DEFAULT_VAULT_ID] };
   const denied = await handler({}, { authInfo });
   assert.equal(denied.isError, true);
   assert.equal(denied.structuredContent.code, "vault_access_denied");

@@ -44,6 +44,9 @@ export const PNG_1X1 = Buffer.from(
 export const WRITE_ROUTE_CALLS = Object.freeze([
   { key: "POST /api/web/v1/note", method: "POST", path: "/api/web/v1/note", body: { path: "Fresh.md", content: "# fresh\n" } },
   { key: "POST /api/web/v1/folder", method: "POST", path: "/api/web/v1/folder", body: { path: "NewFolder" } },
+  // This harness wires no Vault runtime, so rename and delete stop at their 503.
+  { key: "POST /api/web/v1/rename", method: "POST", path: "/api/web/v1/rename", body: { path: "Note.md", to: "Renamed.md" } },
+  { key: "POST /api/web/v1/delete", method: "POST", path: "/api/web/v1/delete", body: { path: "Note.md", confirm: true } },
   { key: "POST /api/web/v1/asset", method: "POST", path: "/api/web/v1/asset", body: PNG_1X1, headers: { "x-file-name": "a.png" } },
   { key: "POST /api/web/v1/vault", method: "POST", path: "/api/web/v1/vault", body: { name: "Another" } },
   { key: "POST /api/web/v1/publish", method: "POST", path: "/api/web/v1/publish", body: { action: "unsupported-action" } },

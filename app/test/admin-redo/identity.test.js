@@ -283,7 +283,12 @@ test("accounts: ?id= drawer reproduces the prototype detail panel", async () => 
 
 test("accounts: ?mode=pw autofocuses the password field, a disabled account gets 启用 instead of 停用", async () => {
   const pw = await render("accounts", { tab: "accounts", id: U_ALICE, mode: "pw" });
-  assert.ok(pw.detailPanel.includes('name="password" autocomplete="new-password" placeholder="新密码，至少 12 位" autofocus'));
+  // The field carries its own constraints (required, minlength, maxlength) so the browser blocks an
+  // empty reset; the assertion names the attributes one by one instead of pinning their order.
+  for (const attribute of ['name="password"', 'autocomplete="new-password"', 'required', 'minlength="12"',
+    'maxlength="256"', 'placeholder="新密码，至少 12 位"', 'autofocus']) {
+    assert.ok(pw.detailPanel.includes(attribute), `密码框缺少 ${attribute}`);
+  }
   const disabled = await render("accounts", { tab: "accounts", id: U_AUDIT });
   assert.ok(disabled.detailPanel.includes('<form class="inline-form" method="post" action="/admin/auth/oauth/user/toggle">'));
   assert.ok(disabled.detailPanel.includes('<input type="hidden" name="disabled" value="false">'));

@@ -164,6 +164,16 @@ export function createDocumentSession({
     return { applied: true, ...statusFlags() };
   }
 
+  // A rename moved the file on disk. The document keeps its revision and its text; only the
+  // identity moves, so the next save posts the new path instead of a 409 on the old one.
+  function rebasePath(from, to) {
+    if (!path || !from || !to) return false;
+    if (path === from) path = to;
+    else if (path.startsWith(`${from}/`)) path = `${to}${path.slice(from.length)}`;
+    else return false;
+    return true;
+  }
+
   function noteLocalEdit(text) {
     liveText = String(text ?? "");
     editVersion += 1;
@@ -478,6 +488,7 @@ export function createDocumentSession({
     commitSave,
     rejectSave,
     enqueueSave,
+    rebasePath,
     markDeleted,
     markRemoteChanged,
     resolveConflictByDiscardLocal,

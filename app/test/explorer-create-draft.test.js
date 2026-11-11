@@ -186,6 +186,8 @@ test("Escape, blur and a name-less Enter cancel the panel-head draft without a w
   const input = draftInput(chrome.host);
   input.value = "临时名字";
   input.dispatchEvent({ type: "input" });
+  // A real blur means the focus already left; the draft row is focused when it opens.
+  chrome.document.activeElement = chrome.document.body;
   input.dispatchEvent({ type: "blur" });
   await tick();
   assert.equal(draftRows(chrome.host).length, 0, "an uncommitted blur cancels the draft");
@@ -219,6 +221,33 @@ test("the default name never commits, a real rename commits exactly once", async
   assert.deepEqual(chrome.calls.note, [["", "我的笔记"]], "exactly one commit, trimmed, at the Vault root");
   assert.equal(draftRows(chrome.host).length, 0);
   assert.equal(chrome.controller.hasActiveDraft(), false);
+});
+
+test("a blur whose focus lands back in the draft keeps the row open", async () => {
+  // The reported defect: the rename row closed before a keystroke could land. A repaint
+  // detaches the focused row, the browser fires blur, and the deferred cancel then killed
+  // a draft whose own input holds the focus again.
+  const chrome = buildHarness();
+  await chrome.controller.load("");
+  chrome.controller.beginNewNote();
+  const input = draftInput(chrome.host);
+  input.focus();
+  input.dispatchEvent({ type: "blur" });
+  input.focus();
+  await tick();
+  assert.equal(draftRows(chrome.host).length, 1, "the row must not close while its input has focus");
+  assert.equal(chrome.controller.hasActiveDraft(), true);
+  assert.deepEqual(chrome.calls.note, [], "a cancelled-by-blur draft would have written nothing anyway");
+});
+
+test("a blur with the focus elsewhere still cancels", async () => {
+  const chrome = buildHarness();
+  await chrome.controller.load("");
+  chrome.controller.beginNewNote();
+  chrome.document.activeElement = chrome.document.body;
+  draftInput(chrome.host).dispatchEvent({ type: "blur" });
+  await tick();
+  assert.equal(draftRows(chrome.host).length, 0, "a real blur cancels, as before");
 });
 
 test("Enter double-press and Enter+blur commit once; a stale row cannot commit", async () => {

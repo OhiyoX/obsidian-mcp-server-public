@@ -28,7 +28,7 @@
     "nodeVersion": "v26.3.0"
   },
   "fixture": {
-    "path": "/opt/discovery-controlled-matrix\\worktree\\app\\test\\fixtures\\host-controlled-matrix\\tasks.json",
+    "path": "D:\\Notes\\obsidian server projects\\scratch\\discovery-controlled-matrix\\worktree\\app\\test\\fixtures\\host-controlled-matrix\\tasks.json",
     "sha256": "94529e7702f8083f2ebfbe87885c1b596a93fa352711a09cfb95d4338e001a58",
     "taskCount": 6,
     "sentinelSha256": "e7f6ff02f4ccf88de67ea131bb2853b61f86abfe5ec085cb85fc85010661ce78",

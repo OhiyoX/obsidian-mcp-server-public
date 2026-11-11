@@ -1,7 +1,8 @@
 // `src/publish/target.js` — the authoritative Publish target gate (#278).
 //
-// Publish is Markdown-only: a Publish record may only point at an existing regular
-// `.md` file inside the Vault. This module owns that decision once, as a small
+// A Publish record points at one of two shapes (`kind`): a `document`, which is an
+// existing regular `.md` file inside the Vault, or a `folder`, which is an existing
+// directory inside the Vault. This module owns that decision once, as a small
 // domain helper, so Web routes, MCP tools and `PublishService` cannot drift into
 // three different whitelists (contract §6 "PublishService 是最终权威 gate", §16).
 //
@@ -30,6 +31,10 @@ export const INVALID_PUBLISH_TARGET_PATH = "invalid_publish_target_path";
 export const PUBLISH_TARGET_MISSING = "publish_target_missing";
 export const PUBLISH_TARGET_NOT_A_FILE = "publish_target_not_a_file";
 export const PUBLISH_TARGET_TOO_LARGE = "publish_target_too_large";
+// A `kind: "folder"` target is a directory, so its limits are its own. Declared here;
+// the folder walker that raises them is a later task.
+export const PUBLISH_FOLDER_TOO_LARGE = "publish_folder_too_large";
+export const PUBLISH_FOLDER_TOO_DEEP = "publish_folder_too_deep";
 
 export const PUBLISH_TARGET_ERROR_CODES = Object.freeze([
   UNSUPPORTED_PUBLISH_TARGET,
@@ -37,7 +42,17 @@ export const PUBLISH_TARGET_ERROR_CODES = Object.freeze([
   PUBLISH_TARGET_MISSING,
   PUBLISH_TARGET_NOT_A_FILE,
   PUBLISH_TARGET_TOO_LARGE,
+  PUBLISH_FOLDER_TOO_LARGE,
+  PUBLISH_FOLDER_TOO_DEEP,
 ]);
+
+// Target shape, selected by the record `kind`. `publish/lifecycle.js` owns that vocabulary,
+// but this module must stay import-free beyond `node:path` and `config.js` (boundary ratchet in
+// test/publish-target.test.js), so it states the two values itself; `PublishService` refuses to
+// start if they ever differ from `PUBLISH_RECORD_KINDS`.
+export const PUBLISH_TARGET_KIND_DOCUMENT = "document";
+export const PUBLISH_TARGET_KIND_FOLDER = "folder";
+const isFolderKind = (kind) => kind === PUBLISH_TARGET_KIND_FOLDER;
 
 export class PublishTargetError extends Error {
   constructor(code, message, details = {}) {
@@ -82,18 +97,19 @@ export function assertPublishableMarkdownPath(canonicalPath) {
 }
 
 // §6 rule 1/2 — canonicalize through the existing Vault resolution, then hand the
-// canonical Markdown path to the caller. `resolvePath` is injected (e.g.
-// `resolveWebVaultPath.bind(null, vault)`) and receives the already
-// `.md`-completed path plus `{ assumeMarkdown: true }`:
-//   * the trailing `.md` is added here, mirroring `vault-registry.js`'s
-//     `assumeMarkdown` semantics exactly, so the resolved `absolute` and the
-//     returned `path` can never disagree;
-//   * passing `assumeMarkdown: true` as well keeps the existing resolver the sole
-//     owner of that rule when the path is used directly.
-// Returns `{ path, absolute }` (`absolute` is `null` when the resolver answers with
-// a bare string). The extension gate is deliberately NOT applied here, so callers
+// canonical path to the caller. `resolvePath` is injected (e.g.
+// `resolveWebVaultPath.bind(null, vault)`).
+//   * `kind: "document"` (the default): the path is `.md`-completed and resolved with
+//     `{ assumeMarkdown: true }`, mirroring `vault-registry.js`'s `assumeMarkdown`
+//     semantics exactly, so the resolved `absolute` and the returned `path` can never
+//     disagree; passing the flag too keeps the existing resolver the sole owner of
+//     that rule when the path is used directly.
+//   * `kind: "folder"`: no `.md` completion, resolved as written — a directory name is
+//     a directory name (`Notes.md/` is a legal directory).
+// Returns `{ path, absolute, kind }` (`absolute` is `null` when the resolver answers
+// with a bare string). The extension gate is deliberately NOT applied here, so callers
 // that must canonicalize a missing target (revoke) can do so.
-export async function normalizePublishTarget(userPath, { resolvePath } = {}) {
+export async function normalizePublishTarget(userPath, { resolvePath, kind } = {}) {
   if (typeof resolvePath !== "function") {
     throw new TypeError("normalizePublishTarget requires an injected canonical resolver ({ resolvePath })");
   }
@@ -101,10 +117,12 @@ export async function normalizePublishTarget(userPath, { resolvePath } = {}) {
   const invalid = invalidInputReason(requested);
   if (invalid) throw new PublishTargetError(INVALID_PUBLISH_TARGET_PATH, invalid, { path: requested || null });
 
-  const requestedPath = assumeMarkdownTarget(requested);
+  const folder = isFolderKind(kind);
+  const requestedPath = folder ? requested : assumeMarkdownTarget(requested);
+  const resolverOptions = folder ? {} : { assumeMarkdown: true };
   let resolved;
   try {
-    resolved = await resolvePath(requestedPath, { assumeMarkdown: true });
+    resolved = await resolvePath(requestedPath, resolverOptions);
   } catch (error) {
     if (isPublishTargetError(error)) throw error;
     // ENOENT is the only resolver failure that means "no such target"; every other
@@ -119,26 +137,35 @@ export async function normalizePublishTarget(userPath, { resolvePath } = {}) {
   const canonical = typeof resolved === "string" ? resolved : resolved?.path;
   const absolute = typeof resolved === "string" ? null : (resolved?.absolute ?? null);
   const canonicalPath = assertCanonicalTargetPath(canonical);
-  return Object.freeze({ path: canonicalPath, absolute });
+  return Object.freeze({ path: canonicalPath, absolute, kind: folder ? PUBLISH_TARGET_KIND_FOLDER : PUBLISH_TARGET_KIND_DOCUMENT });
 }
 
 // §6 + §12.2 existence/size half of the gate. Called with a user path (then it
 // normalizes first) or with an already-normalized `{ path, absolute }`.
-//   stat: async ({ path, absolute }) => { isFile: boolean, size?: number } | null
+//   stat: async ({ path, absolute }) => { isFile: boolean, isDirectory?: boolean, size?: number } | null
 // `null`/`undefined` means "target does not exist". `maxBytes` defaults to the real
 // Web read limit (`config.js`), so the Publish gate and the reader cannot disagree.
-export async function assertPublishableTarget(target, { resolvePath, stat, maxBytes = MAX_READ_BYTES } = {}) {
+// `kind: "folder"` swaps the extension gate for a directory check; its size/depth caps
+// belong to the folder walker of a later task.
+export async function assertPublishableTarget(target, { resolvePath, stat, maxBytes = MAX_READ_BYTES, kind } = {}) {
   if (typeof stat !== "function") {
     throw new TypeError("assertPublishableTarget requires an injected stat probe ({ stat })");
   }
   const normalized = typeof target === "string" || target === null || target === undefined
-    ? await normalizePublishTarget(target, { resolvePath })
+    ? await normalizePublishTarget(target, { resolvePath, kind })
     : target;
-  const canonicalPath = assertPublishableMarkdownPath(normalized?.path);
+  const folder = isFolderKind(kind ?? normalized?.kind);
+  const canonicalPath = folder ? assertCanonicalTargetPath(normalized?.path) : assertPublishableMarkdownPath(normalized?.path);
   const absolute = normalized?.absolute ?? null;
 
   const info = await stat(Object.freeze({ path: canonicalPath, absolute }));
   if (!info) throw new PublishTargetError(PUBLISH_TARGET_MISSING, `Publish target not found: ${canonicalPath}`, { path: canonicalPath });
+  if (folder) {
+    if (info.isDirectory !== true) {
+      throw new PublishTargetError(PUBLISH_TARGET_NOT_A_FILE, `Publish target is not a directory: ${canonicalPath}`, { path: canonicalPath });
+    }
+    return Object.freeze({ path: canonicalPath, absolute, size: null });
+  }
   if (info.isFile !== true) {
     throw new PublishTargetError(PUBLISH_TARGET_NOT_A_FILE, `Publish target is not a regular file: ${canonicalPath}`, { path: canonicalPath });
   }

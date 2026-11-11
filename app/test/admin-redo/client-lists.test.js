@@ -1,4 +1,4 @@
-// Lane L3 — instant list filtering / segment+sort switching / live policy preview (client behaviour).
+// Lane L3 — instant list filtering / segment+sort switching (client behaviour).
 //
 // Real stack, real browser: the real Admin router (session, CSRF, tab dispatch, asset whitelist),
 // the real access-policy store/runtime/admin and the real SSR pages over a real HTTP listener,
@@ -12,11 +12,20 @@
 //      no form value moves, clearing restores, no reload);
 //   2. a status segment / sort `<select>` switches in place (`pushState`, only `.content` swapped,
 //      focus kept, no new `PerformanceNavigationTiming` entry);
-//   3. the editor pane's 「现在（…）」 verdict and 「对主体的影响」 are the server's: they equal an
-//      explicit `GET …/preview?preview=1` answer, while the summary/timeline follow the form locally
-//      and a blocked/unavailable endpoint keeps the last *server* verdict (never a browser one);
-//   4. `⌘/Ctrl+Enter` submits the editor; 5. every one of these still works with script disabled;
-//   6. two negative controls prove the checkers can go red.
+//   3. both still work with script disabled (the GET search form, the segment link);
+//   4. a negative control proves the filter checker can go red.
+//
+// Retired with the freeze (design §7 step 2 + step 5, plan Task 3). The legacy editor is gone: no page
+// renders `#authz-form`, `[data-preview-form]` or a `.ped-side` pane any more, and the fragment route
+// that fed the pane is deleted, so these cases measured a surface that no longer exists. They were
+// removed rather than fixed — do not re-add them without a page that renders what they measured:
+//   * "the editor preview derives the summary locally and takes the verdict from the server"
+//     (the live `.ped-side` preview and its `GET /admin/auth/access-policy/preview?preview=1` answer);
+//   * "⌘/Ctrl+Enter submits the editor through the real form" (the frozen `#authz-form`);
+//   * part (3) of "without script the same actions work" (that form's `button[form="authz-form"]`);
+//   * "negative control: a verdict computed in the browser" (it mutated that preview's adopt step).
+//   * "the preview endpoint is additive …" (it fetched the deleted fragment route; the frozen POST
+//     endpoints' CSRF gate stays pinned in `test/access-policy-frozen.test.js`).
 //
 // The browser half skips (loudly) only when no full Chromium build exists; with
 // `ADMIN_CLIENT_BROWSER_EVIDENCE=1` it fails closed, so an evidence run can never pass by skipping.
@@ -40,7 +49,6 @@ const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const FEATURE_ASSET = path.join(APP_ROOT, "src", "admin", "assets", "admin-feature-lists.js");
 const ADMIN_PASSWORD = "l3-lists-admin-password";
 const REQUIRE_BROWSER = process.env.ADMIN_CLIENT_BROWSER_EVIDENCE === "1";
-const DAY_LABELS = Object.freeze({ mon: "周一", tue: "周二", wed: "周三", thu: "周四", fri: "周五", sat: "周六", sun: "周日" });
 
 // ------------------------------------------------------------------ fixture server
 
@@ -72,7 +80,7 @@ function snapshot() {
   const audit = [
     { id: "au-1", time: "2026-10-10T02:29:00.000Z", action: "mcp.tool.write_note", method: "tools/call", tool: "write_note", outcome: "success", credentialType: "api-key", credentialId: "k-bot", clientId: "api-key:k-bot", source: "192.168.1.5", sourceKind: "direct", userAgent: "undici", agent: "undici", agentSource: "ua", origin: "obsidian.example.com" },
     { id: "au-2", time: "2026-10-10T02:15:00.000Z", action: "mcp.tool.get_note", method: "tools/call", tool: "get_note", outcome: "failure", credentialType: "oauth-access", clientId: "c-claude", userId: "u-alice", source: "192.168.1.24", sourceKind: "loopback", userAgent: "Claude-User/1.0", agent: "Claude Desktop", agentSource: "clientInfo", reason: "定时授权拒绝：当前不在允许窗口", origin: "obsidian.example.com" },
-    { id: "au-3", time: "2026-10-10T01:00:00.000Z", action: "admin.login", outcome: "failure", credentialType: "none", source: "198.51.100.7", sourcePeer: "172.18.0.1", sourceKind: "trusted-proxy", sourceTrusted: true, sourceTrustedEntry: "172.18.0.1", userAgent: "python-requests/2.32.3", reason: "管理密码错误", origin: "obsidian.example.com" },
+    { id: "au-3", time: "2026-10-10T01:00:00.000Z", action: "admin.login", outcome: "failure", credentialType: "none", source: "203.0.113.45", sourcePeer: "172.18.0.1", sourceKind: "trusted-proxy", sourceTrusted: true, sourceTrustedEntry: "172.18.0.1", userAgent: "python-requests/2.32.3", reason: "管理密码错误", origin: "obsidian.example.com" },
     { id: "au-4", time: "2026-10-09T22:00:00.000Z", action: "oauth.token", outcome: "success", credentialType: "oauth-refresh", clientId: "c-cursor", userId: "u-bob", source: "192.168.1.30", sourceKind: "direct", userAgent: "cursor/1.0", agent: "cursor/1.0", agentSource: "ua", origin: "obsidian.example.com" },
   ];
   return { apiKeys: keys, clients, oauthUsers, tokens, audit, configuredApiKeyUsage: { lastUsedAt: null, lastSource: null } };
@@ -125,30 +133,11 @@ async function get(fixture, url) {
 const normalise = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 const countAll = (selector) => js((value) => document.querySelectorAll(value).length, selector);
 const countVisible = (selector) => js((value) => [...document.querySelectorAll(value)].filter((node) => getComputedStyle(node).display !== "none").length, selector);
-const textOf = (selector) => js((value) => String(document.querySelector(value)?.textContent ?? ""), selector);
 /** The text of the first row that is still visible (filtering hides rows with an inline style). */
 const visibleRowCell = (rowSelector, cell) => js((row, column) => {
   const target = [...document.querySelectorAll(row)].find((node) => getComputedStyle(node).display !== "none");
   return String(target?.querySelector(`td:nth-child(${column})`)?.textContent ?? "");
 }, rowSelector, cell);
-
-/** The 「现在（…）」 verdict the server put into the pane (first `.verdict` of the fragment). */
-export function firstVerdictText(html) {
-  const match = /<div class="verdict[^"]*"[^>]*>([\s\S]*?)<\/div>/.exec(String(html));
-  if (!match) return null;
-  // Removing tags (rather than replacing them with a space) reproduces `textContent` exactly, so the
-  // comparison is against the same string the browser would show.
-  return normalise(match[1]
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
-}
-
-/** The first `.sumbox` headline of a server answer. */
-export function firstSummaryText(html) {
-  const match = /<div class="sumbox"><b>([\s\S]*?)<\/b>/.exec(String(html));
-  return match ? normalise(match[1].replace(/<[^>]*>/g, "")) : null;
-}
 
 /**
  * The filtering scenario (desktop rows + mobile cards). Returns observations only; `assertFilterView`
@@ -307,155 +296,6 @@ function assertSegments(observations) {
   assert.equal(observations.toolbar.marker, "kept", "the audit toolbar switch must not reload the document");
 }
 
-/**
- * The weekday key of the day BEFORE today in the policy timezone. A draft whose weekly window lives on
- * that day carries no window for today, so the server's 「现在」 verdict for it is deterministic — it
- * cannot depend on the hour the test happens to run at. (It is robust across a midnight rollover too:
- * the day is then one further behind, still not today.)
- */
-function otherDayKey() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  const yesterday = new Date(new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00Z`).getTime() - 86400000);
-  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][yesterday.getUTCDay()];
-}
-
-/** The edited (unsaved) window that provably excludes "now" in the policy timezone. */
-function excludedWindow() {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
-  }).formatToParts(new Date()).map((part) => [part.type, part.value]));
-  const minutes = (Number(parts.hour) % 24) * 60 + Number(parts.minute);
-  const [from, to] = minutes < 12 * 60 ? ["12:00", "13:00"] : ["00:00", "01:00"];
-  const dayIndex = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00Z`).getUTCDay();
-  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][dayIndex];
-  return { dayKey, from, to, summary: `${DAY_LABELS[dayKey]} ${from}–${to}` };
-}
-
-/**
- * The editor preview scenario in three phases: (a) local summary/timeline while the server endpoint
- * is blocked, (b) the surfaced failure, (c) agreement with the explicit `?preview=1` answer.
- */
-async function observePreview(page, fixture) {
-  const window_ = excludedWindow();
-  // Phase (0) — the deterministic verdict: load the draft on a day that is NOT today. Whatever the
-  // wall clock says, the loaded draft carries no window for today, so the server's verdict is
-  // 「不在今日时段」 and must not read as 允许访问. (Wave Q: this replaces a `/现在（/` match that
-  // asserted nothing about the verdict while depending on the hour through the loaded 09:00–18:00 row.)
-  const otherDay = otherDayKey();
-  await page.goto(`/admin/auth/access-policy?new=1&day=${otherDay}`);
-  const otherDayVerdict = {
-    verdict: normalise(await page.evaluate(textOf(".ped-side .verdict"))),
-    summary: normalise(await page.evaluate(textOf(".ped-side .sumbox b"))),
-    dayKey: otherDay,
-  };
-  await page.block(["*access-policy/preview*"]);
-  // Wave P: a new policy renders no weekly rows until a day is chosen (the prototype's own flow —
-  // its chip adds a 09:00–18:00 window). The day is chosen through the same GET round trip the chip
-  // performs (`?day=<key>`), so the scenario stays a plain navigation instead of a click that
-  // reloads mid-scenario; the fields are then cleared before typing (they no longer start empty).
-  // Phase (a) start: the draft with the day the edited window needs — the same GET round trip the
-  // 周一 chip performs (Wave P: a new policy renders no weekly row until a day is chosen).
-  await page.goto(`/admin/auth/access-policy?new=1&day=${window_.dayKey}`);
-  assert.equal(await page.evaluate(js((key) => Boolean(document.querySelector(`input[name="w_${key}_from_1"]`)), window_.dayKey)), true, `?day=${window_.dayKey} must render that weekly row (the chip adds the prototype's 09:00–18:00)`);
-  const initial = {
-    summary: normalise(await page.evaluate(textOf(".ped-side .sumbox b"))),
-    verdict: normalise(await page.evaluate(textOf(".ped-side .verdict"))),
-    timelineRows: await page.evaluate(countAll(".ped-side .tl .tr")),
-    previewCalls: fixture.requests.filter((entry) => entry.includes("access-policy/preview")).length,
-  };
-  for (const [suffix, value] of [["from", window_.from], ["to", window_.to]]) {
-    const selector = `input[name="w_${window_.dayKey}_${suffix}_1"]`;
-    // The chip's default is 09:00 / 18:00; the field is cleared through a real `input` event (the
-    // client's listener) and then typed character by character through the editing pipeline.
-    await page.evaluate(`(() => { const el = document.querySelector('${selector}'); el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); return el.value; })()`);
-    await page.focus(selector);
-    await page.type(value);
-  }
-  // Read immediately: the debounced round trip is both un-elapsed and blocked, so everything below
-  // is what the browser derived (or refused to derive) on its own.
-  const blocked = {
-    summary: normalise(await page.evaluate(textOf(".ped-side .sumbox b"))),
-    marks: normalise(await page.evaluate(textOf(".ped-side .sumbox [data-admin-preview-marks]"))),
-    verdict: normalise(await page.evaluate(textOf(".ped-side .verdict"))),
-    note: normalise(await page.evaluate(textOf(".ped-side [data-admin-preview-note]"))),
-    timelineRows: await page.evaluate(countAll(".ped-side .tl .tr")),
-    bars: await page.evaluate(countAll(".ped-side .tl .tr .w")),
-  };
-  await sleep(800);
-  const failure = {
-    verdict: normalise(await page.evaluate(textOf(".ped-side .verdict"))),
-    note: normalise(await page.evaluate(textOf(".ped-side [data-admin-preview-note]"))),
-  };
-  // Unblock and type one more character (in a field the window does not read) so a fresh request
-  // reaches the server.
-  await page.block([]);
-  await page.focus('input[name="label"]');
-  await page.type("现");
-  const answer = await (async () => {
-    for (let attempt = 0; attempt < 60; attempt += 1) {
-      const call = [...fixture.requests].reverse().find((entry) => entry.includes("access-policy/preview")
-        && entry.includes("preview=1")
-        && entry.includes(`w_${window_.dayKey}_from_1=`));
-      if (call) return get(fixture, call.slice("GET ".length));
-      await sleep(100);
-    }
-    return null;
-  })();
-  await sleep(400);
-  return {
-    window: window_,
-    otherDay: otherDayVerdict,
-    initial,
-    blocked,
-    failure,
-    answer,
-    pane: {
-      verdict: normalise(await page.evaluate(textOf(".ped-side .verdict"))),
-      summary: normalise(await page.evaluate(textOf(".ped-side .sumbox b"))),
-      timelineRows: await page.evaluate(countAll(".ped-side .tl .tr")),
-      note: normalise(await page.evaluate(textOf(".ped-side [data-admin-preview-note]"))),
-      helpText: normalise(await page.evaluate(js(() => [...document.querySelectorAll(".ped-side p.help")].map((node) => node.textContent).join(" ")))),
-      previewCalls: fixture.requests.filter((entry) => entry.includes("access-policy/preview")).length,
-    },
-  };
-}
-
-function assertPreview(observations) {
-  assert.equal(observations.initial.timelineRows, 7, "the SSR pane draws the 7-day timeline");
-  // Phase (0): the loaded draft's window belongs to another day, so the server's verdict is
-  // deterministic — and this is the assertion that pins what the verdict MEANS, not just its shape.
-  assert.match(observations.otherDay.verdict, /现在（/, `the pane starts from the server's verdict: ${observations.otherDay.verdict}`);
-  assert.match(observations.otherDay.verdict, /今日无生效时段/, `a draft whose window is on another day cannot allow now: ${observations.otherDay.verdict}`);
-  assert.equal(/允许访问/.test(observations.otherDay.verdict), false, `the verdict must not read as 允许访问: ${observations.otherDay.verdict}`);
-  assert.match(observations.otherDay.summary, new RegExp(`${DAY_LABELS[observations.otherDay.dayKey]}.*09:00`), `the summary still names the other day's default window: ${observations.otherDay.summary}`);
-  // (a) the summary/timeline half follows the form locally …
-  assert.equal(observations.blocked.summary, observations.window.summary, `the summary is derived in the browser: ${JSON.stringify(observations.blocked)}`);
-  assert.notEqual(observations.blocked.summary, observations.initial.summary, "typing really changed the summary");
-  assert.equal(observations.blocked.timelineRows, 7, "the locally derived timeline keeps its seven rows");
-  assert.equal(observations.blocked.bars, 1, `exactly the edited day carries a bar: ${JSON.stringify(observations.blocked)}`);
-  // … (b) while the verdict half stays the server's: nothing is invented, and the failure is visible.
-  assert.equal(observations.blocked.verdict, observations.initial.verdict, `the blocked endpoint must not produce a verdict in the browser: ${JSON.stringify(observations.blocked)}`);
-  assert.match(observations.blocked.note, /服务端/, "the pending note names the server as the verdict's source");
-  assert.equal(observations.failure.verdict, observations.initial.verdict, "a failed preview fetch keeps the last server verdict");
-  assert.match(observations.failure.note, /不可用/, "a failed preview fetch is reported, not hidden");
-  // (c) the server's answer is adopted, and it is exactly what an explicit request returns.
-  assert.ok(observations.answer, "the enhancement script must call the preview endpoint with the draft");
-  assert.equal(observations.answer.status, 200, `the explicit preview request must succeed: ${observations.answer?.status}`);
-  const expectedVerdict = firstVerdictText(observations.answer.body);
-  const expectedSummary = firstSummaryText(observations.answer.body);
-  assert.ok(expectedVerdict, "the explicit server answer contains a verdict block");
-  assert.equal(observations.pane.verdict, expectedVerdict, `the pane's verdict is the server's answer, not the browser's: ${JSON.stringify({ pane: observations.pane.verdict, server: expectedVerdict })}`);
-  assert.match(observations.pane.verdict, /不在今日时段/, `the server verdict reflects the edited window: ${observations.pane.verdict}`);
-  assert.equal(/允许访问/.test(observations.pane.verdict), false, "a window excluding now must not read as 允许");
-  assert.equal(observations.pane.summary, expectedSummary, "the adopted summary equals the server's summary");
-  assert.equal(observations.pane.timelineRows, 7, "the adopted timeline keeps seven rows");
-  assert.equal(observations.pane.note, "", "the pending/stale note disappears once the server answered");
-  assert.equal(/不会更新本栏/.test(observations.pane.helpText), false, "the no-script hint about a frozen pane is removed once the pane follows the form");
-  assert.ok(observations.pane.previewCalls > observations.initial.previewCalls, "the pane really re-adopted a server answer");
-}
-
 // ------------------------------------------------------------------ suite wiring
 
 const suite = { fixture: null, cleanups: [], page: null, cdp: null, child: null, profile: null };
@@ -544,37 +384,6 @@ async function withMutatedFeature({ find, replace }, scenario, checker, expect) 
   }
 }
 
-/**
- * A minimal valid new-policy draft, filled the way an operator does: label, one subject, one
- * capability (the capability group is a native `<details>`, so the same clicks work with script off).
- */
-async function fillPolicyDraft(page, label) {
-  // Wave P: a new policy renders NO weekly rows until a day is chosen (the prototype's own flow
-  // `6-app.js:311`), so the caller navigates with `?day=mon` — the same GET round trip the 周一 chip
-  // performs — and the row is there with the prototype's default 09:00–18:00 window.
-  await page.focus('input[name="label"]');
-  await page.type(label);
-  const window_ = await page.evaluate(js(() => {
-    const from = document.querySelector('input[name="w_mon_from_1"]');
-    const to = document.querySelector('input[name="w_mon_to_1"]');
-    return from && to ? { from: from.value, to: to.value } : null;
-  }));
-  assert.deepEqual(window_, { from: "09:00", to: "18:00" }, "a draft must already carry the prototype's Monday window (09:00–18:00, chosen with ?day=mon)");
-  await page.click('input[name="subjects"][value="api-key:k-bot"]');
-  await page.click("details.cap-g > summary");
-  const opened = await page.evaluate(js(() => document.querySelector("details.cap-g").open));
-  assert.equal(opened, true, "the capability group must open before its checkbox can be clicked");
-  await page.click('details.cap-g input[name="capabilities"]');
-  const picked = await page.evaluate(js(() => ({
-    subjects: document.querySelectorAll('input[name="subjects"]:checked').length,
-    capabilities: document.querySelectorAll('input[name="capabilities"]:checked').length,
-  })));
-  assert.deepEqual(picked, { subjects: 1, capabilities: 1 }, "the draft must carry one subject and one capability");
-}
-
-/** Whatever the page says about the last write — used in failure messages, never as a check. */
-const outcomeText = () => js(() => String(document.querySelector(".result")?.textContent ?? "").replace(/\s+/g, " ").trim());
-
 // ------------------------------------------------------------------ static + HTTP checks
 
 test("the enhancement module keeps its no-JS / no-fabrication invariants (static)", async () => {
@@ -586,36 +395,9 @@ test("the enhancement module keeps its no-JS / no-fabrication invariants (static
   assert.equal(/[\s"']on[a-z]+\s*=/.test(code), false, "no inline event handler");
   assert.equal(/https?:\/\//.test(code.replace(/http:\/\/www\.w3\.org[^"']*/g, "")), false, "no third-party origin");
   assert.match(code, /location\.assign\(url\)/, "every intercepted navigation keeps its fallback");
-  assert.match(code, /registerShortcut\("mod\+enter"/, "⌘/Ctrl+Enter is registered with the shell's key router");
-  assert.match(code, /PREVIEW_ENDPOINT = "\/admin\/auth\/access-policy\/preview"/, "the verdict comes from the server fragment endpoint");
-});
-
-test("the preview endpoint is additive: it reads, and the write endpoints keep their CSRF gate", async () => {
-  const fixture = suite.fixture;
-  const url = "/admin/auth/access-policy/preview?preview=1&label=%E9%A2%84%E8%A7%88&mode=suspend&timezone=Asia%2FShanghai&new=1";
-  const preview = await get(fixture, url);
-  assert.equal(preview.status, 200, "the read-only preview fragment is served to the session");
-  assert.match(preview.body, /<aside class="ped-side">/, "it returns the preview pane's SSR markup");
-  assert.match(preview.body, /class="verdict/, "the pane carries the server's 现在判定");
-  assert.match(preview.body, /name="csrf"/, "the editor form it embeds still carries the CSRF field");
-  assert.equal(/<script/i.test(preview.body), false, "the fragment loads no script of its own");
-  const replay = await get(fixture, url);
-  assert.equal(replay.body, preview.body, "the same draft always renders the same fragment");
-  const unauthenticated = await fetch(`${fixture.origin}${url}`, { redirect: "manual" });
-  assert.equal(unauthenticated.status, 303, "without a session the endpoint redirects to login like every other Admin page");
-  for (const endpoint of ["preview", "create", "update", "toggle", "delete", "repair"]) {
-    const response = await fetch(`${fixture.origin}/admin/auth/access-policy/${endpoint}`, {
-      method: "POST", redirect: "manual",
-      headers: { "content-type": "application/x-www-form-urlencoded", cookie: fixture.cookie },
-      body: new URLSearchParams({ label: "x" }).toString(),
-    });
-    assert.equal(response.status, 403, `POST ${endpoint} must still require the CSRF token`);
-  }
-  const writes = fixture.requests.filter((entry) => /^POST .*access-policy/.test(entry));
-  assert.equal(writes.length, 6, `the CSRF probe posted to six existing endpoints: ${writes.join(", ")}`);
-  const list = await get(fixture, "/admin/auth/access-policy");
-  assert.equal(list.status, 200, "the list page is unaffected by the new endpoint");
-  assert.match(list.body, /定时授权/, "…and still renders its own page");
+  // The frozen editor's two behaviours are gone (see the header): no key shortcut and no fetch of a
+  // verdict fragment is left in this module, so the module cannot grow one back unnoticed.
+  assert.doesNotMatch(code, /registerShortcut\("mod\+enter"|access-policy\/preview|#authz-form|data-preview-form/, "nothing here saves the frozen editor or fetches its preview");
 });
 
 // ------------------------------------------------------------------ browser checks
@@ -659,25 +441,7 @@ test("status segments and sort controls switch in place (URL + content only)", a
   assertSegments(await withPage(observeSegments));
 });
 
-test("the editor preview derives the summary locally and takes the verdict from the server", async (t) => {
-  if (!needsBrowser(t)) return;
-  assertPreview(await withPage(observePreview));
-});
-
-test("⌘/Ctrl+Enter submits the editor through the real form", async (t) => {
-  if (!needsBrowser(t)) return;
-  await withPage(async (page) => {
-    await page.goto("/admin/auth/access-policy?new=1&day=mon");
-    await fillPolicyDraft(page, "键盘保存的策略");
-    const loaded = page.cdp.waitFor("Page.loadEventFired", page.sessionId);
-    await page.ctrlEnter();
-    await loaded;
-    const created = await get(suite.fixture, "/admin/auth/access-policy");
-    assert.match(created.body, /键盘保存的策略/, `the shortcut submitted the real form and the policy was stored (page said: ${await page.evaluate(outcomeText())})`);
-  });
-});
-
-test("without script the same actions work: GET filter, full-page segment, editor save", async (t) => {
+test("without script the same actions work: GET filter, full-page segment", async (t) => {
   if (!needsBrowser(t)) return;
   const fixture = suite.fixture;
   await withPage(async (page) => {
@@ -707,16 +471,6 @@ test("without script the same actions work: GET filter, full-page segment, edito
       await page.setScriptExecutionDisabled(false);
       assert.match(await page.evaluate(js(() => location.search)), /status=active/, "the segment link navigated on its own");
       assert.equal(await page.evaluate(countAll(".tbl tbody tr")), 1, "the server-rendered page shows only the active grant");
-
-      // (3) the editor saves through the real POST with no script at all.
-      await page.setScriptExecutionDisabled(true);
-      await page.goto("/admin/auth/access-policy?new=1&day=mon");
-      await fillPolicyDraft(page, "无脚本保存的策略");
-      const postedLoad = page.cdp.waitFor("Page.loadEventFired", page.sessionId);
-      await page.click('button[type="submit"][form="authz-form"]');
-      await postedLoad;
-      await page.setScriptExecutionDisabled(false);
-      assert.match((await get(fixture, "/admin/auth/access-policy")).body, /无脚本保存的策略/, `the editor's save button works without any script (page said: ${await page.evaluate(outcomeText())})`);
     } finally {
       await page.setScriptExecutionDisabled(false);
     }
@@ -724,14 +478,6 @@ test("without script the same actions work: GET filter, full-page segment, edito
 });
 
 // ------------------------------------------------------------------ negative controls
-
-test("negative control: a verdict computed in the browser makes the checker go red", async (t) => {
-  if (!needsBrowser(t)) return;
-  await withMutatedFeature({
-    find: "    target.replaceWith(next);",
-    replace: "    target.querySelector(\".verdict span\").textContent = \"现在（本地）允许访问\";",
-  }, observePreview, assertPreview, /cannot allow now|must not read as 允许访问|verdict is the server's answer/);
-});
 
 test("negative control: a filter that writes form values makes the checker go red", async (t) => {
   if (!needsBrowser(t)) return;

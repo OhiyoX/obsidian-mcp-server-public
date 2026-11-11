@@ -36,8 +36,8 @@ export const WEB_PUBLISH_FILES = Object.freeze({
 // Vault path, a backup tarball, two 64-char SHA-256 digests and a query-string URL — plus one
 // fenced line long enough to overflow the code block itself, so a check can measure the
 // inline-code and the block-level `pre` contracts on the same served page.
-export const WEB_PUBLISH_LONG_PATH = "/srv/obsidian-mcp-server";
-export const WEB_PUBLISH_LONG_TAR = "/srv/backups/obsidian-mcp-server-2026-10-07T03-14-22Z.tar.gz";
+export const WEB_PUBLISH_LONG_PATH = "/srv/projects/dockers/obsidian_mcp_server";
+export const WEB_PUBLISH_LONG_TAR = "/srv/backups/obsidian_mcp_server-2026-10-07T03-14-22Z.tar.gz";
 export const WEB_PUBLISH_SHA_APP = "9f2c1f0a7d3e4b5c6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f";
 export const WEB_PUBLISH_SHA_EDITOR = "b7f1c2d3e4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1";
 export const WEB_PUBLISH_LONG_URL = "https://obsidian.example.com/app/assets/reader.js?v=2026.10.07.2&source=publish";

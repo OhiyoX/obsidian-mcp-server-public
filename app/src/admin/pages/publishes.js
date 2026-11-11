@@ -16,6 +16,10 @@ import { pageBar, emptyState, table, mcards, moreMenu, confirmPage, esc, fut, ic
 import { fmtFull, rel } from "../presentation/format.js";
 import { t } from "../../i18n/context.js";
 import { readSort, sortRows } from "../table-sort.js";
+import { PUBLISH_RECORD_KINDS } from "../../publish/lifecycle.js";
+import { publicPathOf } from "../../publish/service.js";
+
+const PUBLISH_KIND = PUBLISH_RECORD_KINDS.FOLDER;
 
 const TAB = "publishes";
 const BASE = "/admin/auth?tab=publishes";
@@ -113,7 +117,16 @@ function actorView(model, createdBy) {
 function publicHref(ctx, record) {
   const base = String(ctx.publicBaseUrl || "").replace(/\/+$/, "");
   if (!base || record?.lifecycle !== ACTIVE || !record?.id) return "";
-  return `${base}/publish/${encodeURIComponent(String(record.id))}`;
+  // The address shape belongs to the record kind (`/publish/d/<id>` is a folder), so this
+  // page asks the one builder instead of spelling a shape that answers 404.
+  return `${base}${publicPathOf(record)}`;
+}
+
+/** `document` / `folder` — the record kind, which also decides the public address shape. */
+function kindLabel(record) {
+  return record?.kind === PUBLISH_KIND
+    ? t("adm.publishes.kind.folder")
+    : t("adm.publishes.kind.document");
 }
 
 function row(ctx, record, { index = 0, rows = 1 } = {}) {
@@ -122,6 +135,9 @@ function row(ctx, record, { index = 0, rows = 1 } = {}) {
   const actor = actorView(ctx.model, record?.createdBy);
   const id = String(record?.id || "");
   const url = publicHref(ctx, record);
+  // The cell shows the address prefix of the record's own kind, never a document-shaped guess.
+  const address = publicPathOf(record ?? { id: "" });
+  const shortAddress = `${address.slice(0, address.length - id.length)}${id.slice(0, 6)}…`;
   const link = url
     ? `<a class="ibtn" style="display:inline-grid;vertical-align:middle" href="${esc(url)}" target="_blank" rel="noopener noreferrer" title="${esc(t("adm.publishes.menu.open"))}">${ic("link")}</a>`
     : "";
@@ -129,9 +145,9 @@ function row(ctx, record, { index = 0, rows = 1 } = {}) {
     ? `<span title="${esc(`${t("adm.publishes.stampPublished", { time: fmtFull(record.createdAt) })}${record.updatedAt ? t("adm.publishes.stampUpdated", { time: fmtFull(record.updatedAt) }) : ""}`)}">${esc(rel(record.createdAt))}</span>`
     : "—";
   return `<tr class="${record?.lifecycle === ACTIVE ? "" : "dim"}">
-<td><div class="nm"><b>${esc(docTitle(path))}</b><span class="sub2"><span class="tag acc" title="Vault id: ${esc(record?.vaultId || "")}">${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")}</span><span class="mono ell" title="${esc(path)}">${esc(path || "—")}</span></span></div></td>
+<td><div class="nm"><b>${esc(docTitle(path))}</b><span class="sub2"><span class="tag" title="${esc(t("adm.publishes.kind.label"))}">${esc(kindLabel(record))}</span><span class="tag acc" title="Vault id: ${esc(record?.vaultId || "")}">${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")}</span><span class="mono ell" title="${esc(path)}">${esc(path || "—")}</span></span></div></td>
 <td><span class="st ${esc(state.cls)}" title="${esc(state.title)}"><span class="dot"></span>${esc(state.label)}</span></td>
-<td class="cellt"><span class="mono">/publish/${esc(id.slice(0, 6))}…</span> ${link}</td>
+<td class="cellt"><span class="mono">${esc(shortAddress)}</span> ${link}</td>
 <td class="cellt">${esc(actor.name)}<div class="muted">${esc(actor.kind || "—")}</div></td>
 <td class="cellt">${stamp}<div class="muted futonly">${fut(t("adm.publishes.plannedViews"))}</div></td>
 ${ACT_CELL}${rowMenu(recordMenuItems(ctx, record, url), { up: openUpwards(index, rows, 2) })}</td></tr>`;
@@ -140,7 +156,7 @@ ${ACT_CELL}${rowMenu(recordMenuItems(ctx, record, url), { up: openUpwards(index,
 function card(ctx, record) {
   const state = stateOf(record);
   const actor = actorView(ctx.model, record?.createdBy);
-  return `<div class="mc"><div class="b"><div class="nm"><b>${esc(docTitle(record?.path))}</b><span class="sub2">${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")} · ${esc(record?.path || "—")}</span></div><div class="meta"><span class="st ${esc(state.cls)}"><span class="dot"></span>${esc(state.label)}</span><span>${esc(actor.name)}</span><span>${esc(rel(record?.createdAt))}</span></div></div>${rowMenu(recordMenuItems(ctx, record, publicHref(ctx, record)), { up: false })}</div>`;
+  return `<div class="mc"><div class="b"><div class="nm"><b>${esc(docTitle(record?.path))}</b><span class="sub2">${esc(kindLabel(record))} · ${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")} · ${esc(record?.path || "—")}</span></div><div class="meta"><span class="st ${esc(state.cls)}"><span class="dot"></span>${esc(state.label)}</span><span>${esc(actor.name)}</span><span>${esc(rel(record?.createdAt))}</span></div></div>${rowMenu(recordMenuItems(ctx, record, publicHref(ctx, record)), { up: false })}</div>`;
 }
 
 function confirmRevoke(ctx) {

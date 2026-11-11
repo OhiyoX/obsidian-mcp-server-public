@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
 import { PUBLIC_BASE_URL } from "../server-config.js";
 import { defaultWebVaultId } from "../app/vault-registry.js";
-import { encodeDocumentRoute, publishService } from "../publish/service.js";
+import { encodeDocumentRoute, publicPathOf, publishService } from "../publish/service.js";
 import {
   INVALID_PUBLISH_TARGET_PATH,
+  PUBLISH_FOLDER_TOO_DEEP,
+  PUBLISH_FOLDER_TOO_LARGE,
   PUBLISH_TARGET_ERROR_CODES,
   PUBLISH_TARGET_MISSING,
   PUBLISH_TARGET_NOT_A_FILE,
@@ -25,6 +27,8 @@ const TARGET_MESSAGES = Object.freeze({
   [PUBLISH_TARGET_MISSING]: "Publish target not found",
   [PUBLISH_TARGET_NOT_A_FILE]: "Publish target is not a regular file",
   [PUBLISH_TARGET_TOO_LARGE]: "Publish target exceeds the Publish size limit",
+  [PUBLISH_FOLDER_TOO_LARGE]: "Publish folder exceeds the note limit",
+  [PUBLISH_FOLDER_TOO_DEEP]: "Publish folder is deeper than the level limit",
 });
 
 // Absolute / UNC / drive-qualified / backslash spellings are dropped instead of echoed,
@@ -74,10 +78,12 @@ function targetVault() {
 function payload(vaultId, notePath, record) {
   const origin = String(PUBLIC_BASE_URL || "").replace(/\/+$/, "");
   const privatePath = `/app/note/${encodeDocumentRoute(vaultId, notePath)}`;
-  const publicPath = record ? `/publish/${record.id}` : null;
+  // One builder for both kinds, so a folder never advertises a document address (Task 8).
+  const publicPath = record ? publicPathOf(record) : null;
   return {
     vaultId,
     path: notePath,
+    kind: record?.kind ?? null,
     privatePath,
     privateUrl: origin ? `${origin}${privatePath}` : privatePath,
     published: Boolean(record),
@@ -90,7 +96,7 @@ function payload(vaultId, notePath, record) {
 export function registerPublishTools(server) {
   server.registerTool("get_publish_status", {
     title: "Get note publish status",
-    description: "Return the authenticated document route and current anonymous Publish status for one Markdown note. Vault access is limited by the credential allowlist.",
+    description: "Return the authenticated document route and current anonymous Publish status for one Markdown note or folder. Vault access is limited by the credential allowlist.",
     inputSchema: {
       path: z.string().min(1),
     },
@@ -106,13 +112,14 @@ export function registerPublishTools(server) {
 
   server.registerTool("manage_publish", {
     title: "Manage note Publish",
-    description: "Publish or revoke the anonymous read-only link for one Markdown note. Publishing never exposes Vault browsing, search, backlinks, or attachments.",
+    description: "Publish or revoke the anonymous read-only link for one Markdown note, or for one folder when kind is \"folder\" (a folder publishes the notes its index lists). Publishing never exposes Vault browsing, search, backlinks, or attachments.",
     inputSchema: {
       action: z.enum(["publish", "revoke"]),
       path: z.string().min(1),
+      kind: z.enum(["document", "folder"]).optional(),
     },
     annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: false },
-  }, async ({ action, path }, extra) => {
+  }, async ({ action, path, kind }, extra) => {
     try {
       const id = targetVault();
       if (action === "revoke") {
@@ -127,7 +134,7 @@ export function registerPublishTools(server) {
         // declaring the field would break the root-tool-inventory and
         // capability-catalog drift gates. `outputSchemaForTool()` emits a passthrough
         // object, so the field is still wire-valid (asserted by the MCP tests).
-        const revoked = await publishService.revoke(id, path);
+        const revoked = await publishService.revoke(id, path, { kind });
         return ok({
           ...payload(revoked.vaultId, revoked.path, null),
           changed: revoked.revoked === true,
@@ -136,7 +143,7 @@ export function registerPublishTools(server) {
       }
       const author = requestContext()?.author;
       const actor = author ? `mcp:${author.agent}/${author.model}` : `mcp:${extra?.authInfo?.clientId || "client"}`;
-      const published = await publishService.publish(id, path, { actor });
+      const published = await publishService.publish(id, path, { actor, kind });
       return ok({ ...payload(published.vaultId, published.path, published), changed: published.created === true });
     } catch (error) {
       return publishFailure(error, path);

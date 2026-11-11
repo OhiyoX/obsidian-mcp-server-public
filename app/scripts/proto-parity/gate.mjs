@@ -153,11 +153,17 @@ export function compareAll(trace) {
       continue;
     }
     if (live.status !== null && live.status >= 400) failures.push(`[${page.id}] ${page.live} 返回 ${live.status}`);
+    // `page.omitted` (see `spec.mjs`): prototype elements this page deliberately does not render, each
+    // with the reason. Every entry is reported as a NOTE, never silently dropped, and it is only ever
+    // subtracted from the required set — the shape gate still compares both directions, so an element
+    // that comes back is still seen.
+    const omitted = new Set((page.omitted ?? []).map((entry) => entry.selector));
     const parts = [
       page.table ? compareColumns(page, proto.probe, live.probe) : { failures: [], notes: [] },
-      compareElements(ELEMENT_CANDIDATES, proto.probe, live.probe, ELEMENT_EQUIVALENTS),
+      compareElements(ELEMENT_CANDIDATES.filter((selector) => !omitted.has(selector)), proto.probe, live.probe, ELEMENT_EQUIVALENTS),
+      { failures: [], notes: (page.omitted ?? []).map((entry) => `按声明不渲染 ${entry.selector}：${entry.reason}`) },
     ];
-    if (page.table) {
+    if (page.table && !omitted.has('.main .btn.primary')) {
       const protoPrimary = (proto.probe.buttons || []).filter((button) => button.classes.split(' ').includes('primary')).length;
       parts.push({ failures: comparePrimaryButtons(live.probe, protoPrimary), notes: [] });
     }

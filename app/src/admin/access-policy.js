@@ -12,8 +12,9 @@
 //  - a rejected draft must leave the store untouched (we validate before the
 //    store call, and the store validates again);
 //  - the Admin plane has *no* policy gate: nothing here calls
-//    `runtime.evaluate` to allow/deny an Admin action. Only the read-only
-//    `previewForSubject` calls `runtime.explain`;
+//    `runtime.evaluate` to allow/deny an Admin action, and this module holds no preview either —
+//    the frozen runtime is not a source of truth any more, so the one preview left is the constraint
+//    page's read-only card (`adm.authz2.preview.readonly`);
 //  - no Vault content, no credential secret and no full policy JSON is read or
 //    returned. Subjects are opaque identity labels, not secrets.
 //
@@ -321,43 +322,6 @@ export function createAccessPolicyAdmin({ store, runtime, now = Date.now } = {})
     return store.replace(revision, current.policies.filter((policy) => policy.id !== id));
   }
 
-  async function previewForSubject(subject, capabilities) {
-    if (!runtime || typeof runtime.explain !== "function") {
-      return {
-        subject,
-        decision: { allowed: true, mode: null, reason: "no_matching_policy", denyPolicyId: null, matchedPolicyIds: [] },
-        now: clockIso(),
-        timezone: null,
-        nextChangeAt: null,
-        nextAllowedAt: null,
-      };
-    }
-    // Preview the *whole* subject: union the capabilities of every policy that
-    // names it, so a scoped suspend policy is not silently skipped when the
-    // caller did not supply an explicit capability list.
-    const policyCapabilities = [
-      ...new Set((runtime.snapshot?.().policies ?? [])
-        .filter((policy) => Array.isArray(policy.subjects) && policy.subjects.includes(subject))
-        .flatMap((policy) => policy.capabilities ?? [])),
-    ];
-    const wanted = Array.isArray(capabilities) ? capabilities : policyCapabilities;
-    const explain = runtime.explain({ subjects: [subject], capabilities: wanted });
-    return {
-      subject,
-      decision: {
-        allowed: explain.allowed,
-        mode: explain.mode,
-        reason: explain.reason,
-        denyPolicyId: explain.denyPolicyId,
-        matchedPolicyIds: explain.matchedPolicyIds,
-      },
-      now: explain.now,
-      timezone: explain.timezone,
-      nextChangeAt: explain.nextChangeAt,
-      nextAllowedAt: explain.nextAllowedAt,
-    };
-  }
-
   async function repairFromCandidate(document) {
     if (!store || typeof store.repairBroken !== "function") return unavailable();
     const parsed = parseAccessPolicyDocument(document);
@@ -372,7 +336,6 @@ export function createAccessPolicyAdmin({ store, runtime, now = Date.now } = {})
     attachSubject,
     setEnabled,
     deletePolicy,
-    previewForSubject,
     repairFromCandidate,
   };
 }

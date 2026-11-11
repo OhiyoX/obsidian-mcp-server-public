@@ -13,9 +13,11 @@
 // so the filter can never read a different source of truth than the UI toolbar.
 import { getWebCatalogRuntime } from "./runtime.js";
 import { resolveSearchPage } from "./search-api.js";
+import { chainWith, webReadRouteGate } from "../access-policy.js";
 
-export function registerSearchRoute(router, { requireApi, currentVault, metrics = null, publishService = null }) {
-  router.get("/api/web/v2/search", requireApi, async (req, res, next) => {
+export function registerSearchRoute(router, { requireApi, currentVault, metrics = null, publishService = null, policy = null, authorizationShadow = null }) {
+  const readGate = webReadRouteGate(policy, "GET /api/web/v2/search", { shadow: authorizationShadow });
+  router.get("/api/web/v2/search", chainWith(requireApi, readGate), async (req, res, next) => {
     try {
       const vault = await currentVault(req);
       metrics?.count("web.v2.search.requests");

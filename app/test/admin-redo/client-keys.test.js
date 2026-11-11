@@ -13,7 +13,7 @@
 // instead of silently passing.
 //
 // Run it (the shared Playwright runtime lives outside the worktrees):
-//   PLAYWRIGHT_MODULE="/opt/playwright/index.mjs" \
+//   PLAYWRIGHT_MODULE="/opt/shared/playwright-runtime/node_modules/playwright/index.mjs" \
 //     node --test test/admin-redo/client-keys.test.js
 // Without a resolvable Playwright runtime/Chromium the browser part skips with the reason, so
 // `npm test` stays honest on a machine that has no browser (see CHECKPOINT.md for the recorded run).
@@ -81,7 +81,7 @@ test("client-keys: the SSR markup keeps every no-JS fallback this module interce
     activeTab: "accounts",
     theme: "dark",
     csrf: "csrf-under-test",
-    accessPolicyBase: "/admin/auth/access-policy",
+    constraintsBase: "/admin/auth/authz",
     vaultGitBase: "/admin/auth/vault-git",
   });
   // 1. the theme control is a real POST form carrying the CSRF token and the *next* theme

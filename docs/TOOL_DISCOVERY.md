@@ -106,9 +106,10 @@ the container environment when the process starts:
   never reaches the container.
 - Changing `.env` requires recreating the container, not just restarting it:
   `docker compose up -d --no-build --force-recreate obsidian-server`. A plain
-  `docker compose restart` keeps the existing container environment. Source-only
-  edits (`app/server.js`, `app/src`) still load on a restart because Compose
-  bind-mounts them.
+  `docker compose restart` keeps the existing container environment. Compose
+  mounts no source over `/app`, so a code edit needs a new image: an `app/`
+  change reports `rebuild` and a restart alone serves the previous code
+  (`docs/RELEASE_AND_DEPLOY.md`).
 - The variables are validated at startup; an invalid value falls back to `full`
   with the bounded warning in the container logs. It never partially applies.
 

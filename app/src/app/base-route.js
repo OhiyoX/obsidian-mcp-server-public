@@ -47,6 +47,7 @@ import {
   encodeBaseCursor,
 } from "./base-cursor.js";
 import { BaseReaderError, readBaseInRoot } from "./base-reader.js";
+import { chainWith, webReadRouteGate } from "./access-policy.js";
 import { buildPropertyCatalog } from "../base-property-catalog.js";
 import { BASE_FILTER_CONJUNCTIONS, BASE_FILTER_OPERATORS } from "../base-query.js";
 // Re-exported for existing importers/tests; the implementation now lives in
@@ -353,7 +354,8 @@ function sendBaseError(res, error, deps) {
 }
 
 export function registerBaseRoute(router, deps) {
-  router.get("/api/web/v1/base", deps.requireApi, async (req, res) => {
+  const readGate = webReadRouteGate(deps.policy ?? null, "GET /api/web/v1/base", { shadow: deps.authorizationShadow ?? null });
+  router.get("/api/web/v1/base", chainWith(deps.requireApi, readGate), async (req, res) => {
     res.setHeader("Cache-Control", "no-store");
     try {
       // Validate query parameters before any Vault/catalog access so an invalid

@@ -79,13 +79,13 @@ test("the default Admin render keeps the historic Chinese face", () => {
   assert.match(page, /<label for="pw">管理密码<\/label>/);
   assert.match(page, /<button class="btn primary" type="submit">登录<\/button>/);
   assert.match(page, /<b class="tx2" style="font-weight:600">不接受<\/b>/);
-  const { side, foot } = renderSidebar({ activeTab: "overview", csrf: "c", accessPolicyBase: "/admin/auth/access-policy", vaultGitBase: "/admin/auth/vaults" });
+  const { side, foot } = renderSidebar({ activeTab: "overview", csrf: "c", constraintsBase: "/admin/auth/authz", vaultGitBase: "/admin/auth/vaults" });
   for (const label of ["概览", "身份与凭据", "OAuth 账户", "API Key", "内容与安全", "定时授权", "系统", "Vault 与 Git"]) {
     assert.ok(side.includes(label), `sidebar keeps ${label}`);
   }
   assert.match(side, /aria-label="授权管理"/);
   assert.match(foot, /退出登录/);
-  assert.match(renderMnav({ activeTab: "overview", accessPolicyBase: "/a", vaultGitBase: "/v" }), /移动导航[\s\S]*更多/);
+  assert.match(renderMnav({ activeTab: "overview", constraintsBase: "/admin/auth/authz", vaultGitBase: "/v" }), /移动导航[\s\S]*更多/);
   assert.equal(actionLabel("admin.login").label, "管理员登录");
   assert.equal(credentialKindLabel("api-key").label, "API Key");
   assert.equal(auditResultLabel("nope").label, "未知结果（nope）");
@@ -106,12 +106,12 @@ test("inside an English request scope the Admin surface is English", () => {
     assert.match(page, /Obsidian MCP Authorization/);
     assert.match(page, /<label for="pw">Admin password<\/label>/);
     assert.match(page, /It does not accept/);
-    const { side, foot } = renderSidebar({ activeTab: "overview", csrf: "c", accessPolicyBase: "/admin/auth/access-policy", vaultGitBase: "/admin/auth/vaults" });
+    const { side, foot } = renderSidebar({ activeTab: "overview", csrf: "c", constraintsBase: "/admin/auth/authz", vaultGitBase: "/admin/auth/vaults" });
     for (const label of ["Overview", "Identity &amp; credentials", "OAuth accounts", "API keys", "Scheduled access", "Vaults &amp; Git"]) {
       assert.ok(side.includes(label), `sidebar shows ${label}`);
     }
     assert.match(foot, /Sign out/);
-    assert.match(renderMnav({ activeTab: "overview", accessPolicyBase: "/a", vaultGitBase: "/v" }), /Mobile navigation[\s\S]*More/);
+    assert.match(renderMnav({ activeTab: "overview", constraintsBase: "/admin/auth/authz", vaultGitBase: "/v" }), /Mobile navigation[\s\S]*More/);
     assert.equal(actionLabel("admin.login").label, "Admin sign-in");
     assert.equal(actionLabel("mcp.tool.search_notes").label, "MCP tool call · search_notes");
     assert.equal(credentialKindLabel("api-key").label, "API key");

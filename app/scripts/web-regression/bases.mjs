@@ -11,6 +11,7 @@ import { registerWebBasesChecks, registerWebBasesParityChecks } from '../web-bas
 // regressions, driven on this block's own fixture page.
 import { registerBaseSelectKeyboardChecks } from './bases-select-keyboard.mjs';
 import { createSortDriver } from '../web-bases-panels.mjs';
+import { waitForHealthz } from './readiness.mjs';
 
 export async function registerBasesChecks(ctx) {
   const { check, sleep, page, errors, dialogs, open, mode, value, vault, base, outputRoot, fixture, expectedHeadings, propertiesFixture, root, appRoot, browser, serverErrors } = ctx;
@@ -45,7 +46,7 @@ export async function registerBasesChecks(ctx) {
     webBasesChild.stdout.resume();
     let webBasesPage;
     try {
-      for(let n=0;n<150;n++){try{if((await fetch(`${webBasesBase}/healthz`)).ok)break;}catch{} if(webBasesChild.exitCode!==null)throw Error('Web Bases test server exited');await sleep(100);}
+      await waitForHealthz({ base: webBasesBase, child: webBasesChild, serverErrors, label: 'Web Bases test server' });
       webBasesPage=await browser.newPage({viewport:{width:1440,height:1000}});
       webBasesPage.setDefaultTimeout(10000);
       webBasesPage.on('pageerror',error=>errors.push(error.stack||error.message));

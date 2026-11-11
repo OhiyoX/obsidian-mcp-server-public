@@ -196,6 +196,11 @@ details.ua[open]>summary{color:var(--tx)}
 select.sel[data-select-native]{position:fixed!important;left:0!important;top:0!important;width:1px!important;height:1px!important;
   margin:-1px!important;padding:0!important;border:0!important;overflow:hidden;clip-path:inset(50%);
   white-space:nowrap;pointer-events:none!important}
+/* Accounts reset: an empty (or too short) new-password field disables its submit button with no
+   script. The required + minlength attributes make the input invalid, :has() then paints the button
+   and blocks the pointer, and the browser's own validation stops the submit. The server keeps its
+   12-256 check, so this is an affordance, never the guarantee. */
+form.dsec:has(input[name=password]:invalid) button[type=submit]{pointer-events:none;opacity:.5}
 /* A no-JS fallback control the enhancement replaced. The hidden attribute alone is not enough: the
    prototype's own .btn{display:inline-flex} is an author rule and beats the UA sheet's [hidden]. */
 [data-enhanced-hidden="1"]{display:none!important}button.sel.sel-proxy{text-align:left;display:inline-flex;align-items:center;overflow:hidden;white-space:nowrap;

@@ -246,17 +246,26 @@ test("web first-load budget (#414): asset cache policy, gzip negotiation and byt
   // to a 0x0 bbox). The reference and the publish point share one hash (pages.js
   // `assetUrl("icons.svg")`), so changing the file must change every reference.
   await t.test("every sprite reference in the served pages carries the published content hash (U38)", async () => {
-    const { appPage, publishPage } = await import("../src/app/pages.js");
+    const pagesModule = await import("../src/app/pages.js");
+    const { appPage, publishPage, loginPage } = pagesModule;
     const spriteHash = createHash("sha256").update(await fs.readFile(path.join(ASSETS_DIR, "icons.svg"))).digest("hex").slice(0, 16);
     const publishedSprite = `/app/assets/icons.svg?v=${spriteHash}`;
+    // Issue #579: the gate used to name appPage() and publishPage() by hand, so loginPage()
+    // published its sprite URL unguarded. The third field says whether the page draws glyphs.
     const pages = [
-      ["/app (served shell)", shell.text],
-      ["appPage()", appPage({ username: WEB_USERNAME, displayName: "Budget", csrf: "csrf-token" }, {})],
-      ["publishPage()", publishPage({ title: "budget", content: "", publishedAt: "" })],
+      ["/app (served shell)", shell.text, true],
+      ["loginPage()", loginPage("", {}, "/app/"), false],
+      ["appPage()", appPage({ username: WEB_USERNAME, displayName: "Budget", csrf: "csrf-token" }, {}), true],
+      ["publishPage()", publishPage({ title: "budget", content: "", publishedAt: "" }), true],
     ];
-    for (const [label, markup] of pages) {
+    const covered = new Set(["appPage", "publishPage", "loginPage"]);
+    const uncovered = Object.entries(pagesModule)
+      .filter(([name, value]) => typeof value === "function" && !covered.has(name))
+      .map(([name]) => name);
+    assert.deepEqual(uncovered, [], `pages.js exports missing from this sprite gate: ${uncovered.join(", ")}`);
+    for (const [label, markup, expectGlyphs] of pages) {
       const references = [...markup.matchAll(/\/app\/assets\/icons\.svg[^"']*?#[a-z0-9-]+/g)].map((match) => match[0]);
-      assert.ok(references.length > 0, `${label} must still use the icons.svg sprite`);
+      if (expectGlyphs) assert.ok(references.length > 0, `${label} must still use the icons.svg sprite`);
       for (const reference of references) {
         assert.ok(VERSIONED_SPRITE_RE.test(reference), `${label}: ${reference} must carry a 16-hex content hash`);
       }

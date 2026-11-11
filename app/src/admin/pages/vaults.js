@@ -456,7 +456,56 @@ function vaultAdmissionSection(vault, ctx) {
   return `<div class="dsec"><h3>${esc(t("adm.vaults.admission.title"))}</h3><div class="kv"><div class="k">${esc(t("adm.vaults.admission.decision"))}</div><div>${maybeText(admission.admission)}</div><div class="k">${esc(t("adm.vaults.admission.status"))}</div><div>${maybeText(admission.status)}</div><div class="k">${esc(t("adm.vaults.admission.reason"))}</div><div>${maybeText(admission.reason)}</div><div class="k">${esc(t("adm.vaults.admission.servable"))}</div><div>${admission.servable === true ? esc(t("adm.vaults.yes")) : admission.servable === false ? esc(t("adm.vaults.no")) : MISSING}</div></div><div style="margin-top:12px">${action}</div></div>`;
 }
 
-/** The `?id=` drawer: 状态 / Git 同步设置 / 能力 / 准入 / 规划中「运行时」. */
+/**
+ * The managed reconciliation service (#437) is live, so the drawer states its facts instead of a
+ * "planned" box: whether discovery runs, the last round and its outcome. Read-only by design — the
+ * page never starts a round; the refresh action does that.
+ */
+function runtimeSection(vault, ctx) {
+  const runtime = ctx.runtime;
+  const heading = `<b style="font-weight:600">${esc(t("adm.vaults.section.runtime"))}</b>`;
+  if (!runtime) {
+    // Honest empty state: no managed service is wired in this deployment (discovery off, or the
+    // legacy inventory path), so there is nothing to report and nothing to fake.
+    return `<div class="dsec">${heading}<div class="help" style="margin-top:6px">${esc(t("adm.vaults.runtime.unmanaged"))}</div></div>`;
+  }
+  // The service publishes epoch milliseconds (`Date.now()`), never ISO strings: accept both, and
+  // answer "never" only when there really is no timestamp.
+  const iso = (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString();
+    if (typeof value === "string" && value) {
+      const at = Date.parse(value);
+      return Number.isFinite(at) ? new Date(at).toISOString() : null;
+    }
+    return null;
+  };
+  // relTitle() is markup (relative time + absolute in `title`), so it is inserted as-is; every
+  // other value is escaped text.
+  const when = (value) => {
+    const at = iso(value);
+    return at ? relTitle(at) : esc(t("adm.vaults.runtime.never"));
+  };
+  const seconds = Number.isFinite(runtime.periodicMs) && runtime.periodicMs > 0 ? Math.round(runtime.periodicMs / 1000) : null;
+  const schedule = !runtime.periodic
+    ? esc(t("adm.vaults.runtime.off"))
+    : seconds === null ? esc(t("adm.vaults.runtime.on")) : esc(t("adm.vaults.runtime.scheduleOn", { seconds }));
+  // `lastError` is `{stage, code, message}` from the service; a string is tolerated for older shapes.
+  const errorText = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return esc(value);
+    const parts = [value.code, value.message].filter((part) => typeof part === "string" && part);
+    return esc(parts.length ? parts.join(" · ") : JSON.stringify(value));
+  };
+  const lines = [
+    `${esc(t("adm.vaults.runtime.discovery"))}：<b>${esc(runtime.enabled ? t("adm.vaults.runtime.on") : t("adm.vaults.runtime.off"))}</b> · ${esc(t("adm.vaults.runtime.scheduleLabel"))} ${schedule}`,
+    `${esc(t("adm.vaults.runtime.lastRound"))}：${esc(runtime.lastStatus || t("adm.vaults.runtime.none"))}${runtime.lastTrigger ? ` · ${esc(runtime.lastTrigger)}` : ""} · ${when(runtime.lastRunAt)} · ${esc(t("adm.vaults.runtime.lastRoundHelp", { runs: runtime.runs, failures: runtime.failures }))}`,
+    `${esc(t("adm.vaults.runtime.lastSuccess"))}：${when(runtime.lastSuccessAt)}`,
+  ];
+  if (runtime.lastError) lines.push(`${esc(t("adm.vaults.runtime.lastError"))}：${errorText(runtime.lastError)}`);
+  return `<div class="dsec">${heading}<div class="help" style="margin-top:6px">${lines.join("<br>")}</div></div>`;
+}
+
+/** The `?id=` drawer: 状态 / Git 同步设置 / 能力 / 准入 / 运行时. */
 function detailPanel(vault, ctx) {
   const id = String(vault?.id ?? "");
   const heading = shown(vault?.name) ? vault.name : id;
@@ -465,7 +514,7 @@ function detailPanel(vault, ctx) {
     settingsSection(vault, ctx),
     capabilitySection(vault),
     vaultAdmissionSection(vault, ctx),
-    `<div class="dsec futonly"><div class="futbox"><b style="font-weight:600">${esc(t("adm.vaults.section.runtime"))}</b> ${fut("#437")}<div class="help">${esc(t("adm.vaults.section.runtimeBody"))}</div></div></div>`,
+    runtimeSection(vault, ctx),
   ];
   // Identity badges stay in the header where the prototype keeps them (`6-app.js:265` dhead): the
   // primary marker, plus the exception marker a read-only descriptor needs. The redundant half of
@@ -494,6 +543,7 @@ function normalizeCtx(ctx = {}) {
     admission: ctx.actions?.admission || null,
     admissionInitialized: model?.admission?.initialized === true,
     revision: ctx.revision ?? model?.revision ?? null,
+    runtime: ctx.runtime ?? null,
     query: ctx.query || {},
     error: ctx.vaultGit?.error ?? null,
     notice: ctx.notice ?? model?.notice ?? null,
@@ -647,13 +697,12 @@ export function renderVaultsPage(ctx) {
     && String(view.query.confirm ?? "").trim() !== "admission"
     ? `<a class="btn" href="${esc(`${view.base}?confirm=admission`)}">${ic("shield")}<span class="hide-m">${esc(t("adm.vaults.admissionInit.ok"))}</span></a>`
     : "";
-  const scan = `<span class="btn futonly" aria-disabled="true">${ic("search")}<span class="hide-m">${esc(t("adm.vaults.action.scan"))}</span> ${fut("#437")}</span>`;
 
   const unavailable = !model
     ? result(false, `${esc(t("adm.vaults.unavailable"))}${view.error ? `：${tx(view.error)}` : `：${esc(t("adm.vaults.unavailable.noModel"))}`}`)
     : "";
 
-  const content = `${pageBar({ title: t("adm.nav.vaultGit"), count: model ? list.length : null, actions: `${refresh}${admissionEntry}${scan}` })}<div class="content scroll"><div class="page">
+  const content = `${pageBar({ title: t("adm.nav.vaultGit"), count: model ? list.length : null, actions: `${refresh}${admissionEntry}` })}<div class="content scroll"><div class="page">
 <p class="lede">${esc(t("adm.vaults.lede"))}</p>
 ${noticeLine(view.notice)}
 ${unavailable}

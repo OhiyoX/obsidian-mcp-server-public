@@ -136,8 +136,8 @@ function model(overrides = {}) {
   };
 }
 
-function ctx(input = model(), query = {}) {
-  return { vaultGit: { wired: true, model: input, error: null }, csrf: CSRF, actions: ACTIONS, query };
+function ctx(input = model(), query = {}, runtime = null) {
+  return { vaultGit: { wired: true, model: input, error: null }, runtime, csrf: CSRF, actions: ACTIONS, query };
 }
 
 function render(input = model(), query = {}) {
@@ -168,7 +168,9 @@ function checkList(html, input = model()) {
   assert.ok(html.includes('<span class="st amber" data-pending-count="2" title="作者 cursor / composer · 最早待提交 2026-10-17T09:00:00.000Z · 有未提交改动"><span class="dot"></span>2 个待提交</span>'), "the fixture's non-empty pending batch is the list status (prototype gitState, 5-render.js:169)");
   assert.ok(html.includes('<span class="st off"><span class="dot"></span>未初始化 Git 仓库</span>'), "missing repository state");
   assert.ok(html.includes(`<form class="inline-form" method="post" action="${ACTIONS.refresh}">`), "页头刷新 is a POST form");
-  assert.ok(html.includes('规划中 · #437'), "扫描新 Vault keeps the planned marker");
+  // #437 shipped: the scan placeholder is gone, because the page-header refresh runs the one
+  // manual reconciliation and nothing would differ between the two controls.
+  assert.equal(html.includes("扫描新 Vault"), false, "no planned scan placeholder is left");
   assert.ok(html.includes("从 GitHub 仓库添加 Vault") && html.includes("<button class=\"btn\" disabled>添加…</button>"), "GitHub-backed futbox keeps a disabled CTA");
   assert.ok(html.includes('class="sect futonly"'), "planned blocks stay behind .futonly");
   assert.ok(html.includes('<details class="mn">'), "row menu is a details element (no script)");
@@ -214,7 +216,12 @@ function checkDrawer(html) {
   assert.ok(html.includes("· 语义检索：本机未配置向量服务，检索仍按关键词工作"), "Chinese reason for an unwired capability");
   assert.ok(html.includes("embedding provider is not configured"), "raw reason stays in 技术细节");
   assert.ok(html.includes("技术细节"), "technical details are folded, not dropped");
-  assert.ok(html.includes("规划中 · #437"), "抽屉「运行时」keeps the planned marker");
+  // #437 shipped: the drawer now states the reconciliation service's own facts instead of a
+  // "planned" box (the body used to say the wiring did not exist).
+  assert.ok(html.includes("运行时"), "the runtime section stays");
+  assert.equal(html.includes('规划中 · #437'), false, "the runtime section carries no planned marker");
+  // The fixture injects no runtime descriptor, so the section states that honestly.
+  assert.ok(html.includes("本部署没有挂载统一对账服务"), "the runtime section states its own state");
 }
 
 /** No-JS + escaping checks. */
@@ -293,6 +300,48 @@ test("drawer: a read-only vault is marked in the header, and the kv inventory st
   assert.equal(readOnly.detailPanel.includes('<div class="k">角色</div>'), false, "no invented kv row");
   // The writable default is not badged (the prototype badges the marker, not the norm).
   assert.equal(render(model(), { id: "vault" }).detailPanel.includes('>只读<'), false, "a writable vault carries no 只读 badge");
+});
+
+test("drawer: the runtime section states the reconciliation service's facts, not a planned box", async () => {
+  // #437 shipped. The descriptor uses the SERVICE's real shapes: epoch milliseconds
+  // (`reconciliation-status.js` stores `Date.now()`), and `lastError` as `{stage, code, message}`.
+  const runtime = {
+    enabled: true, initialized: true, inFlight: false, runs: 7, failures: 1,
+    lastRunAt: Date.parse("2026-11-06T11:00:00.000Z"), lastSuccessAt: Date.parse("2026-11-06T10:45:00.000Z"),
+    lastError: { stage: "commit", code: "vault_git_unavailable", message: "vault_b unavailable" },
+    lastTrigger: "periodic", lastStatus: "committed", periodic: true, periodicMs: 60000,
+  };
+  const page = renderVaultsPage({ ...ctx(model(), { id: "vault" }, runtime) });
+  const html = page.detailPanel;
+  assert.ok(html.includes("运行时"), "the runtime section renders");
+  assert.equal(html.includes("规划中"), false, "no planned marker survives a shipped feature");
+  assert.ok(html.includes("发现新 Vault"), "discovery switch is stated");
+  assert.ok(html.includes("开启 · 每 60 秒"), "the schedule is read, not the raw milliseconds");
+  assert.ok(html.includes("committed · periodic"), "the last round states its status and trigger");
+  assert.ok(html.includes("累计 7 轮 / 失败 1 次"), "the round counts are real numbers");
+  // Epoch milliseconds must reach the formatter: a bare `从未` next to 7 real rounds is the bug.
+  assert.equal(html.includes("最近一次对账：committed · periodic · 从未"), false, "the last round carries a time");
+  assert.equal(html.includes("最近成功：从未"), false, "the last success carries a time");
+  assert.ok(/最近成功：[^<]*<span title="2026-11-06 19:45/.test(html) || /最近成功：<span title="2026-11-06/.test(html), "the last success shows the absolute time in the tooltip");
+  // The error object must be rendered as its own fields, never as [object Object].
+  assert.equal(html.includes("[object Object]"), false, "the error object is expanded");
+  assert.ok(html.includes("vault_git_unavailable · vault_b unavailable"), "the error code and message are shown");
+});
+
+test("drawer: the runtime section says off when discovery is off, whatever the interval", async () => {
+  // The off branch must be proven: with the scheduler off the section may not claim a cadence,
+  // even when a stale periodicMs value is still in the descriptor.
+  const runtime = {
+    enabled: false, initialized: false, inFlight: false, runs: 0, failures: 0,
+    lastRunAt: null, lastSuccessAt: null, lastError: null,
+    lastTrigger: "", lastStatus: "", periodic: false, periodicMs: 60000,
+  };
+  const html = renderVaultsPage({ ...ctx(model(), { id: "vault" }, runtime) }).detailPanel;
+  assert.ok(html.includes("发现新 Vault"), "the switch line renders");
+  assert.ok(/发现新 Vault：<b>关闭/.test(html), "the switch reads off");
+  assert.equal(html.includes("每 60 秒"), false, "a stopped scheduler never advertises a cadence");
+  assert.ok(html.includes("最近一次对账"), "the round line renders without data");
+  assert.equal(html.includes("从未"), true, "an empty timestamp says never, not 1970");
 });
 
 test("drawer: an unknown ?id= renders the honest 不存在 state instead of an empty drawer", () => {

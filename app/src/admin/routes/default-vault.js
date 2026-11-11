@@ -54,6 +54,27 @@ export function registerDefaultVaultRoutes(router, {
     }
   });
 
+  router.post("/oauth/user/default-vault", requireAdmin, requireCsrf, async (req, res) => {
+    try {
+      const userId = String(req.body?.id || "");
+      const snapshot = await provider.authorizationSnapshot();
+      const account = (snapshot.oauthUsers || []).find((item) => item.id === userId);
+      if (!account) throw new Error(t("adm.dv.userMissing"));
+      const selected = defaultChoice(req.body);
+      await validateChoice(selected, account.allowedVaults || []);
+      if (!await provider.updateOAuthUserDefaultVault(userId, selected)) throw new Error(t("adm.dv.userMissing"));
+      // A preference, not a grant: unlike an authorization change, it revokes nothing. But a token
+      // minted before the default's Vault was granted cannot reach it, so the flash counts those
+      // instead of promising that every token keeps working.
+      const stale = selected === null ? 0 : (snapshot.tokens || []).filter((token) =>
+        token.userId === userId && token.status === "active" && !(token.allowedVaults || []).includes(selected)).length;
+      setFlash(req, stale ? t("adm.dv.userUpdatedStale", { count: stale }) : t("adm.dv.userUpdated"));
+      redirectTab(res, "accounts");
+    } catch (error) {
+      res.status(400).send(renderError({ title: t("adm.dv.updateFailed"), heading: t("adm.dv.updateFailedHeading"), message: String(error?.message || error) }));
+    }
+  });
+
   router.post("/oauth/client/default-vault", requireAdmin, requireCsrf, async (req, res) => {
     try {
       const clientId = String(req.body?.clientId || "");

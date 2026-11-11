@@ -55,6 +55,7 @@ import { createGitConfigStore } from "./git-config/store.js";
 import { resolveEffectiveGitConfig } from "./git-config/schema.js";
 import { createGitConfigProvider } from "./git-runtime/config-source.js";
 import { createGitRuntime } from "./git-runtime/runtime.js";
+import { observeGitTask } from "./authorization/adapters/git.js";
 import { bindPushHistory } from "./git-push-observability.js";
 import {
   GIT_RUNTIME_INVALID,
@@ -117,11 +118,24 @@ function secondaryGitConfigProvider(vaultId) {
  * instance is built on demand through `createSecondaryRuntime` (same store, `primary:false`, its own
  * root) and handed to `src/git-runtimes.js`, which caches it per B1 VaultRuntime instance.
  */
+// P2: the injected observation seam for background Git tasks. It is ONE module-global slot,
+// read at call time, and the last `installGitShadow` wins for every runtime: two different
+// shadows in one process are not supported (they could not both be recorded consistently).
+let gitShadowSeam = () => null;
+/** Install the shadow seam for background Git tasks (P2). Never used for a decision. */
+export function installGitShadow(seam) {
+  gitShadowSeam = typeof seam === "function" ? seam : () => null;
+}
+
 function buildGitRuntime({ vaultId, root, primary, guard }) {
   return createGitRuntime({
     vaultId,
     root,
     guard,
+    // P2 / Task 17: a background task is observed with a `system` actor (no subject), in
+    // its own unit, when it really starts. The injected seam is set once the server has
+    // built the authorization runtime; without it the worker records nothing.
+    onAuthorizeTask: ({ task, vaultId: taskVaultId }) => observeGitTask({ shadow: gitShadowSeam(), vaultId: taskVaultId, task }),
     // F3: primary runtime must check process-shared primary authorization
     authorization: primary ? { allowed: primaryAuthorized, token: primaryAuthorizationToken } : undefined,
     configProvider: primary
@@ -259,8 +273,11 @@ function currentGitRuntimeOrNull() {
  *
  * W0-D §1: the `GIT_ENABLED`/`GIT_AUTO_COMMIT` gate returns before `requireRequestAuthor()`, so a
  * disabled (or config-invalid) vault is a silent no-op even outside a request context.
+ *
+ * #736: recovery passes the author it read from the journal manifest. Without that argument the
+ * author still comes from the request context, which every write path has.
  */
-export function trackGitMutation(paths) {
+export function trackGitMutation(paths, author = null) {
   const runtime = currentGitRuntimeOrNull();
   // A write must never fail because *reporting* it to Git was impossible: a selection without a
   // materialized runtime is refused on the Git tool surface (§47), where the caller asked for Git,
@@ -268,7 +285,7 @@ export function trackGitMutation(paths) {
   if (runtime === null) return;
   const config = runtime.config();
   if (!config?.enabled || !config.autoCommit) return;
-  runtime.trackMutation({ paths, author: requireRequestAuthor() });
+  runtime.trackMutation({ paths, author: author || requireRequestAuthor() });
 }
 
 /** Contract §16.3: re-read the store, reconcile timers, re-probe presence. */

@@ -27,9 +27,12 @@ export { TOOL_NAMES };
 // the guidance layer builds its own context (A4 patch semantics) and the handler
 // can read them. A disabled runtime still evaluates (allow-all), which is what
 // makes Stage 0 a structural zero difference instead of a short-circuit.
-export function registerObsidianCapabilities(server, { accessRuntime, vaultScope } = {}) {
-  if (accessRuntime) server = createAccessPolicyRegistrar(server, { runtime: accessRuntime });
-  server = createVaultScopeRegistrar(server, vaultScope);
+// P2: `authorizationShadow` is the observation-only seam. P3: `authorization` is the one
+// runtime every MCP boundary decides through. Both default to null, so the registration
+// graph is byte-for-byte the legacy one when nothing is injected.
+export function registerObsidianCapabilities(server, { accessRuntime, authorization = null, vaultScope, authorizationShadow = null } = {}) {
+  if (accessRuntime || authorization) server = createAccessPolicyRegistrar(server, { runtime: accessRuntime, authorization, authorizationShadow });
+  server = createVaultScopeRegistrar(server, { ...vaultScope, authorization, accessRuntime, authorizationShadow });
   server = createMemoryGuidanceRegistrar(server);
   registerInfoTools(server);
   registerNoteTools(server);

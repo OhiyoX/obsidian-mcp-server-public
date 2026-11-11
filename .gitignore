@@ -16,6 +16,8 @@ app/data/
 *.pem
 *.key
 *.p12
+# Deployment-local TLS material (docs/RELEASE_AND_DEPLOY.md -> Encrypted upstream hop).
+/certs/
 *.pfx
 id_rsa
 id_ed25519

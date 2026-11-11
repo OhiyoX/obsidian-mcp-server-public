@@ -2,6 +2,8 @@
 // The domain codes come from A1's authoritative gate so there is a single definition (§16).
 import {
   INVALID_PUBLISH_TARGET_PATH,
+  PUBLISH_FOLDER_TOO_DEEP,
+  PUBLISH_FOLDER_TOO_LARGE,
   PUBLISH_TARGET_MISSING,
   PUBLISH_TARGET_NOT_A_FILE,
   PUBLISH_TARGET_TOO_LARGE,
@@ -28,6 +30,9 @@ const PUBLISH_TARGET_RESPONSES = new Map([
   [PUBLISH_TARGET_TOO_LARGE, { status: 400, error: "Publish target exceeds the size limit" }],
   [PUBLISH_TARGET_MISSING, { status: 404, error: "Publish target not found" }],
   [INVALID_PUBLISH_TARGET_PATH, { status: 400, error: "Invalid path" }],
+  // A folder the caps refuse is too big to serve, so it is a 413 (§7 "too-large → 413").
+  [PUBLISH_FOLDER_TOO_LARGE, { status: 413, error: "Publish target exceeds the folder limit" }],
+  [PUBLISH_FOLDER_TOO_DEEP, { status: 413, error: "Publish target is deeper than the folder limit" }],
 ]);
 
 export function classifyWebApiError(error) {

@@ -86,24 +86,6 @@ export const SHAPE_WAIVERS = Object.freeze([
       + '把按钮隐掉就等于放弃一个无脚本可用的显式提交（见 docs/QUALITY_AUDIT.md 的 Wave R 同类排查）。',
   }),
   Object.freeze({
-    state: 'authz-editor', line: 'div.cap-g :: -', side: 'live-only', kind: 'catalog',
-    reason: '能力分组列表的长度属于**运行时目录**：plane 渲染的是真实能力目录（全部/访问面/权限范围/工具集/单个工具/资源六组），'
-      + '原型的 mock 只有五组，所以多出一个 `div.cap-g` 区域。分组区域的“多一组”不是布局回归，但也不能当“一个数据不同”豁免'
-      + '（`data` 已在判据里明确拒绝区域容器行）——它的数量来自目录。区域内部结构（cap-h 标题 + cap-b 复选行）仍逐项对照；'
-      + '选择与筛选行为由 admin-layout-capq 门禁对照（它证明的是“勾选集合 + 过滤不丢已选”，不比较分组名）。',
-  }),
-  Object.freeze({
-    state: 'authz-editor', line: 'cap-h :: T', side: 'live-only', kind: 'data',
-    reason: '同上：运行时真实目录比原型 mock 多一个分组标题（六组 vs 五组），标题文本与项数是目录数据。'
-      + '注意 capq 门禁**不**比较分组名（它只对照勾选集合、`?capq=` 过滤保留已选与未改动保存不丢选项），'
-      + '分组标题本身的“存在与数量”由这条豁免与本状态的分组区域豁免承当。',
-  }),
-  Object.freeze({
-    state: 'authz-editor', line: 'disclosure [open=no] :: -', side: 'live-only', kind: 'deliberate',
-    reason: 'plane 多一个「用其他主体试算（服务端判定）」折叠块：原型用脚本实时预览，plane 的判定只能来自服务端，'
-      + '无脚本时这是唯一能发起试算的入口。它是有意保留的额外控件（无 JS 契约），不是布局回归。',
-  }),
-  Object.freeze({
     state: 'vaults', line: 'btn.btn :: -', side: 'live-only', kind: 'deliberate',
     reason: '原型完全没有准入区（`grep 准入 docs/admin-ui-proto` → 0），但 Vault 准入是真实能力，而“全新部署'
       + '（无 vault-admissions.json + 发现关闭）”必须在 UI 上有办法把闸打开。这一条控件就是一个真实 GET 链接'
@@ -112,24 +94,110 @@ export const SHAPE_WAIVERS = Object.freeze([
       + '2026-10-22 前列表区被整块隐藏、抽屉只有一句「等待显式初始化」，文档里的启用路径实际无入口。',
   }),
   Object.freeze({
-    state: 'vaults', line: 'span.hide-m :: T', side: 'live-only', kind: 'deliberate',
-    reason: '上面那个准入入口链接的文案容器：它与页栏的「刷新 Vault 清单」用同一个约定（图标 + `span.hide-m` 文案），'
-      + '窄屏（320px）时只留图标，否则页栏会横向溢出 32px（实测过）。原型里只有一个 `hide-m` 文案，因此多出一个。',
+    state: 'audit', line: 'select.sel.sm :: -', side: 'live-only', kind: 'deliberate', count: 3,
+    reason: '审计身份筛选（#518）：工具栏多了客户端 `client`、API Key `apiKey`、Token `token` 三个下拉，按记录里的原始 id 精确匹配。'
+      + '原型只有结果/动作/凭据类型/域名/来源/关键字六项，没有按具体身份收窄的控件，所以这三个 `select.sel.sm` 是实现侧多出来的；'
+      + '它们的形态与既有两个下拉逐字相同（同一个 `.sel.sm`、同一个 GET 表单），值只放 id、可读名称只放文案，不回显任何密钥或 Token 明文。'
+      + '三个下拉的 canonical line 相同，所以写成一条 `count: 3`（两条同名条目会被拒绝：会互相遮蔽失效检测）。',
+  }),
+  Object.freeze({
+    state: 'audit', line: '↻ option :: T {  }', side: 'live-only', kind: 'state', count: 3,
+    reason: '同上三个下拉各自的选项组。这是一个重复组（`↻`），所以按判据只能声明为 `state`，但缘由不是数据状态差异，而是实现侧多了三组筛选控件：'
+      + '原型没有这三项筛选，也就没有对应的 `<option>` 组。第一个选项是「所有…」，其余每个是被审计记录真实出现过的 id（数量由数据决定，所以只算一个重复组）。',
+  }),
+  Object.freeze({
+    state: 'vaults', line: 'btn.btn.futonly :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '原型的「扫描新 Vault」是设想控件（`.futonly` + `fut("#437")`）。#437 已交付：统一对账服务按目录 watcher 与周期轮询运行，'
+      + '页栏的「刷新 Vault 清单」就是同一次手动对账（`POST /refresh` → `admission.reconcile("manual")`）。'
+      + '再造一个只做同一件事的按钮等于两个控件一份能力，所以实现侧把它删掉了。',
+  }),
+  Object.freeze({
+    state: 'vaults', line: 'span.fut :: T', side: 'proto-only', kind: 'deliberate',
+    reason: '同一条的另一半：实现侧不再渲染「规划中」标记。抽屉原来那句「扫描新 Vault / 热刷新尚未接线」已经不成立（生产 `VAULT_DISCOVERY_ENABLED=true`），'
+      + '继续标「规划中」会让已完成的功能看起来没做。抽屉现在直接写运行时事实（发现开关、定时、最近一次对账、最近成功、最近错误）；'
+      + '页栏那个设想按钮整个删除（见上一条）。',
+  }),
+  /* ---- 定时授权（冻结页）：Task 3 移除了「当前状态预览」卡片与「新建策略」入口，并加了冻结横幅 ---- */
+  Object.freeze({
+    state: 'authz', line: 'div.sect :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '「当前状态预览」区域的容器是一张 POST 到 /preview 的表单；Task 3 冻结了全部七个旧写入端点（409 access_policy_frozen），'
+      + '所以这个只读页面不能继续提供它。同一份现在判定与 7 天时间轴仍在只读视图（?edit=）的 .ped-side 里；'
+      + '按 Vault 的定时约束在新页面 /admin/auth/authz 配置。逐条豁免对应同一处移除的每一层骨架。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'div.sect-h :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '同一区域的分区标题（见 div.sect 一条）：标题行随那张已冻结的表单一起移除，单独留一个空标题只会是死版面。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'h2 :: T', side: 'proto-only', kind: 'deliberate',
+    reason: '「当前状态预览」的 h2（见 div.sect 一条）。文案面见同状态的 label 豁免。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'span.muted :: T', side: 'proto-only', kind: 'deliberate',
+    reason: '「查看某个主体此刻是否被策略限制」这一行副标题，它与卡片同属那张已冻结的 POST 表单（见 div.sect 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'div.card :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '同一区域的内容卡片：卡片里的主体 select 与「查看」提交按钮就是那张已冻结的 POST 表单（见 div.sect 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'div :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '卡片里包裹主体下拉与「查看」按钮的那一行 flex 容器，随那张已冻结的 POST 表单一起移除（见 div.sect 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'select.sel :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '试算用的主体下拉：它的值原先以 POST 提交到已冻结的 /preview（见 div.sect 一条）。'
+      + '同名的 .sel.sm 下拉在审计工具栏上仍逐项对照（形状与封闭态），自绘下拉的交互契约由 admin-design 的 Q12 对照。',
+  }),
+  Object.freeze({
+    state: 'authz', line: '↻ option :: T {  }', side: 'proto-only', kind: 'state',
+    reason: '被移除的主体下拉的选项组：这是一个重复组（↻），所以按判据只能声明为 state，但缘由不是数据状态差异，'
+      + '而是整张试算卡片（POST 到已冻结 /preview）随 Task 3 一起移除——见同状态的 div.sect 一条。选项来自运行时主体清单，数量本身就是数据。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'p.help :: T', side: 'proto-only', kind: 'deliberate',
+    reason: '「选择主体后显示命中的策略及此刻的判定」这句提示随卡片移除（见 div.sect 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'span.hide-m :: T', side: 'proto-only', kind: 'deliberate',
+    reason: '「新建策略」标签的响应式隐藏包装，随创建入口一起移除（见同状态的 btn.btn.primary 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'btn.btn.primary :: -', side: 'proto-only', kind: 'deliberate',
+    reason: '「新建策略」是创建入口：旧策略文档已冻结（所有写入 409），只读页面不能提供它。'
+      + '按 Vault 的定时约束在新的定时授权页面创建；这一处的形状差异与文案差异（.btn = 新建策略）各一条。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'div.amber.banner :: -', side: 'live-only', kind: 'deliberate',
+    reason: '冻结横幅（R8 的诚实规则）：页面必须说明自己只读、指向新页面，并写出当前授权模式。原型没有这一条，'
+      + '因为原型没有“策略文档已冻结”这个事实；不带横幅的只读页面会让操作员以为策略已经不生效（legacy 模式下它们仍在判定）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'div :: T', side: 'live-only', kind: 'deliberate',
+    reason: '冻结横幅内部的文本容器：横幅把图标与一段带链接的说明分成两个子节点（见同状态 div.amber.banner 一条）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'b :: T', side: 'live-only', kind: 'deliberate', count: 2,
+    reason: '冻结横幅里的两处强调（「本页已冻结（只读）」与「仍然参与判定 / 不再参与判定」）。同一 canonical 行出现两次，'
+      + '所以写成一条 count: 2（两条同名条目会被拒绝：会互相遮蔽失效检测）。',
+  }),
+  Object.freeze({
+    state: 'authz', line: 'a [href=route:<a href=<v>] :: T', side: 'live-only', kind: 'deliberate',
+    reason: '冻结横幅里指向 /admin/auth/authz 的链接（见 div.amber.banner 一条）。链接由常量拼出并经 esc 转义，不是注入点。',
   }),
 ]);
 
 /** Budget for the structural-label waivers (`compareShapeLabels`). */
 export const SHAPE_LABEL_WAIVER_BUDGET = 12;
 export const SHAPE_LABEL_WAIVERS = Object.freeze([
+  Object.freeze({
+    state: 'vaults', label: '.btn = 扫描新 Vault 规划中 · ##', kind: 'deliberate',
+    reason: '原型把「扫描新 Vault」画成设想（`fut("#437")`）。#437 已交付（目录 watcher + 周期对账 + 手动刷新），实现侧不再有带规划标记的按钮，'
+      + '这串文案因此只在原型里；形状侧见同状态的 deliberate 豁免。',
+  }),
   Object.freeze({ state: 'tokens', label: '.btn = 排序', kind: 'no-js-submit', reason: '排序控件的无脚本提交按钮（见同状态同 kind 的形状豁免；Wave R 同类排查后决定不在脚本生效时收起）。' }),
   Object.freeze({ state: 'audit', label: '.btn = 筛选', kind: 'no-js-submit', reason: '审核筛选表单的无脚本提交按钮（见同状态同 kind 的形状豁免）。' }),
   Object.freeze({ state: 'audit', label: '.btn = 应用', kind: 'no-js-submit', reason: '每页条数表单的无脚本提交按钮（见同状态同 kind 的形状豁免）。' }),
-  Object.freeze({ state: 'authz-editor', label: 'disclosure trigger = 用其他主体试算（服务端判定）', kind: 'deliberate', reason: '服务端试算折叠块的无脚本触发器（文案即其功能名）。' }),
-  Object.freeze({
-    state: 'authz-editor', label: '.cap-h = 访问面surface# 项', kind: 'data',
-    reason: '运行时真实能力目录比原型 mock 多一个分组（访问面 surface）—— 分组标题文本（含项数）是目录数据，'
-      + '与同状态的 catalog/`cap-h` 形状豁免对应；分组的存在与数量不靠这条豁免（形状侧不允许用 data 豁免区域）。',
-  }),
   Object.freeze({
     state: 'audit', label: '.btn = 导出 CSV 规划中 · 设想', kind: 'deliberate',
     reason: '原型把「导出 CSV」画成设想（虚线按钮 + 「规划中 · 设想」）。审计记录本来就在手上，所以它是一个真实下载：'
@@ -146,6 +214,9 @@ export const SHAPE_LABEL_WAIVERS = Object.freeze([
     reason: '上面那条 `btn.btn` 形状豁免的文案面：它是全新部署里唯一的准入入口（原型没有准入区），'
       + '无脚本时仍是一个真实可用、真实可点的 GET 链接（`?confirm=admission`）。',
   }),
+  Object.freeze({ state: 'authz', label: '.btn = 新建策略', kind: 'deliberate', reason: '「新建策略」入口随旧写入一起移除（见同状态的 btn.btn.primary 形状豁免）。' }),
+  Object.freeze({ state: 'authz', label: 'h2 = 当前状态预览', kind: 'deliberate', reason: '「当前状态预览」区域移除后它的标题也随之消失（见同状态的 div.sect 形状豁免）。' }),
+  Object.freeze({ state: 'authz', label: 'p.help = 选择主体后显示命中的策略及此刻的判定。', kind: 'deliberate', reason: '试算卡片的提示文案随卡片移除（见同状态的 div.sect 形状豁免）。' }),
 ]);
 
 /**

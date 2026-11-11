@@ -179,3 +179,20 @@ test("MCP Publish tools take the credential Vault boundary from the vault-scope 
   );
   assert.equal(revoked.structuredContent.published, false);
 });
+
+test("a folder record's id answers 404 on the document route, never an empty page", async () => {
+  const publishService = new PublishService({ file: path.join(data, "publish", "folder-route-state.json") });
+  await fs.mkdir(path.join(vault, "Folder"), { recursive: true });
+  const folder = await publishService.publish("default", "Folder", { kind: "folder" });
+  const app = express();
+  app.use(createWebAppRouter({ provider: { recordAudit() {} }, secureCookie: false, publishService }));
+  const server = await listen(app);
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const response = await fetch(`${base}/publish/${folder.id}`);
+    assert.equal(response.status, 404, "a folder's address is /publish/d/<id>, added with the folder surface");
+    assert.equal(await response.text(), "Not Found", "the document route never renders an empty published page");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

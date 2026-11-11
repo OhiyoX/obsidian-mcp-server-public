@@ -34,6 +34,7 @@ const { VAULT_SCOPE_DENY_CODES, canonicalVaultIdProperty, createVaultScopeRegist
 const { VAULT_ID_INPUT_SPEC } = await import("../src/vault-scope.js");
 const { DEFAULT_VAULT_ID } = await import("../src/oauth-provider.js");
 const { requestContext, withRequestContext } = await import("../src/request-context.js");
+const { MEMORY_POLICY_URI } = await import("../src/agent-bootstrap.js");
 
 const AUTHOR = { agent: "wave-c", model: "test" };
 const RUNTIME_A = Object.freeze({ id: DEFAULT_VAULT_ID, primary: true });
@@ -249,27 +250,67 @@ test("global tools keep their own context untouched", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Resources stay primary-only (contract §19, §43-12)
+// 4. Resources: the same `allowedVaults` gate, and still no ambient Vault selection
 // ---------------------------------------------------------------------------
+// A `obsidian://vault/*` handler reads the primary Vault. The registrar therefore asks the
+// authorization runtime for that fixed target before the handler runs, and never lets a resource
+// pick a Vault of its own. The credential is stated the way a real verifier states it (type and
+// client id), because an unnameable principal decides nothing.
 
-test("delegates resource registration untouched and never rewrites a resource handler", async () => {
+test("gates a vault resource on the request's allowedVaults before the handler runs", async () => {
   const { server, resources } = fakeServer();
   const registrar = createVaultScopeRegistrar(server);
-  const resourceHandler = async () => requestContext();
+  const resourceHandler = async () => ({ contents: [{ uri: "obsidian://vault/index", text: "vault-content" }] });
   registrar.registerResource("obsidian-vault-index", "obsidian://vault/index", {}, resourceHandler);
-  assert.equal(resources.has("obsidian://vault/index"), true);
-  // The registrar adds no wrapper: the upstream registrar receives the very same handler.
-  assert.equal(resources.get("obsidian://vault/index").handler, resourceHandler);
-  // Invoking it inside a patched vault context passes the ambient context through unchanged, so a
-  // resource can never select a Vault of its own (contract §19).
-  const seen = await withRequestContext({ vaultId: "beta" }, () => resources.get("obsidian://vault/index").handler());
+  const { handler } = resources.get("obsidian://vault/index");
+  const uri = new URL("obsidian://vault/index");
+  assert.notEqual(handler, resourceHandler, "the allowlist gate wraps the handler");
+
+  // Primary Vault in the allowlist: the read is unchanged, byte for byte.
+  assert.deepEqual(await handler(uri, { authInfo: { type: "oauth", clientId: "c1", allowedVaults: [DEFAULT_VAULT_ID, "beta"] } }), await resourceHandler());
+
+  // Primary Vault absent: the tool refusal family, and not one byte of Vault content.
+  const denied = await handler(uri, { authInfo: { type: "oauth", clientId: "c2", allowedVaults: ["beta"] } });
+  assert.equal(denied.isError, true);
+  assert.equal(denied.structuredContent.code, VAULT_SCOPE_DENY_CODES.ACCESS_DENIED);
+  assert.deepEqual(denied.contents.map((item) => JSON.parse(item.text).code), [VAULT_SCOPE_DENY_CODES.ACCESS_DENIED]);
+  assert.doesNotMatch(JSON.stringify(denied), /vault-content/);
+
+  // A credential without any Vault list is refused too: never defaulted to the primary Vault.
+  const noList = await handler(uri, { authInfo: { type: "oauth", clientId: "no-vault" } });
+  assert.equal(noList.isError, true);
+  assert.equal(noList.structuredContent.code, VAULT_SCOPE_DENY_CODES.ACCESS_DENIED);
+});
+
+test("an instance-level resource is delegated untouched", async () => {
+  const { server, resources } = fakeServer();
+  const registrar = createVaultScopeRegistrar(server);
+  const policyHandler = async () => ({ contents: [{ uri: "obsidian://agent/memory-policy", text: "{}" }] });
+  registrar.registerResource("obsidian-agent-memory-policy", MEMORY_POLICY_URI, {}, policyHandler);
+  assert.equal(resources.get(MEMORY_POLICY_URI).handler, policyHandler, "no Vault gate on an instance resource");
+  assert.deepEqual(await resources.get(MEMORY_POLICY_URI).handler(new URL(MEMORY_POLICY_URI), { authInfo: { allowedVaults: [] } }), { contents: [{ uri: MEMORY_POLICY_URI, text: "{}" }] });
+});
+
+test("a resource read never consults the inventory and never selects a Vault", async () => {
+  const { server, resources } = fakeServer();
+  const { calls, deps } = spies();
+  const registrar = createVaultScopeRegistrar(server, deps);
+  registrar.registerResource("obsidian-vault-index", "obsidian://vault/index", {}, async () => requestContext());
+  // A permitted read passes the ambient context through unchanged, so a resource can never select a
+  // Vault of its own (contract §19), and it resolves no runtime and no inventory entry.
+  const seen = await withRequestContext({ vaultId: "beta" }, () =>
+    resources.get("obsidian://vault/index").handler(new URL("obsidian://vault/index"), { authInfo: { allowedVaults: [DEFAULT_VAULT_ID] } })
+  );
   assert.deepEqual(seen, { vaultId: "beta" });
+  assert.deepEqual(calls.runtimes, []);
+  assert.deepEqual(calls.exists, []);
   assert.equal(requestContext(), undefined);
 });
 
-test("the vault layer does not implement registerResource itself", async () => {
+test("the vault layer keeps one Vault set and reads no ambient selection for resources", async () => {
   const source = await fs.readFile(new URL("../src/vault-scope-registrar.js", import.meta.url), "utf8");
-  assert.doesNotMatch(source, /registerResource\s*\(/, "the vault registrar must delegate resources, not wrap them");
+  assert.match(source, /registerResource\(name, uri, config, handler\)/, "the registrar owns the resource gate");
+  assert.doesNotMatch(source, /requestContext\(\)/, "no ambient Vault selection is consulted");
   const resources = await fs.readFile(new URL("../src/resources.js", import.meta.url), "utf8");
-  assert.doesNotMatch(resources, /request-context/, "resources must not read the ambient Vault selection (§19)");
+  assert.doesNotMatch(resources, /request-context|allowedVaults/, "resources must not read the selection or restate the allowlist");
 });

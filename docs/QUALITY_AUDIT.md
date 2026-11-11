@@ -493,3 +493,13 @@ Wave Q 之后独立审查席留下 7 条发布阻塞。本波只做这 7 条，�
      但服务端启动才炸 → 门禁报 “fixture server must become ready”）。本波出现两次，均已修。
   2. `vaults`/`vaults-repair` 的「no JS hooks」扫描跑在**整份文档**上（CSS 也在内），
      所以 CSS 注释里写 `[data-act=mmenu]` 会让它对这条真断言报红 —— 改注释措辞，不动断言。
+
+## 2026-11-05 审计身份筛选（#518）
+
+审计工具栏补了三个按**原始 id 精确匹配**的筛选：`client`（`clientId`）、`apiKey`（`api-key` + `credentialId`，含 `configured-env`）、`token`（`oauth-access` / `oauth-refresh` + `credentialId`）。
+
+- 选项来自审计记录本身：没被任何记录用过的 id 不出现在下拉里；选中但已无记录的 id 仍作为选中项显示，否则一个筛选中的视图会读成「所有」。
+- 参数集合收到 `FILTER_KEYS` 一处定义：深链、排序链接、分页、每页表单、CSV 导出不再各抄一份（此前三处重复同一列表）。
+- 断言：`app/test/admin-redo/audit-identity-filters.test.js` 7 条（先红后绿）；相邻 `audit-export` / `audit-pager` / `records` / `i18n-admin-catalog` 35/35；`npm run check` 语法 1067 + 架构 1223 通过。
+- 门禁 `node scripts/run-admin-layout-checks.mjs`：**56/56**。与 2026-10-19 Wave R 记录的 52/52 之间的差值来自那之后新增的检查项（本轮未逐项对账，只记读数）。
+- 原型没有这三项筛选，因此整页骨架比对多出 3 个 `select.sel.sm` 与 3 个 option 组；按判据写成两条显式豁免（`deliberate count: 3` 与行态 `state count: 3`），理由写在 `scripts/proto-parity/shape-waivers.mjs`，豁免卫生与三个负控仍全绿。

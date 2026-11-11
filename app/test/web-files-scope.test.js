@@ -116,6 +116,8 @@ test("Web attachment reads require obsidian.files while note reads remain availa
     });
     assert.equal(asset.status, 200);
     assert.equal(asset.headers.get("content-type"), "image/png");
+    // The body is user content: it must not survive in the browser disk cache after logout.
+    assert.equal(asset.headers.get("cache-control"), "private, no-store");
     assert.deepEqual(Buffer.from(await asset.arrayBuffer()), Buffer.from("89504e470d0a1a0a", "hex"));
     assert.equal(fileReader.audits.filter((entry) => entry.action === "web.attachment.read").length, 1);
   } finally {

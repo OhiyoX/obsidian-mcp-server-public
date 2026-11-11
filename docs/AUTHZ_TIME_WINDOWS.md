@@ -1,8 +1,58 @@
 # AuthZ Time Windows — operator guide
 
 Scope: issue 269 — time-window authorization layered on top of the existing
-Scope/Vault authorization. Status at this commit: **code present, feature off**
-(`AUTHZ_ENABLED=false`, Stage 0). Wave C performs the runtime wiring.
+Scope/Vault authorization.
+
+**Read §0 first.** The model that decides is no longer the one §1–§7 describe. Those
+sections stay accurate for the **legacy** document, which is still on disk and still
+readable, but its writes are frozen.
+
+## 0. The per-Vault model (P4)
+
+One document, one mode, one editor.
+
+- **One durable document:** `DATA_PATH/authorization.json`. It owns the constraints and
+  `timeConstraintsEnabled`. The subjects are derived from live credential state on every
+  read and never written back, so a credential created after the cutover works at once and
+  no credential route has to write this file (design §6.8).
+- **One mode:** `AUTHORIZATION_MODE=legacy | shadow | enforce`, forwarded by
+  `docker-compose.yaml` (`.env.example` documents it). `enforce` is the only mode whose
+  answer comes from this document. `legacy` and `shadow` answer from the old gate, and in
+  both the recorder still compares the new verdict beside that answer
+  (`/healthz.authorizationShadow`); `shadow` is the mode where that comparison is the point.
+- **A constraint is per subject and per Vault.** A constraint names subjects, one mode
+  (`suspend` or `revoke`, as §1 defines them), a selector and a schedule. The selector
+  picks surfaces, capabilities and **targets**, and a target is the instance or exactly one
+  Vault: `{kind: "vault", vaultId: …}`. A window can therefore suspend `read_note` for one
+  Vault while every other Vault stays open. A constraint with no Vault target keeps the
+  principal-wide meaning §1 describes. Several matching constraints still intersect, and a
+  revoke constraint is still all-or-nothing (design §6.4, §6.2).
+- **The editor is the constraint page** `/admin/auth/authz`: list, drawer, create, update,
+  toggle, delete. Writes are compare-and-swap on the document `revision` (a stale writer gets
+  409 `stale_authorization_revision` and keeps its draft) and map to the existing
+  `admin_authorization_manage` capability. Every write appends an audit row
+  `authz.constraint.*` that carries the constraint id, the revision and the window before and
+  after on one line: label, on/off, timezone, weekday hours, date ranges, start and expiry
+  (`auditWindowText`, `app/server.js`; at most four day groups and four date ranges, then
+  `+N`). It never carries a subject or a Vault id.
+- **`/healthz` reports the model, nothing else:**
+  `authorization: {mode, revision, constraints}` — the mode in force, the committed document
+  revision (`null` while no document is readable) and how many constraints it holds. It
+  never carries a subject id, a Vault id, a window, a capability or a label: `/healthz` is
+  public, and those facts stay on Admin.
+- **The legacy page is history.** `DATA_PATH/access-policy.json`, its page
+  `/admin/auth/access-policy` and its routes stay on disk, read-only. The seven legacy writes
+  (`POST …/access-policy/{create,update,toggle,delete,preview,repair,subjects}`) refuse with
+  409 `access_policy_frozen` and point at `/admin/auth/authz`. They were frozen in the same
+  deploy that seeded the document, because an accepted legacy edit would be stored and never
+  apply. Nothing is deleted, and a re-seed is not allowed: the seed runs once, only when no
+  document exists, and never overwrites one.
+- **The cutover, the soak rule, the enforce proof and the rollback truth** are in
+  [RELEASE_AND_DEPLOY.md](RELEASE_AND_DEPLOY.md), section
+  "AuthZ per-Vault cutover (P4)".
+
+§1–§7 below remain the reference for the legacy document and for the semantics the two
+models share.
 
 ## 1. Feature semantics
 
