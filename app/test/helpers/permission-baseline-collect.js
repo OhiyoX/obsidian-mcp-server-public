@@ -493,33 +493,13 @@ export async function collectBaselineRows({ sourceRoot, dataPath, nowMs = Date.n
     await httpCase("admin", "admin", "ADMIN POST /login", { method: "POST", urlPath: "/admin/auth/login", headers: form(), body: body({ password: process.env.OAUTH_ADMIN_PASSWORD }) }, "instance");
     await httpCase("admin:wrong-password", "admin", "ADMIN POST /login", { method: "POST", urlPath: "/admin/auth/login", headers: form(), body: body({ password: "wrong-admin-password" }) }, "instance");
     await httpCase("admin", "admin", "ADMIN GET /", { urlPath: "/admin/auth", headers: { Cookie: admin.cookie } }, "instance");
-    await httpCase("admin", "admin", "ADMIN GET /access-policy", { urlPath: "/admin/auth/access-policy", headers: { Cookie: admin.cookie } }, "instance");
     await httpCase("admin:anonymous", "admin", "ADMIN GET /", { urlPath: "/admin/auth" }, "instance");
-    const policyFields = {
-      csrf: admin.csrf,
-      label: "baseline window",
-      // A subject no actor in this run has: the policy this row stores must never gate a later row.
-      subjects: "oauth-user:00000000-0000-4000-8000-000000000000",
-      mode: "suspend",
-      capabilities: "scope:obsidian.read",
-      timezone: "UTC",
-      w_mon_from_0: "09:00",
-      w_mon_to_0: "18:00",
-    };
-    await httpCase("admin", "admin", "ADMIN POST /access-policy/create", { method: "POST", urlPath: "/admin/auth/access-policy/create", headers: { Cookie: admin.cookie, ...form() }, body: body(policyFields) }, "instance");
-    await httpCase("admin:no-csrf", "admin", "ADMIN POST /access-policy/create", { method: "POST", urlPath: "/admin/auth/access-policy/create", headers: { Cookie: admin.cookie, ...form() }, body: body({ ...policyFields, csrf: "not-the-token" }) }, "instance");
     await httpCase("admin", "admin", "ADMIN POST /api-key/default-vault", { method: "POST", urlPath: "/admin/auth/api-key/default-vault", headers: { Cookie: admin.cookie, ...form() }, body: body({ csrf: admin.csrf, id: readKey.id, defaultVaultId: "vault" }) }, "instance");
     await httpCase("admin:no-csrf", "admin", "ADMIN POST /api-key/default-vault", { method: "POST", urlPath: "/admin/auth/api-key/default-vault", headers: { Cookie: admin.cookie, ...form() }, body: body({ csrf: "not-the-token", id: readKey.id, defaultVaultId: "vault" }) }, "instance");
     await httpCase("admin:anonymous", "admin", "ADMIN POST /api-key/default-vault", { method: "POST", urlPath: "/admin/auth/api-key/default-vault", headers: form(), body: body({ csrf: "not-the-token", id: readKey.id, defaultVaultId: "vault" }) }, "instance");
-    await httpCase("admin", "admin", "ADMIN POST /access-policy/create", {
-      method: "POST",
-      urlPath: "/admin/auth/access-policy/create",
-      headers: { Cookie: admin.cookie, ...form() },
-      body: body({ csrf: admin.csrf, capabilities: "scope:obsidian.read", timezone: "UTC", w_mon_from_0: "09:00", w_mon_to_0: "18:00" }),
-    }, "instance#malformed", "malformed:missing-field");
     await httpCase("admin", "admin", "ADMIN POST /theme", { method: "POST", urlPath: "/admin/auth/theme", headers: { Cookie: admin.cookie, ...form() }, body: body({ csrf: admin.csrf, theme: "light" }) }, "instance");
 
-    // ---- the rest of the Admin surface: Git, the permission editor, credential writes, audit ---
+    // ---- the rest of the Admin surface: Git, the constraint editor, credential writes, audit ---
     await collectAdminBoundaryRows({
       httpCase,
       plane,

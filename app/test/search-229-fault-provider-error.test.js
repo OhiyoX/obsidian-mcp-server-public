@@ -42,8 +42,9 @@ await fs.mkdir(path.join(data, "index"), { recursive: true });
 await fs.writeFile(path.join(vault, "Keep.md"), "# Keep\n\nexact-needle lives here.\n", "utf8");
 await fs.writeFile(path.join(vault, "Other.md"), "# Other\n\nunrelated body.\n", "utf8");
 
-// A valid retrieval index (version 1) with one embedded chunk. Written before
-// the tool loads it so the query-time embedding provider is exercised.
+// A valid retrieval generation with one embedded chunk. Published through the v2
+// store before the tool loads it, so the query-time embedding provider is
+// exercised (M2: the runtime no longer parses a v1 JSON index).
 const fixtureIndex = {
   version: 1,
   updatedAt: new Date().toISOString(),
@@ -51,6 +52,8 @@ const fixtureIndex = {
   notes: {
     "Keep.md": {
       path: "Keep.md",
+      revision: "r1",
+      stat: { mtimeMs: 1 },
       metadata: {
         title: "Keep",
         description: "",
@@ -68,7 +71,9 @@ const fixtureIndex = {
     },
   },
 };
-await fs.writeFile(process.env.RETRIEVAL_INDEX_PATH, JSON.stringify(fixtureIndex), "utf8");
+const { openIndexStore } = await import("../src/vault-runtime/retrieval-index-store.js");
+const fixtureStore = openIndexStore({ legacyIndexPath: process.env.RETRIEVAL_INDEX_PATH });
+await fixtureStore.commit({ ...fixtureIndex, version: 2 }, Object.keys(fixtureIndex.notes));
 
 const [{ registerSearchTools }, { drainRetrievalIndex }] = await Promise.all([
   import("../src/tools/search.js"),

@@ -486,6 +486,19 @@ async function recoverJournal(dir, namespaceKey) {
   await finishBatchJournal({ dir, scope });
 }
 
+// #736: a refused startup must name the journal it refused on. The path is relative to the
+// journal root, so a startup log carries no absolute path and no Vault content.
+async function recoverJournalOrFail(dir, namespaceKey) {
+  try {
+    await recoverJournal(dir, namespaceKey);
+  } catch (error) {
+    const failure = new Error(
+      `Mutation journal recovery failed for ${path.relative(root, dir)}: ${error.message}`);
+    if (error.code) failure.code = error.code;
+    throw failure;
+  }
+}
+
 async function recoverUnlocked() {
   await fs.mkdir(root, { recursive: true, mode: 0o700 });
   await pruneExpiredAppliedRecords(primaryMutationVaultScope());
@@ -495,12 +508,12 @@ async function recoverUnlocked() {
     if (VAULT_NAMESPACE.test(name)) {
       for (const child of (await fs.readdir(dir)).sort()) {
         if (!JOURNAL_ID.test(child)) throw new Error(`Unexpected mutation journal entry: ${child}`);
-        await recoverJournal(path.join(dir, child), name);
+        await recoverJournalOrFail(path.join(dir, child), name);
       }
       continue;
     }
     if (!JOURNAL_ID.test(name)) throw new Error(`Unexpected mutation journal entry: ${name}`);
-    await recoverJournal(dir, null);
+    await recoverJournalOrFail(dir, null);
   }
 }
 

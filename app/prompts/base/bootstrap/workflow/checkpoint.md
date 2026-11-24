@@ -1,0 +1,1 @@
+After a confirmed decision, implementation milestone, validation, or handoff: update the existing current-state section. Create a dated note only for independently useful history and link it from the nearest README/map. Do not create one note per turn.

@@ -12,6 +12,9 @@ services:
     container_name: obsidian-mcp-server
     init: true
     user: "1002:10"
+    # 上限：语义索引重建 + 批量 embedding 的峰值约 3.3 GiB（2026-11-22 实测 cgroup peak）。
+    # NAS 上 earlyoom 在内存压力下会 SIGKILL 大进程，早先它误杀过 srvr 的 qemu。
+    mem_limit: ${MCP_MEM_LIMIT:-4g}
     ports:
       # Plaintext stays for local health checks, in-container probes and rollback, and it is bound
       # to loopback only: proxies reach the container on the TLS port below. The public edge comes in

@@ -8,8 +8,9 @@
 // No script (CSP `default-src 'none'`, D0 HOLD). Deliberate deviations, all in the lane CHECKPOINT:
 //   * no "复制 Key ID" menu item and no copy button (script-only; the id is selectable text and the
 //     drawer shows it in full);
-//   * the planned "轮换（重新生成）" menu item (#285/设想) is not rendered as a dead button; the
-//     planned markers the prototype shows inside the drawer (到期时间 / 绑定 Agent) are kept;
+//   * the planned "轮换（重新生成）" menu item (#285/设想) is not rendered as a dead button, and the
+//     planned 绑定 Agent row is gone: #285 shipped it as a display-purpose label, so the drawer
+//     now carries that label's own POST form; the planned 到期时间 marker is kept;
 //   * the one-time Key plaintext banner is rendered by the shell (`pages/shell.js`), not here;
 //   * the ⋯ menu cannot draw the prototype's `<hr>` separator.
 //
@@ -18,10 +19,12 @@
 import { pageBar, searchBox, table, mcards, emptyState, moreMenu, drawer, confirmPage, kv, banner } from "../ui.js";
 import { renderSubjectAuthzSection } from "../subject-authz.js";
 import { readSort, sortRows } from "../table-sort.js";
-import { esc, fmtDate, fmtFull, fut, relTitle } from "../presentation/format.js";
+import { esc, fmtDate, fmtFull, relTitle } from "../presentation/format.js";
 import { ic } from "../assets/icons.js";
 import { renderDefaultVaultPicker } from "../default-vault-picker.js";
 import { t } from "../../i18n/context.js";
+import { keyExpiryState } from "../../api-key-expiry.js";
+import { displayAgentHint } from "../../agent-identity.js";
 
 const TAB = "keys";
 
@@ -54,6 +57,24 @@ function menu(ctx, key) {
   ]);
 }
 
+/** The expiry cell, said once so the table, the card and the drawer cannot disagree. */
+function expiryCell(key) {
+  // The deployment's own key is never created through the form and never expires.
+  const state = isEnvKey(key) ? { kind: "never", days: null } : keyExpiryState(key.expiresAt);
+  if (state.kind === "never") return esc(t("adm.keys.expiresNever"));
+  if (state.kind === "expired") return `<span class="st danger">${esc(t("adm.keys.expiresExpired"))}</span>`;
+  if (state.kind === "today") return esc(t("adm.keys.expiresToday"));
+  return esc(t("adm.keys.expiresDays", { days: state.days }));
+}
+
+/** The operator's display purpose, or the User-Agent hint when no label is bound (#285). */
+function agentLabelOf(key) {
+  const label = String(key?.agentLabel || "").trim();
+  if (label) return label;
+  // A key that was never used has no User-Agent to infer from: show nothing rather than a guess.
+  return key?.lastUserAgent ? displayAgentHint(key.lastUserAgent) : null;
+}
+
 function row(ctx, key, selectedId) {
   const { model } = ctx;
   const env = isEnvKey(key);
@@ -63,9 +84,10 @@ function row(ctx, key, selectedId) {
   return `<tr${selectedId === key.id ? ' class="cur"' : ""}>
     <td>${nameCell(model, key)}</td>
     <td><div class="tags">${model.scopeTags(key.allowedScopes)}${model.vaultTags(key.allowedVaults)}</div></td>
-    <td class="cellt">${lastCell}</td>
+    <td class="cellt">${lastCell}${key.agentLabel ? `<div class="muted ell">${esc(key.agentLabel)}</div>` : ""}</td>
     <td class="cellt mono muted">${esc(key.lastSource || "—")}</td>
     <td class="cellt muted">${env ? esc(t("adm.keys.withDeployment")) : esc(fmtDate(key.createdAt))}</td>
+    <td class="cellt">${expiryCell(key)}</td>
     <td class="act">${env
       ? `<span class="ibtn lock-cell" title="${esc(t("adm.keys.envLockTitle"))}">${ic("lock")}</span>`
       : menu(ctx, key)}</td></tr>`;
@@ -77,7 +99,7 @@ function card(ctx, key) {
   return `<div class="mc"><div class="b">
     <a class="cell-link block" href="${esc(tabHref({ id: key.id }))}"><div class="nm"><b>${esc(model.keyName(key))}</b><span class="sub2">${env ? esc(t("adm.keys.envReadOnlyBadge")) : `${esc(key.prefix ? `${key.prefix}…` : "—")}`}</span></div></a>
     <div class="tags">${model.scopeTags(key.allowedScopes)}${model.vaultTags(key.allowedVaults)}</div>
-    <div class="meta"><span>${key.lastUsedAt ? esc(t("adm.keys.usedAt", { time: relTitle(key.lastUsedAt) })) : esc(t("adm.keys.neverUsed"))}</span></div>
+    <div class="meta"><span>${key.lastUsedAt ? esc(t("adm.keys.usedAt", { time: model.rel(key.lastUsedAt) })) : esc(t("adm.keys.neverUsed"))}</span><span>${esc(t("adm.keys.column.expires"))}: ${expiryCell(key)}</span></div>
   </div>${env ? "" : menu(ctx, key)}</div>`;
 }
 
@@ -112,20 +134,25 @@ function createDrawer(ctx) {
     <div class="dsec"><h3>${esc(t("adm.keys.scopeSection"))}</h3><div class="grid2" style="gap:0">${pick.scopes}</div></div>
     <div class="dsec"><h3>${esc(t("adm.accounts.allowedVaults"))}</h3>${pick.vaults}</div>
     <div class="dsec">${renderDefaultVaultPicker(ctx, { allowedVaults: (ctx.vaults || []).map((v) => v.id) })}</div>
-    <div class="dsec futonly"><h3>${esc(t("adm.keys.expiry"))} ${fut(t("adm.audit.idea"))}</h3><select class="sel" disabled><option>${esc(t("adm.keys.neverExpires"))}</option></select></div>
+    <div class="dsec">
+      <div class="grid2" style="gap:0">
+        <div class="fld"><label for="new-key-expiry">${esc(t("adm.keys.expiry"))}</label><select class="sel" id="new-key-expiry" name="expiry"><option value="never">${esc(t("adm.keys.expiryNever"))}</option><option value="7">${esc(t("adm.keys.expiry7"))}</option><option value="30">${esc(t("adm.keys.expiry30"))}</option><option value="90">${esc(t("adm.keys.expiry90"))}</option></select></div>
+        <div class="fld"><label for="new-key-expires-on">${esc(t("adm.keys.expiryPick"))}</label><input class="inp" id="new-key-expires-on" type="date" name="expiresOn"></div>
+      </div>
+      <span class="help">${esc(t("adm.keys.expiryHelp"))}</span></div>
   </form>`,
     footHtml: `<span class="help">${esc(t("adm.keys.plaintextOnce"))}</span><a class="btn ghost" href="${esc(tabHref())}">${esc(t("adm.ui.cancel"))}</a><button class="btn primary" type="submit" form="new-key">${esc(t("adm.keys.create"))}</button>`,
   });
 }
 
-/** Policies that mention this Key as a subject (`api-key:<id>`), with an honest link. */
+/** Constraints that name this Key as a subject (`api-key:<id>`), each linked to its drawer. */
 function policyCell(ctx, key) {
-  const policies = Array.isArray(ctx.authz?.policies) ? ctx.authz.policies : [];
+  const constraints = Array.isArray(ctx.constraintPage?.constraints) ? ctx.constraintPage.constraints : [];
   const subject = `api-key:${key.id}`;
-  const hits = policies.filter((policy) => (Array.isArray(policy?.subjects) ? policy.subjects : []).includes(subject));
+  const hits = constraints.filter((constraint) => (Array.isArray(constraint?.subjects) ? constraint.subjects : []).includes(subject));
   if (!hits.length) return `<span class="muted">${esc(t("adm.keys.unrestricted"))}</span>`;
-  const base = ctx.accessPolicyBase || "/admin/auth";
-  return hits.map((policy) => `<a href="${esc(`${base}?edit=${encodeURIComponent(policy.id)}`)}">${esc(policy.label || policy.id)}</a>`).join(esc(t("adm.ui.listSeparator")));
+  const base = ctx.constraintBase || "/admin/auth";
+  return hits.map((constraint) => `<a href="${esc(`${base}?id=${encodeURIComponent(constraint.id)}`)}">${esc(constraint.label || constraint.id)}</a>`).join(esc(t("adm.ui.listSeparator")));
 }
 
 function keyDrawer(ctx, key) {
@@ -143,26 +170,36 @@ function keyDrawer(ctx, key) {
     [t("adm.keys.kv.created"), env ? t("adm.keys.withDeployment") : esc(fmtFull(key.createdAt))],
     [t("adm.keys.kv.lastUsed"), lastCell],
     [t("adm.keys.kv.authz"), policyCell(ctx, key)],
-    [t("adm.keys.kv.agent"), `<span class="muted">${esc(t("adm.accounts.notSet"))}</span> ${fut("#285")}<div class="help">${esc(t("adm.keys.agentWhy"))}</div>`, 'class="futonly"'],
+    [t("adm.keys.column.expires"), expiryCell(key)],
+    [t("adm.keys.kv.agent"), key.agentLabel
+      ? esc(key.agentLabel)
+      : `<span class="muted">${esc(t("adm.keys.agentInferred", { agent: agentLabelOf(key) || "—" }))}</span>`],
   ])}</div>
+  ${env ? "" : `<form class="dsec" method="post" action="/admin/auth/api-key/agent">
+    <h3>${esc(t("adm.keys.kv.agent"))}</h3>
+    <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
+    <input type="hidden" name="id" value="${esc(key.id)}">
+    <div class="fld"><input class="inp" name="agent" value="${esc(key.agentLabel || "")}" maxlength="40" placeholder="${esc(t("adm.keys.agentPlaceholder"))}" aria-label="${esc(t("adm.keys.kv.agent"))}"></div>
+    <span class="help">${esc(t("adm.keys.agentHelp"))}</span>
+    <div style="margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.keys.saveAgent"))}</button></div>
+  </form>`}
   ${renderSubjectAuthzSection(ctx, { subject: `api-key:${key.id}` })}
-  <form class="dsec" method="post" action="/admin/auth/api-key/scopes">
+  <form class="dsec" data-key-access-form method="post" action="/admin/auth/api-key/scopes">
     <h3>${esc(t("adm.keys.scopeVaultSection"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="id" value="${esc(key.id)}">
     ${env
       ? `<div class="tags">${model.scopeTags(key.allowedScopes)}${model.vaultTags(key.allowedVaults)}</div><span class="help">${esc(t("adm.keys.envScopeHelp"))}</span>`
-      : `<div class="grid2" style="gap:0">${pick.scopes}</div>
-    <div style="height:8px"></div>
-    ${pick.vaults}
-    <div style="margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.keys.save"))}</button></div>`}
+      : `<div class="grid2 key-access-scopes">${pick.scopes}</div>
+    <fieldset class="key-access-vaults"><legend>${esc(t("adm.accounts.allowedVaults"))}</legend>${pick.vaults}</fieldset>
+    <button class="btn primary" type="submit">${esc(t("adm.keys.save"))}</button>`}
   </form>
   ${env ? "" : `<form class="dsec" method="post" action="/admin/auth/api-key/default-vault">
     <h3>${esc(t("adm.keys.defaultVault"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="id" value="${esc(key.id)}">
-    ${renderDefaultVaultPicker(ctx, { current: key.defaultVaultId, allowedVaults: key.allowedVaults || [] })}
-    <div style="margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.keys.saveDefaultVault"))}</button></div>
+    ${renderDefaultVaultPicker(ctx, { showLabel: false, current: key.defaultVaultId, allowedVaults: key.allowedVaults || [] })}
+    <div class="default-vault-actions"><button class="btn primary" type="submit">${esc(t("adm.keys.saveDefaultVault"))}</button></div>
   </form><div class="dsec"><h3>${esc(t("adm.accounts.dangerTitle"))}</h3><div class="danger-zone">
     <div class="dz"><div class="t"><b>${esc(t("adm.keys.deleteKey"))}</b>${esc(t("adm.keys.deleteKeyDesc"))}</div><a class="btn danger-o" href="${esc(tabHref({ id: key.id, confirm: "delete" }))}">${esc(t("adm.accounts.deleteAction"))}</a></div>
   </div></div>`}`;
@@ -184,17 +221,19 @@ export function renderKeysPage(ctx) {
     ? list0.filter((key) => `${key.label || ""} ${key.prefix || ""}`.toLowerCase().includes(q))
     : list0;
   // Sorting is server state (see `table-sort.js`): the header link carries it, the data decides it.
-  const sort = readSort(query, ["name", "scopes", "lastUsed", "created"], "name");
+  const sort = readSort(query, ["name", "scopes", "lastUsed", "created", "expires"], "name");
   const list = sortRows(filtered, sort, {
     name: (key) => model.keyName(key),
     scopes: (key) => (Array.isArray(key.allowedScopes) ? key.allowedScopes.length : 0),
     lastUsed: (key) => key.lastUsedAt ?? null,
     created: (key) => key.createdAt ?? null,
+    // A key that never expires sorts last when ascending: nothing is sooner than "never".
+    expires: (key) => (isEnvKey(key) ? null : key.expiresAt ?? null),
   });
   const target = list0.find((key) => String(key.id) === selectedId) || null;
 
   const tableHtml = table(
-    [[t("adm.keys.column.name"), "26%", "", "name"], [t("adm.keys.column.scopes"), "26%", "", "scopes"], [t("adm.keys.column.lastUsed"), "20%", "", "lastUsed"], [t("adm.keys.column.source"), "12%"], [t("adm.keys.column.created"), "10%", "", "created"], ["", "", "act"]],
+    [[t("adm.keys.column.name"), "24%", "", "name"], [t("adm.keys.column.scopes"), "24%", "", "scopes"], [t("adm.keys.column.lastUsed"), "18%", "", "lastUsed"], [t("adm.keys.column.source"), "10%"], [t("adm.keys.column.created"), "9%", "", "created"], [t("adm.keys.column.expires"), "9%", "", "expires"], ["", "", "act"]],
     list.map((key) => row(ctx, key, selectedId)),
     emptyState("key", t("adm.keys.emptyNoMatch"), t("adm.accounts.emptyNoMatchHint")),
     { ...sort, base: tabHref({ q: query.q }) },

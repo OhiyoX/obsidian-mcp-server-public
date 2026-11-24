@@ -229,7 +229,8 @@ test("core/app.js only wires the strip and does not grow", () => {
   assert.match(app, /baseNavigation\?\.exitToNote\?\.\(\);[\s\S]{0,120}tabs\.syncFromSession\(\);/, "synced after the note/base chrome commit");
   assert.match(app, /clearOutline: \(\) => \{[\s\S]{0,240}tabs\.syncFromSession\(\); documentTabRow\.sync\(tabs\.getState\(\)\.tabs\); \}/, "Base entry deactivates every tab and mirrors the row");
   assert.match(app, /refreshOutline: \(\) => \{ refreshOutlineFromSource\(\); tabs\.syncFromSession\(\); documentTabRow\.sync\(tabs\.getState\(\)\.tabs\); \}/, "a restored note re-activates its tab and mirrors the row");
-  assert.ok(app.split("\n").length <= 500, "the local 500-line cap (BRIEF: net growth 0)");
+  // The hard code-line gate was retired by owner decision (2026-11-13). The behavioural
+  // invariants above remain the contract; no line count is asserted here.
 
   // The strip owns no document state and no persistence.
   for (const [name, source] of [["index", tabsIndex], ["model", tabsModel], ["view", tabsView]]) {

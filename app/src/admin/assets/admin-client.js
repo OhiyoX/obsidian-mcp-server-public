@@ -319,44 +319,16 @@ function applyAutoSubmit() {
 }
 
 
-/**
- * 列宽拖拽（2026-10-31 owner request：「所有表格都能自由调整列宽」）。
- *
- * Why it is built this way:
- *   * **no DOM is added.** The grab area is the `th::after` strip in the stylesheet (7px, cursor
- *     col-resize); the handler only has to notice that a mousedown landed inside it. Nothing appears
- *     in the markup, so the scriptless page, the prototype-parity capture and the shape gate see
- *     exactly the table that the server rendered;
- *   * **a `<col>` is what changes.** The table already ships a `<colgroup>` with the server's widths;
- *     dragging writes a px width onto that column, which is the one thing that can narrow a column
- *     without touching every cell;
- *   * **the width is remembered per page and per column index** in `localStorage` under
- *     `omcp.colw:<surface>`, where the surface is the current tab (or the access-policy / vault page)
- *     — a width tuned on 审计 does not follow the operator to Token;
- *   * **double-click resets** the column to the server's own width, and a width is never written below
- *     `MIN_COL_PX`: a column cannot be squeezed into illegibility with no way back.
- *
- * Without the module none of this exists — and none of it is needed: the table renders, sorts and
- * reads exactly as before, at the widths the server chose.
- */
-const COL_SCALE_KEY = "omcp.colw";
+// Drag a boundary to distribute its width between adjacent data columns. Persist proportions so the table fits on resize.
+const COL_SCALE_KEY = "omcp.colw.v2";
 const MIN_COL_PX = 56;
+const defaultColumnWidths = new WeakMap();
 
 function surfaceKey() {
   const params = new URLSearchParams(location.search);
   const tab = params.get("tab");
   if (tab) return tab;
   return location.pathname.replace(/\/+$/, "") || "admin";
-}
-
-function readColumnWidths() {
-  try {
-    const raw = localStorage.getItem(`${COL_SCALE_KEY}:${surfaceKey()}`);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
 }
 
 function writeColumnWidths(widths) {
@@ -371,74 +343,72 @@ function columnNodes(table) {
   return [...table.querySelectorAll(":scope > colgroup > col")];
 }
 
-function restoreColumnWidths() {
-  const widths = readColumnWidths();
-  for (const table of document.querySelectorAll("table.tbl")) {
-    columnNodes(table).forEach((col, index) => {
-      const px = Number(widths[index]);
-      if (Number.isFinite(px) && px >= MIN_COL_PX) col.style.width = `${px}px`;
-    });
-  }
-}
-
 function rememberColumnWidths(table) {
-  const widths = readColumnWidths();
-  columnNodes(table).forEach((col, index) => {
-    const value = col.style.width;
-    // Only a px width this client wrote is worth remembering: the server's own widths are
-    // percentages (`26%`), and "26" must never come back as a 26px column.
-    if (!/px$/.test(value)) {
-      delete widths[index];
-      return;
-    }
-    const px = Number.parseFloat(value);
-    if (Number.isFinite(px)) widths[index] = Math.round(px);
-    else delete widths[index];
+  const widths = columnNodes(table).map((col, index) => {
+    document.documentElement.style.setProperty(`--admin-col-${index}`, col.style.width);
+    const width = Number.parseFloat(col.style.width);
+    col.style.width = defaultColumnWidths.get(col);
+    return width;
   });
   writeColumnWidths(widths);
 }
 
 function applyColumnResize() {
-  restoreColumnWidths();
   on("mousedown", "table.tbl th", (event, th) => {
     if (event.button !== 0 || th.classList.contains("act")) return;
     const rect = th.getBoundingClientRect();
     // The grab strip is the stylesheet's `th::after` (7px at the right edge); the pointer must land
     // inside it, so a plain click on the label still follows the sort link.
-    if (rect.right - event.clientX > 8) return;
+    if (rect.right - event.clientX > 10) return;
     const table = th.closest("table");
     const index = [...th.parentElement.children].indexOf(th);
-    const col = columnNodes(table)[index];
-    if (!col) return;
+    const columns = columnNodes(table);
+    for (const col of columns) defaultColumnWidths.set(col, col.style.width);
+    const headers = [...th.parentElement.cells];
+    const adjacent = index + 1;
+    if (!columns[adjacent] || headers[adjacent].classList.contains("act")) return;
     const startX = event.clientX;
-    const startWidth = th.getBoundingClientRect().width;
+    const widths = headers.map((header) => header.getBoundingClientRect().width);
+    const total = widths.reduce((sum, width) => sum + width, 0);
+    const pair = widths[index] + widths[adjacent];
+    const firstMin = Math.min(MIN_COL_PX, widths[index]);
+    const secondMin = Math.min(MIN_COL_PX, widths[adjacent]);
+    let moved = false;
     event.preventDefault();
     table.classList.add("rz-active");
     const move = (moveEvent) => {
-      const next = Math.max(MIN_COL_PX, Math.round(startWidth + (moveEvent.clientX - startX)));
-      col.style.width = `${next}px`;
+      const delta = moveEvent.clientX - startX;
+      if (!moved && Math.abs(delta) < 3) return;
+      moved = true;
+      const next = Math.min(pair - secondMin, Math.max(firstMin, widths[index] + delta));
+      columns.forEach((col, at) => {
+        const width = at === index ? next : at === adjacent ? pair - next : widths[at];
+        col.style.width = `${width / total * 100}%`;
+      });
     };
     const up = () => {
       table.classList.remove("rz-active");
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
-      rememberColumnWidths(table);
+      if (moved) {
+        rememberColumnWidths(table);
+        const suppress = (click) => { click.preventDefault(); click.stopImmediatePropagation(); };
+        table.addEventListener("click", suppress, { capture: true, once: true });
+        setTimeout(() => table.removeEventListener("click", suppress, true), 0);
+      }
     };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up, { once: true });
   });
-  // Double-click the same strip = back to the server's width for that column.
+  // Double-click the same strip = reset the table to its server widths.
   on("dblclick", "table.tbl th", (event, th) => {
     if (th.classList.contains("act")) return;
     const rect = th.getBoundingClientRect();
-    if (rect.right - event.clientX > 8) return;
+    if (rect.right - event.clientX > 10) return;
     const table = th.closest("table");
-    const index = [...th.parentElement.children].indexOf(th);
-    const col = columnNodes(table)[index];
-    if (!col) return;
-    col.style.removeProperty("width");
+    columnNodes(table).forEach((_, index) => document.documentElement.style.removeProperty(`--admin-col-${index}`));
     event.preventDefault();
-    rememberColumnWidths(table);
+    writeColumnWidths({});
   });
 }
 
@@ -484,3 +454,4 @@ import "./admin-feature-keys.js";
 import "./admin-feature-lists.js";
 import "./admin-feature-select.js";
 import "./admin-feature-nav.js";
+import "./admin-feature-authz.js";

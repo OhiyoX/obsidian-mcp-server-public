@@ -39,6 +39,27 @@ const CREDENTIAL_OPTIONS = Object.freeze([
 const CREDENTIAL_EXTRA = Object.freeze({ "admin-session": "adm.label.credential.admin-session", "web-session": "adm.label.credential.web-session", "oauth-code": "adm.label.credential.oauth-code", none: "adm.label.credential.none" });
 /** `request-attribution.js` `AGENT_SOURCE_PRIORITY` → what the recorded Agent value actually is. */
 const AGENT_SOURCE = Object.freeze({ clientInfo: "adm.audit.agentSource.clientInfo", meta: "adm.audit.agentSource.meta", session: "adm.audit.agentSource.session", apiKeyLabel: "adm.audit.agentSource.apiKeyLabel", ua: "adm.audit.agentSource.ua" });
+
+/**
+ * The Agent column and the drawer's Agent line (#285): `{ label, source }`.
+ *
+ * A recorded identity wins and keeps its provenance. A programmatic client (undici/node/…) records
+ * no identity, so the old `—` hid the one fact the audit does know — it says 通用客户端（undici）
+ * and keeps declaring that no identity was stated, instead of borrowing one. Both absent ⇒ `—`.
+ * Display only: nothing here reaches auth, Scope or Vault.
+ */
+function agentCell(row) {
+  const agent = String(row?.agent || "");
+  const whyKey = AGENT_SOURCE[String(row?.agentSource || "")] || "";
+  if (agent) return { label: agent, source: whyKey ? t(whyKey) : "" };
+  // The recorded `genericClient` (`buildRequestUsage` classifies the User-Agent); no identity, no
+  // kind ⇒ `—`. Never re-classify here: a row that recorded no User-Agent at all is not a client.
+  const kind = String(row?.genericClient || "");
+  if (kind === "generic") return { label: t("adm.audit.agentGenericNoUa"), source: t("adm.audit.agentNoIdentity") };
+  if (kind) return { label: t("adm.audit.agentGeneric", { kind }), source: t("adm.audit.agentNoIdentity") };
+  return { label: "—", source: "" };
+}
+
 /** The credential types whose `credentialId` is a token record (#518). */
 const TOKEN_KINDS = Object.freeze(["oauth-access", "oauth-refresh"]);
 /** Every filter a link, the pager or the export must carry to describe the same view. */
@@ -219,10 +240,9 @@ function detailLines(ctx, row) {
   // decision that produced the adopted source, and the Agent's provenance, so the line renders as
   // what it is. It keeps its own `.uax` line (and the raw hops stay labelled untrusted).
   if (chain) lines.push(`<div>${chain}</div>`);
-  const agent = String(row?.agent || "");
-  if (agent) {
-    const whyKey = AGENT_SOURCE[String(row?.agentSource || "")] || "";
-    lines.push(`<div style="font-family:var(--font)">${esc(t("adm.audit.agentSourceLabel"))} ${esc(whyKey ? t(whyKey) : t("adm.audit.agentSourceUnknown"))}</div>`);
+  const cell = agentCell(row);
+  if (cell.label !== "—") {
+    lines.push(`<div style="font-family:var(--font)">${esc(t("adm.audit.agentSourceLabel"))} ${esc(cell.source || t("adm.audit.agentSourceUnknown"))}</div>`);
   }
   return lines.join("");
 }
@@ -237,14 +257,16 @@ function rowHtml(ctx, row) {
   const category = actionCategory(row?.action);
   const tool = toolOf(row);
   const kind = credentialKind(row);
+  const agent = agentCell(row);
   return `<tr class="${[failed ? "fail" : "", focused ? "cur" : ""].filter(Boolean).join(" ")}" style="position:relative">
 <td class="cellt num" title="${esc(fmtFull(at))}">${esc(fmt(at))}</td>
 <td>${failed ? `<span class="st danger"><span class="dot"></span>${esc(t("adm.audit.status.failed"))}</span>` : `<span class="st ok"><span class="dot"></span>${esc(t("adm.audit.status.ok"))}</span>`}</td>
 <td><div class="nm"><span class="ell" title="${esc(row?.action || "")}">${esc(action.label)}</span><span class="sub2">${esc(category)}${tool && !action.label.includes(tool) ? ` · <span class="mono ell">${esc(tool)}</span>` : ""}</span></div></td>
 <td><div class="nm"><span class="ell">${esc(credentialName(ctx, row))}</span><span class="sub2">${esc(kind)}</span></div></td>
-<td><div class="nm"><span class="ell">${esc(row?.agent || "—")}</span><span class="sub2">${esc(AGENT_SOURCE[String(row?.agentSource || "")] ? t(AGENT_SOURCE[String(row?.agentSource || "")]) : "")}</span></div></td>
+<td><div class="nm"><span class="ell">${esc(agent.label)}</span><span class="sub2">${esc(agent.source)}</span></div></td>
 <td class="cellt"><span class="mono">${esc(row?.source || "—")}</span><div class="muted">${esc(sourceKindText(row))}</div></td>
-<td class="act" style="overflow:visible"><details class="ua"><summary aria-label="${esc(t("adm.audit.expand"))}" title="${esc(t("adm.audit.expand"))}">${ic("chev")}</summary><div class="uax" style="position:absolute;left:var(--s3);right:var(--s3);top:100%;z-index:20;text-align:left;white-space:normal;border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--shadow)">${detailLines(ctx, row)}</div></details></td></tr>`;
+<td class="act"><details class="ua"><summary aria-label="${esc(t("adm.audit.expand"))}">${ic("chev")}</summary></details></td></tr>
+<tr class="detail-row"><td colspan="7"><div class="uax">${detailLines(ctx, row)}</div></td></tr>`;
 }
 
 function cardHtml(ctx, row) {

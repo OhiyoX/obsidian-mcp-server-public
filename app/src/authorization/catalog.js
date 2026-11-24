@@ -261,20 +261,14 @@ const BOUNDARY_ROWS = Object.freeze([
   ["ADMIN GET /language", "admin_metadata_read", "admin"],
   ["ADMIN GET /audit/export.csv", "admin_metadata_read", "admin"],
   ["ADMIN POST /audit/clear", "admin_metadata_read", "admin"],
-  ["ADMIN GET /access-policy", "admin_metadata_read", "admin"],
-  ["ADMIN POST /access-policy/preview", "admin_metadata_read", "admin"],
-  ["ADMIN POST /access-policy/subjects", "admin_metadata_read", "admin"],
+  ["ADMIN POST /api-key/agent", "admin_metadata_read", "admin"], // #285: a display label, not a grant
   ["ADMIN POST /api-key/default-vault", "admin_metadata_read", "admin"],
   ["ADMIN POST /oauth/client/default-vault", "admin_metadata_read", "admin"],
   ["ADMIN POST /oauth/user/default-vault", "admin_metadata_read", "admin"],
-  ["ADMIN POST /access-policy/create", "admin_authorization_manage", "admin"],
-  ["ADMIN POST /access-policy/delete", "admin_authorization_manage", "admin"],
-  ["ADMIN POST /access-policy/repair", "admin_authorization_manage", "admin"],
-  ["ADMIN POST /access-policy/toggle", "admin_authorization_manage", "admin"],
-  ["ADMIN POST /access-policy/update", "admin_authorization_manage", "admin"],
-  // The per-Vault constraint editor (plan Tasks 5 and 6). Every write moves who may do what, on
-  // which Vault, so all five are the same control operation as the legacy policy writes above; its
-  // `GET` renders that console and is filed with them, not with the read-only metadata rows.
+  // The per-Vault constraint editor (plan Tasks 5 and 6) is the whole 定时授权 surface. Every write
+  // moves who may do what, on which Vault, so all five are the same control operation; its `GET`
+  // renders that console and is filed with them, not with the read-only metadata rows. The legacy
+  // `/access-policy` page and its seven write routes are retired, so they have no row.
   ["ADMIN GET /authz", "admin_authorization_manage", "admin"],
   ["ADMIN POST /authz/create", "admin_authorization_manage", "admin"],
   ["ADMIN POST /authz/delete", "admin_authorization_manage", "admin"],

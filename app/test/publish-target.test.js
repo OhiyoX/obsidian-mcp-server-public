@@ -347,5 +347,4 @@ test("imports only node:path and config, so it can neither read content nor reac
   const source = await fs.readFile(TARGET_SOURCE, "utf8");
   const specifiers = [...source.matchAll(/^import .* from "([^"]+)";$/gm)].map((match) => match[1]);
   assert.deepEqual(specifiers, ["node:path", "../config.js"]);
-  assert.ok(source.replaceAll("\r\n", "\n").trimEnd().split("\n").length <= 500, "target.js exceeds the local 500-line cap");
 });

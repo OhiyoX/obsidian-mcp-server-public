@@ -5,7 +5,7 @@
 // *markup* — "the plane is fully usable when the script never runs" — so the write has to be driven
 // by clicking the rendered control in a scriptless browser, and the result has to be read back from
 // the rendered page. The categories follow the lane brief: 账户 / Key / 客户端 / Token / 发布 / 审计 /
-// 策略 / Git 修复.
+// Git 修复 (the 策略 category retired with the legacy page: its surface and its writes are gone).
 //
 // State is created by this scene itself wherever a destructive action is involved (a throwaway
 // account, a throwaway DCR client with a real authorization-code grant, its own publication and its
@@ -108,9 +108,20 @@ async function assertClientDidNothing(page) {
   }))()`);
   assert.equal(snapshot.toast, 0, '无 JS 时不应出现 toast 节点（增强脚本不该运行）');
   assert.equal(snapshot.armed, false, '无 JS 时增强脚本的观察器不该存在');
+  // Two kinds of script are legitimate. The enhancement script is a module. The column-width
+  // pre-paint owner must be a CLASSIC external script: a module is deferred, so the saved
+  // `--admin-col-*` variables would land after the first paint and the table would flash at its
+  // default widths. It reads localStorage and sets custom properties, so it needs a name here
+  // rather than a loosened rule - a third script still fails.
+  const PRE_PAINT_SCRIPTS = new Set(['/admin/auth/assets/admin-column-widths.js']);
   for (const script of snapshot.scripts) {
+    const src = String(script.src || '');
+    assert.ok(src.startsWith('/admin/auth/assets/'), `脚本必须来自同源白名单：${src}`);
+    if (PRE_PAINT_SCRIPTS.has(src)) {
+      assert.equal(script.type, null, `预绘脚本 ${src} 应当是经典脚本（module 会延后到首绘之后）`);
+      continue;
+    }
     assert.equal(script.type, 'module', `无 JS 时页面仍只应声明同源 module，实际 ${JSON.stringify(script)}`);
-    assert.ok(String(script.src || '').startsWith('/admin/auth/assets/'), `脚本必须来自同源白名单：${script.src}`);
   }
   return snapshot;
 }
@@ -198,8 +209,6 @@ export async function registerNoScriptChecks(ctx, deps) {
     const publishPath = `notes/l4-noscript-publish-${stamp}.md`;
     await mcpCall({ base, apiKey: fixture.apiKey, name: 'write_note', args: { path: publishPath, overwrite: true, content: '# no-JS publish probe\n' } });
     await mcpCall({ base, apiKey: fixture.apiKey, name: 'manage_publish', args: { action: 'publish', path: publishPath } });
-    // The legacy policy writes are frozen, so this scene creates no policy: it reads the two the
-    // fixture planted in the store before boot (`seedParityPolicies`) and asserts the frozen surface.
     state = { clientName, clientId, publishPath, account: `l4-noscript-${stamp}`, keyLabel: `无 JS Key ${stamp}` };
   } finally {
     await setupContext.close().catch(() => {});
@@ -316,6 +325,26 @@ export async function registerNoScriptChecks(ctx, deps) {
     });
 
     await check('admin-nojs: 发布 — 无脚本仍能撤销公开链接', async () => {
+      await fs.unlink(path.join(fixture.fixtureRoot, 'vault', state.publishPath));
+      const scripted = await browser.newContext({ viewport: VIEWPORT });
+      try {
+        await noJsLogin(scripted, base, fixture.password);
+        const live = await scripted.newPage();
+        await open(live, `${base}/admin/auth?tab=publishes`);
+        const stale = rows(live, path.basename(state.publishPath)).first();
+        assert.match(await stale.getAttribute('class'), /\bdim\b/);
+        await stale.locator('details.mn > summary').click();
+        const menu = live.locator('body > .menu.on');
+        const revoke = menu.locator('a[href*="confirm=publish-revoke"]');
+        const panel = await menu.boundingBox();
+        const item = await revoke.boundingBox();
+        assert.ok(panel && item && item.y >= panel.y && item.y + item.height <= panel.y + panel.height,
+          `revoke must fit inside its menu: ${JSON.stringify({ panel, item })}`);
+        await revoke.click();
+        await live.locator('.modal form[action="/admin/auth/publish/revoke"]').waitFor();
+      } finally {
+        await scripted.close();
+      }
       await open(page, `${base}/admin/auth?tab=publishes`);
       const row = rows(page, path.basename(state.publishPath)).first();
       assert.ok(await row.count(), `前置发布记录（${state.publishPath}）没有出现在列表里`);
@@ -352,24 +381,6 @@ export async function registerNoScriptChecks(ctx, deps) {
       const after = await page.locator('.main .tbl tbody tr').count();
       assert.ok(after < before, `清空后记录数没有减少（${before} → ${after}）`);
       trace.categories.push({ id: 'audit', ok: true, before, after });
-    });
-
-    await check('admin-nojs: 策略 — 无脚本时列表只读（无写入口），冻结的写入端点仍拒绝真实表单提交', async () => {
-      await open(page, `${base}/admin/auth/access-policy`);
-      const listed = await page.locator('.main .tbl tbody tr').count();
-      assert.ok(listed > 0, '前置策略（fixture 在启动前播种的两条）没有出现在列表里');
-      assert.ok(await page.locator('.banner[data-frozen]').count(), '策略页必须带冻结横幅（data-frozen）');
-      // The frozen surface offers nothing that could write: no form posts to the policy routes, and
-      // no delete / new / copy link is rendered.
-      assert.equal(await page.locator('.main form[action*="access-policy"]').count(), 0, '冻结的策略页不应渲染任何写入表单');
-      assert.equal(await page.locator('.main a[href*="confirm=delete"], .main a[href*="new=1"], .main a[href*="?copy="]').count(), 0, '冻结的策略页不应渲染删除/新建/复制入口');
-      // A real form submission (valid session + CSRF) still gets the honest refusal, not a 404 and
-      // not a silent no-op.
-      // The token has to come from THIS context's session (the setup context is closed already).
-      const refused = await postForm(context.request, base, '/admin/auth/access-policy/delete', { csrf: await adminCsrf(context.request, base), id: 'any', confirm: 'any' });
-      assert.equal(refused.status(), 409, `冻结的删除端点必须拒绝（实际 ${refused.status()}）`);
-      assert.equal((await refused.json()).error, 'access_policy_frozen', '拒绝必须带 access_policy_frozen 代码');
-      trace.categories.push({ id: 'policies', ok: true, readOnly: listed });
     });
 
     await check('admin-nojs: 无脚本时页面没有 page error，且脚本没有运行', async () => {
@@ -431,4 +442,4 @@ export async function registerNoScriptChecks(ctx, deps) {
   return { trace };
 }
 
-export const NO_SCRIPT_CATEGORIES = Object.freeze(['accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'policies', 'git-repair']);
+export const NO_SCRIPT_CATEGORIES = Object.freeze(['accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'git-repair']);

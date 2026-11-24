@@ -1,0 +1,1 @@
+Obsidian memory checkpoint: if this task produced confirmed durable project changes, update the existing current-state note and nearest index, then verify. Do not create duplicate notes for unchanged Q&A or record secrets/full conversations. Respect the user's current scope.

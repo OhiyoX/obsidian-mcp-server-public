@@ -156,13 +156,49 @@ Use the Streamable HTTP MCP endpoint and either an API key or OAuth:
 }
 ```
 
-- For API keys, set `API_KEY` in `.env` and keep the header name in
-  `API_KEY_HEADER` (default `X-API-Key`). The configured key reaches the primary
-  Vault only; set `API_KEY_VAULTS` (comma separated Vault ids) to grant it more.
-- For interactive clients, prefer OAuth 2.1 with PKCE and set
-  `PUBLIC_BASE_URL` to the externally reachable HTTPS origin.
-- The repository also ships a project skill:
-  [`skills/connect-obsidian-mcp`](skills/connect-obsidian-mcp).
+That template is for a **header-based client**: the key travels in a header, and the
+client never opens a browser. For API keys, set `API_KEY` in `.env` and keep the
+header name in `API_KEY_HEADER` (default `X-API-Key`). The configured key reaches
+the primary Vault only; set `API_KEY_VAULTS` (comma separated Vault ids) to grant
+it more.
+
+An **interactive client** uses OAuth 2.1 with PKCE instead, and most such clients
+want nothing but a URL — they discover the authorization server from it and open a
+browser for approval:
+
+```text
+Server URL: https://mcp.example.com/mcp
+Authentication: OAuth (the client discovers it; no header, no JSON key)
+```
+
+Set `PUBLIC_BASE_URL` to the externally reachable HTTPS origin, or the client will
+be sent to an address it cannot reach. One JSON snippet is not a universal
+configuration: a header-based client cannot use the OAuth template, and an
+interactive client cannot use a key that the operator pastes into a header.
+
+| Client | Transport | Authentication | Status |
+| --- | --- | --- | --- |
+| Pi Pocket (this project's own agent) | Streamable HTTP | API key header | verified |
+| Any MCP client that reads `mcpServers` from JSON | Streamable HTTP | API key header | verified by contract tests |
+| Interactive hosts (Claude, Cursor, …) | Streamable HTTP | OAuth 2.1 + PKCE | unverified per client — the OAuth flow is tested, the individual host is not |
+
+The repository also ships a project skill:
+[`skills/connect-obsidian-mcp`](skills/connect-obsidian-mcp).
+
+To check one endpoint end to end, run the onboarding self-check. It performs one
+`initialize`, one `tools/list` and one read-only `server_info`, prints one JSON line
+with a single failure class per run, and never prints the credential:
+
+```bash
+MCP_SMOKE_URL=https://mcp.example.com/mcp MCP_SMOKE_API_KEY="$API_KEY" \
+  node app/scripts/mcp-onboarding-smoke.mjs
+```
+
+The classes are bounded and each names the part to fix instead of "it does not work":
+`auth-invalid-key`, `auth-forbidden`, `auth-token-expired`, `scope-read-only`,
+`profile-read-only`, `network-dns`, `network-tls`, `network-refused`, `network-timeout`,
+`session-dropped-recovered`, `session-dropped-unrecovered` and `cjk-write-unreachable`
+(the Chinese write intent that must reach `write_note`). Exit code 0 means no error.
 
 ### Use it from the browser
 
@@ -211,6 +247,7 @@ audit history, and time-window authorization.
 - [Per-vault Git settings](docs/ADMIN_VAULT_GIT.md)
 - [Mutation recovery](docs/MUTATION_RECOVERY.md)
 - [Time-window authorization](docs/AUTHZ_TIME_WINDOWS.md)
+- [Retrieval provenance and index freshness](docs/SEARCH_PROVENANCE.md)
 - [Release and deployment](docs/RELEASE_AND_DEPLOY.md)
 - [Agent setup prompt](docs/AGENT_SETUP_PROMPT.md)
 - [Connect skill](skills/connect-obsidian-mcp)
@@ -360,13 +397,44 @@ TRUST_PROXY=127.0.0.1
 }
 ```
 
-- API Key：在 `.env` 设置 `API_KEY`，请求头名由 `API_KEY_HEADER` 控制
-  （默认 `X-API-Key`）。配置 key 默认只能访问主库；需要跨库时在 `API_KEY_VAULTS`
-  里列出多个库 id（逗号分隔）。
-- 交互式客户端优先使用 OAuth 2.1 + PKCE，并把 `PUBLIC_BASE_URL` 设为外部可达的
-  HTTPS 源。
-- 仓库自带项目 Skill：
-  [`skills/connect-obsidian-mcp`](skills/connect-obsidian-mcp)。
+上面这份是**请求头型客户端**的模板：密钥走请求头，客户端不会打开浏览器。API Key 在
+`.env` 设置 `API_KEY`，请求头名由 `API_KEY_HEADER` 控制（默认 `X-API-Key`）。配置
+key 默认只能访问主库；需要跨库时在 `API_KEY_VAULTS` 里列出多个库 id（逗号分隔）。
+
+**交互式客户端**走 OAuth 2.1 + PKCE，这类客户端通常只要一个地址 —— 它自己从地址发现
+授权服务器并打开浏览器：
+
+```text
+服务器地址：https://mcp.example.com/mcp
+认证方式：OAuth（客户端自动发现，不需要请求头，也不需要 JSON 里的密钥）
+```
+
+`PUBLIC_BASE_URL` 必须是外部可达的 HTTPS 源，否则客户端会被送到它访问不到的地址。
+**一份 JSON 不是通用配置**：请求头型客户端用不了 OAuth 模板，交互式客户端也用不了
+操作者粘进请求头的 key。
+
+| 客户端 | Transport | 认证 | 状态 |
+| --- | --- | --- | --- |
+| Pi Pocket（本项目自己的 agent） | Streamable HTTP | API Key 请求头 | 已验证 |
+| 任何从 JSON 读 `mcpServers` 的 MCP 客户端 | Streamable HTTP | API Key 请求头 | 已由契约测试验证 |
+| 交互式宿主（Claude、Cursor…） | Streamable HTTP | OAuth 2.1 + PKCE | 逐客户端未验证 —— OAuth 流程有测试，具体宿主没有 |
+
+仓库自带项目 Skill：
+[`skills/connect-obsidian-mcp`](skills/connect-obsidian-mcp)。
+
+要端到端确认某个端点可用，跑接入自检：它做一次 `initialize`、一次 `tools/list` 和一次
+只读 `server_info`，输出一行 JSON，每次只给一个失败类别，也绝不打印凭据：
+
+```bash
+MCP_SMOKE_URL=https://mcp.example.com/mcp MCP_SMOKE_API_KEY="$API_KEY" \
+  node app/scripts/mcp-onboarding-smoke.mjs
+```
+
+类别有界，每个都指出该修哪一段，而不是只说「连不上」：`auth-invalid-key`、
+`auth-forbidden`、`auth-token-expired`、`scope-read-only`、`profile-read-only`、
+`network-dns`、`network-tls`、`network-refused`、`network-timeout`、
+`session-dropped-recovered`、`session-dropped-unrecovered`、`cjk-write-unreachable`
+（必须能命中 `write_note` 的中文写入意图）。退出码 0 表示没有问题。
 
 ### 浏览器使用
 

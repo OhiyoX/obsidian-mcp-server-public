@@ -1,0 +1,1 @@
+Roll back (undo / revert) an accidental or mistaken write: restore a pre-write snapshot (overwrite: true if the note exists; IDs from list_versions or preWriteVersionId), or path + revision from Vault Git. 误写回滚、恢复版本用它。

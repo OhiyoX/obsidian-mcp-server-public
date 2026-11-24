@@ -96,6 +96,10 @@ export async function registerEditorRenderChecks(ctx) {
         headings:[1,2,3,4,5,6].map(level=>host.querySelectorAll(`h${level}`).length),
         tables:host.querySelectorAll('table').length,
         codeBlocks:host.querySelectorAll('pre > code').length,
+        // #747: the fixture's ```mermaid fence is rendered as a diagram (`.mermaid` + svg), not as a
+        // `pre > code`, so a `pre > code` census alone read "2 of 3 code blocks" on a page where
+        // nothing was lost. The two fence surfaces the fixture holds are counted separately below.
+        diagrams:host.querySelectorAll('.mermaid').length,
         blockquotes:host.querySelectorAll('blockquote').length,
         callouts:host.querySelectorAll('.callout').length,
         tasks:host.querySelectorAll('input.task-list-item-checkbox').length,
@@ -109,7 +113,8 @@ export async function registerEditorRenderChecks(ctx) {
     });
     assert.deepEqual(rendered.headings,[1,2,1,1,1,1]);
     assert.ok(rendered.tables>=1,JSON.stringify(rendered));
-    assert.ok(rendered.codeBlocks>=3,JSON.stringify(rendered));
+    assert.ok(rendered.codeBlocks>=2,JSON.stringify(rendered));
+    assert.ok(rendered.diagrams>=1,JSON.stringify(rendered));
     assert.ok(rendered.blockquotes>=2,JSON.stringify(rendered));
     assert.ok(rendered.callouts>=1,JSON.stringify(rendered));
     assert.equal(rendered.tasks,2,JSON.stringify(rendered));
@@ -135,6 +140,12 @@ export async function registerEditorRenderChecks(ctx) {
     assert.equal(result.href,'https://example.com/reference');assert.equal(result.unsafeNodes,0);
   });
   await check('closed code renders as a card outside the selection while tables stay in-place',async()=>{
+    // #747: this scene measures the fence card, whose radius/background come from the
+    // `.is-live-preview` scope. It must put the page in live mode itself; inheriting the
+    // previous scene's mode measured the card rules switched off (border-radius 0px).
+    await open('A.md');
+    await mode('live');
+    await sleep(120);
     const result=await page.evaluate(()=>{
       const code=document.querySelector('.cm-live-code');
       const codeStart=document.querySelector('.cm-live-code-start');
@@ -157,12 +168,12 @@ export async function registerEditorRenderChecks(ctx) {
     assert.ok(result.codeLines>=2);
     assert.match(result.codeText,/# fake heading|const value = 1/);
     assert.ok(result.tableCount>0);
-    assert.match(result.codeFamily,/mono|consolas|menlo|courier/i);
-    assert.notEqual(result.codeBackground,'rgba(0, 0, 0, 0)');
-    assert.notEqual(result.codePadding,'0px');
-    assert.notEqual(result.codeRadius,'0px');
-    assert.notEqual(result.codeColor,'rgba(0, 0, 0, 0)');
-    assert.equal(result.visibleFenceLines,0);
+    assert.match(result.codeFamily,/mono|consolas|menlo|courier/i,JSON.stringify(result));
+    assert.notEqual(result.codeBackground,'rgba(0, 0, 0, 0)',JSON.stringify(result));
+    assert.notEqual(result.codePadding,'0px',JSON.stringify(result));
+    assert.notEqual(result.codeRadius,'0px',JSON.stringify(result));
+    assert.notEqual(result.codeColor,'rgba(0, 0, 0, 0)',JSON.stringify(result));
+    assert.equal(result.visibleFenceLines,0,JSON.stringify(result));
   });
   await check('code geometry and typography stay stable across language, selection, and reading mode',async()=>{
     const source='`inline sample`\n\n```\nplain line\n```\n\n```powershell\nWrite-Host language\n```\n';

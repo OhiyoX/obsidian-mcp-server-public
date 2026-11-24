@@ -40,13 +40,12 @@ One document, one mode, one editor.
   revision (`null` while no document is readable) and how many constraints it holds. It
   never carries a subject id, a Vault id, a window, a capability or a label: `/healthz` is
   public, and those facts stay on Admin.
-- **The legacy page is history.** `DATA_PATH/access-policy.json`, its page
-  `/admin/auth/access-policy` and its routes stay on disk, read-only. The seven legacy writes
-  (`POST …/access-policy/{create,update,toggle,delete,preview,repair,subjects}`) refuse with
-  409 `access_policy_frozen` and point at `/admin/auth/authz`. They were frozen in the same
-  deploy that seeded the document, because an accepted legacy edit would be stored and never
-  apply. Nothing is deleted, and a re-seed is not allowed: the seed runs once, only when no
-  document exists, and never overwrites one.
+- **The legacy page is gone.** `DATA_PATH/access-policy.json` stays on disk, read once by the
+  seed and by the legacy decision backend, so `AUTHORIZATION_MODE=legacy` is still a valid
+  rollback. Its page `/admin/auth/access-policy` and its seven write routes
+  (`POST …/access-policy/{create,update,toggle,delete,preview,repair,subjects}`) were retired:
+  every legacy path answers 404. `/admin/auth/authz` is the whole 定时授权 surface. A re-seed is
+  not allowed: the seed runs once, only when no document exists, and never overwrites one.
 - **The cutover, the soak rule, the enforce proof and the rollback truth** are in
   [RELEASE_AND_DEPLOY.md](RELEASE_AND_DEPLOY.md), section
   "AuthZ per-Vault cutover (P4)".

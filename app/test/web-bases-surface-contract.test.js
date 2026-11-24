@@ -91,19 +91,15 @@ test("Base internals stay behind the navigation wiring module", async () => {
   // dependency on Base internals so app.js stays a thin bootstrap module.
   const app = await fs.readFile(new URL("../frontend/app/core/app.js", import.meta.url), "utf8");
   assert.doesNotMatch(app, /features\/bases|createBaseSurface/);
-  assert.ok(app.split(/\r?\n/).length <= 500, "app.js must stay within the local 500-line cap");
+  // The hard code-line gate was retired by owner decision (2026-11-13); the isolation checks
+  // around it remain the contract.
   const wiring = await fs.readFile(new URL("../frontend/app/features/navigation/base-navigation.js", import.meta.url), "utf8");
   assert.match(wiring, /bases\/index\.js/);
   assert.match(wiring, /BASE_SURFACE_CSS/);
 });
 
-test("every Base module stays within the architecture line budget", async () => {
-  for (const name of BASE_MODULES) {
-    const source = await readModule(name);
-    assert.ok(source.split(/\r?\n/).length <= 500, `${name} exceeds the local 500-line cap`);
-  }
-});
-
+// The "every Base module stays within the architecture line budget" test was deleted: it asserted
+// only line counts, and the hard code-line gate was retired by owner decision (2026-11-13).
 test("createBaseSurface returns the frozen mount contract", async () => {
   const { createBaseSurface } = await import("../frontend/app/features/bases/index.js");
   const surface = createBaseSurface({ host: null, fetchImpl: async () => ({ ok: false, status: 500, json: async () => ({}) }) });

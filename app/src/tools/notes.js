@@ -27,19 +27,22 @@ export function registerNoteTools(server) {
     "get_note",
     {
       title: "Get Obsidian Note",
-      description: "Read a note as content, full structured data, document map, metadata, or a single section.",
       inputSchema: {
         path: z.string().min(1),
         format: z.enum(["content", "full", "document-map", "metadata", "section"]).default("full"),
         section: z.string().optional(),
         sectionType: z.enum(["heading", "block", "frontmatter"]).optional(),
         includeLinks: z.boolean().default(true),
+        ifRevision: z.string().min(1).optional().describe("Optional revision returned by get_note; when it still matches, the answer is {path, revision, notModified: true} with no body."),
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ path, format, section, sectionType, includeLinks }) => {
+    async ({ path, format, section, sectionType, includeLinks, ifRevision }) => {
       try {
+        // Order matters: resolving the path binds the caller's authorized Vault, so the revision
+        // below is always this subject's own source revision. No cache: the note is read once.
         const note = await readNote(resolveVaultPath(path, { assumeMarkdown: true }));
+        if (ifRevision && ifRevision === note.revision) return ok({ path: note.path, revision: note.revision, notModified: true });
         if (format === "content") return ok({ path: note.path, content: note.raw, revision: note.revision });
         if (format === "document-map") return ok(documentMap(note));
         if (format === "metadata") return ok({ path: note.path, cache: buildCachedMetadata(note), revision: note.revision });
@@ -57,7 +60,6 @@ export function registerNoteTools(server) {
     "get_metadata",
     {
       title: "Get Obsidian Metadata",
-      description: "Return a best-effort Obsidian CachedMetadata-shaped object for a Markdown note.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -75,7 +77,6 @@ export function registerNoteTools(server) {
     "write_note",
     {
       title: "Write Obsidian Note",
-      description: "Create a note or overwrite an existing note when overwrite=true. The server records explicit or derived _meta[obsidian/author] in mcp_author frontmatter.",
       inputSchema: {
         path: z.string().min(1),
         content: z.string().default(""),
@@ -121,7 +122,6 @@ export function registerNoteTools(server) {
     "append_to_note",
     {
       title: "Append To Obsidian Note",
-      description: "Append content to a note, optionally inside a heading section.",
       inputSchema: {
         path: z.string().min(1),
         content: z.string(),
@@ -156,7 +156,6 @@ export function registerNoteTools(server) {
     "patch_note",
     {
       title: "Patch Obsidian Note",
-      description: "Append, prepend, or replace note content. replace swaps the ENTIRE targeted heading body (or block line / frontmatter value), not one matching line; a write shrinking the note by more than 20% is refused unless confirmShrink is true.",
       inputSchema: {
         path: z.string().min(1),
         operation: z.enum(["append", "prepend", "replace"]).default("append"),
@@ -214,7 +213,6 @@ export function registerNoteTools(server) {
     "replace_in_note",
     {
       title: "Replace In Obsidian Note",
-      description: "Run literal or regex replacements against a note body while preserving frontmatter.",
       inputSchema: {
         path: z.string().min(1),
         replacements: z.array(z.object({
@@ -263,7 +261,6 @@ export function registerNoteTools(server) {
     "manage_frontmatter",
     {
       title: "Manage Obsidian Frontmatter",
-      description: "Get, set, delete, or replace YAML frontmatter values for a note.",
       inputSchema: {
         path: z.string().min(1),
         action: z.enum(["get", "set", "delete", "replace"]).default("get"),
@@ -308,7 +305,6 @@ export function registerNoteTools(server) {
     "manage_tags",
     {
       title: "Manage Obsidian Tags",
-      description: "List, add, remove, or set tags in frontmatter, inline body tags, or both.",
       inputSchema: {
         path: z.string().min(1),
         action: z.enum(["list", "add", "remove", "set"]).default("list"),

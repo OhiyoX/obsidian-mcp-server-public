@@ -15,7 +15,8 @@
 //     `<details>`, every switch/danger action is a real POST form, and results render as `.result`.
 //   * Data comes from the model only; a fact the service does not provide renders as `—` / 未提供,
 //     never as `0` / `正常`. A vault whose runtime threw renders without runtime facts.
-//   * Planned features keep the dashed marker (`fut()`) and get no fake CTA.
+//   * Planned features keep the dashed marker (`fut()`) and get no fake CTA. This page renders none:
+//     its one planned box (「从 GitHub 仓库添加 Vault」) is now the read-only fact card below.
 //   * The Admin plane never creates a repo, never edits credentials and never accepts a
 //     credential-bearing remote URL; `root`/`remote`/`branch` stay Admin-plane facts.
 //   * `状态` (list row + mobile card + drawer) is the prototype's `gitState()`: a non-empty pending
@@ -26,7 +27,7 @@
 //   * The `?confirm=repair` page is `ui.confirmPage` again: the type-to-confirm input must live
 //     inside the `<form>` and the submit must stay enabled, so a scriptless POST carries the text
 //     the server compares. The check itself stays server-side.
-import { banner, confirmPage, emptyState, esc, fut, ic, mcards, moreMenu, pageBar, postForm, result, table } from "../ui.js";
+import { banner, confirmPage, emptyState, esc, ic, mcards, moreMenu, pageBar, postForm, result, table } from "../ui.js";
 import { relTitle } from "../presentation/format.js";
 import { admissionConfirmChoices } from "../vault-admission-view.js";
 import { capabilityHint, capabilityLabel } from "../capability-labels.js";
@@ -139,7 +140,6 @@ function maybeText(value) {
   return shown(value) ? tx(value) : MISSING;
 }
 
-/** `st` pill (`1-head.html` `.st`): `<span class="st ok"><span class="dot"></span>已同步</span>`. */
 function statePill(token, extra = "") {
   const view = gitStateView()[token] || { label: token ? t("adm.vaults.state.unknownWith", { token }) : t("adm.vaults.state.unknown"), tone: "off" };
   return `<span class="st ${view.tone}"><span class="dot"></span>${esc(view.label)}</span>${extra ? ` <span class="muted">· ${extra}</span>` : ""}`;
@@ -403,7 +403,13 @@ function numberField(vault, key, label, min, max) {
 function textField(vault, key, label, sub, hint, maxLength) {
   const config = vault?.git?.config ?? null;
   const disabled = vault?.editable !== true;
-  return `<div class="fld"><label>${esc(label)} <small>${esc(sub)}</small></label><input class="inp mono" name="${esc(key)}" maxlength="${esc(String(maxLength))}" value="${maybeText(config?.[key])}"${disabled ? " disabled" : ""}>${hint ? `<span class="help">${esc(hint)}</span>` : ""}</div>`;
+  // An ATTRIBUTE carries text, never markup: `maybeText()` answers HTML (`<span class="muted">—</span>`
+  // when the value is absent), so using it here put literal `<span class="` into the input's value —
+  // the branch field rendered that fragment as its content (screenshot, 2026-11-21). Escape the plain
+  // string and let the placeholder carry the "not set" state.
+  const raw = config?.[key];
+  const value = shown(raw) ? tx(raw) : "";
+  return `<div class="fld"><label>${esc(label)} <small>${esc(sub)}</small></label><input class="inp mono" name="${esc(key)}" maxlength="${esc(String(maxLength))}" value="${value}" placeholder="${esc(t("adm.authz.notProvided"))}"${disabled ? " disabled" : ""}>${hint ? `<span class="help">${esc(hint)}</span>` : ""}</div>`;
 }
 
 /** `6-app.js` Git 同步设置: 4 switches + 3 numbers + 2 texts + 保存设置 / 验证仓库与配置. */
@@ -653,6 +659,38 @@ function admissionConfirmPage(view) {
   });
 }
 
+/**
+ * The GitHub-backed Vault fact card (design C, `scratch/sdd-747/design-github-vault.md`).
+ *
+ * Visibility only: `git.remoteKind` — the class the service already decided (`github` / `other` /
+ * `none` / `disabled` / `null` for "nothing to read") — plus the push outcome the Git admin reports
+ * for the same Vault. This page never sees a remote URL: no network, no Git write, no credential.
+ * A Vault without a runtime (every secondary today) says 未提供 instead of guessing a remote.
+ */
+function githubSection(list) {
+  if (!Array.isArray(list) || list.length === 0) return "";
+  // The service decides the class (`git.remoteKind`); an unknown token renders as 未提供 rather than
+  // as a guessed host, and the page never holds a URL to guess from.
+  const kindPill = (kind) => {
+    const known = ["github", "other", "none", "disabled"].includes(kind) ? kind : "unknown";
+    return `<span class="st ${known === "github" ? "ok" : "off"}"><span class="dot"></span>${esc(t(`adm.vaults.github.kind.${known}`))}</span>`;
+  };
+  const rows = list.map((vault) => {
+    const git = vault?.git ?? {};
+    const kind = git.remoteKind;
+    const remote = shown(git?.config?.remote) ? `<span class="muted">· ${t("adm.vaults.github.remote", { remote: tx(git.config.remote) })}</span>` : "";
+    const push = git.push?.lastOutcome;
+    const pushFact = push && typeof push === "object"
+      ? `${esc(t("adm.vaults.kv.lastPush"))} ${relTitle(push.at)} · ${esc(t(push.pushed === true ? "adm.vaults.push.pushed" : "adm.vaults.push.failed"))}`
+      : `${esc(t("adm.vaults.kv.lastPush"))} ${esc(t("adm.vaults.push.none"))}`;
+    const name = shown(vault?.name) ? tx(vault.name) : tx(vault?.id);
+    // The five-state reading is NOT repeated here: the table's own 状态 column carries it, and a
+    // second copy would let a clean label sit next to a pending batch (#400/#435).
+    return `<div class="k">${name}</div><div>${kindPill(kind)} ${remote}<div class="help">${pushFact} · ${esc(t("adm.vaults.github.fetch"))}</div></div>`;
+  }).join("");
+  return `<div class="sect" id="vault-github"><div class="sect-h"><h2>${esc(t("adm.vaults.github.title"))}</h2><span class="muted">${esc(t("adm.vaults.github.readonly"))}</span></div><div class="kv">${rows}</div><p class="help">${esc(t("adm.vaults.github.body"))}</p></div>`;
+}
+
 /** Row menu / mobile-card / drawer context: `renderVaultsPage(ctx) -> { content, detailPanel }`. */
 export function renderVaultsPage(ctx) {
   const view = normalizeCtx(ctx);
@@ -712,7 +750,7 @@ ${askAdmission ? admissionConfirmPage(view) : ""}
 ${model ? table(vaultColumns(), sorted.map((vault) => row(vault, view)), emptyState("db", t("adm.vaults.empty.title"), t("adm.vaults.empty.body")), { ...sort, base: view.base }) : ""}
 ${model ? mcards(sorted.map((vault) => card(vault, view))) : ""}
 ${admissionListSection(list, model, view)}
-<div class="sect futonly"><div class="futbox" style="display:flex;gap:12px;align-items:center"><div class="grow"><b style="font-weight:600">${esc(t("adm.vaults.github.title"))}</b> ${fut("Architecture TODO")}<div class="help">${esc(t("adm.vaults.github.body"))}</div></div><button class="btn" disabled>${esc(t("adm.vaults.github.add"))}</button></div></div>
+${githubSection(sorted)}
 </div></div>`;
   return { content, detailPanel: detail };
 }

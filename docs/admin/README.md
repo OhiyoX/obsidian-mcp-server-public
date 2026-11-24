@@ -1,5 +1,7 @@
 # Admin plane — developer contract (greenfield redo, 2026-10-18)
 
+For incremental layout work, use the [UI fine-tuning checklist](UI_CHECKLIST.md).
+
 The Admin console is being **rebuilt from scratch**. The previous Admin UI (Admin UI v2, W0–W8 plus
 two "parity" rounds, deployed up to `v2026.10.18.1`) was judged untrustworthy and removed as a
 design source: its markup, CSS, page modules and its self-reported parity claims are **not**
@@ -105,13 +107,16 @@ Rules:
 | `capabilities` | `{ groups: [{ group, label, items: [{ key, name }] }], nameOf, isValid }` |
 | `navCounts`, `navAttention` | sidebar counts / attention dots |
 | `theme`, `csrf`, `session`, `query`, `now` | request context: theme, CSRF token, admin session, query params |
-| `accessPolicyBase`, `vaultGitBase` | hrefs of the two separate route modules |
+| `constraintBase`, `vaultGitBase` | hrefs of the two separate route modules |
 
 ## The two route modules
 
-`/admin/auth/access-policy*` and `/admin/auth/vault-git*` live in their own route modules (they own
-service-level validation, CAS and admission). They render through the same shell via
+`/admin/auth/authz*` (定时授权, the per-Vault constraint console) and `/admin/auth/vault-git*` live in
+their own route modules (they own service-level validation, CAS and admission). They render through
+the same shell via
 `view.renderAuthShell({ activeTab, content, session, theme, navCounts, navAttention, detailPanel })`.
+The legacy `/admin/auth/access-policy*` routes were retired and answer 404 (owner ruling 2026-11-12:
+the Admin speaks the per-Vault constraint model only).
 
 ## D0 — the enhancement script (same-origin client)
 
@@ -199,9 +204,9 @@ Feature modules register with `registerFeature(name, setup)`; `registerFeature` 
 | `a.cell-link`, `details.mn` | pages / `ui.js` | rows that own an entry; the native menu the client floats |
 | `data-scrim`, `.modal`, `.tc code` | `ui.js` | scrim ownership, the dialog box, the typed target string |
 | `[data-overlay-dismiss]` | set by the client on the server's 取消 link | close in place instead of navigating |
-| `data-enhance="hide-when-scripted"` | pages | a control that exists **only** for the no-JS path (the 定时授权 preview card's 查看); the entry drops it once the feature that replaces it has marked the form `data-enhanced="1"` |
+| `data-enhance="hide-when-scripted"` | pages | a control that exists **only** for the no-JS path; the entry drops it once the feature that replaces it has marked the form `data-enhanced="1"`. No page renders it since the legacy 定时授权 preview card retired — the client keeps the rule for the next surface that needs it |
 | `data-autosubmit` | pages | the prototype's scripted “pick and it submits” select; without the script the explicit submit button is the path |
-| `data-preview-form` | `pages/authz.js` | the list page's preview card: `admin-feature-lists` answers a pick in place from the server's own `POST {base}/preview` |
+| `data-preview-form` | retired | the list page's in-place preview (`pages/authz.js`, deleted with the legacy surface); `admin-client.js` still skips a form that carries it |
 | `data-select-native` | `admin-feature-select.js` (client) | marks the real select as clipped/aria-hidden — an attribute, never a class, so the shape line stays the prototype's |
 | `data-nav-toggle` / `data-nav-close` / `data-nav-scrim` | `layout.js` | the narrow-screen menu: a real link to the server's `?nav=1` state, its close link, and the scrim the client re-uses |
 
@@ -259,13 +264,10 @@ plain defects, not adaptations; they are covered by `test/admin-redo/audit-pager
 found there was #607's pager, now fixed - so the honest statement is "prime suspect fixed, device
 re-check outstanding".
 
-A second overflow exists on **other** pages and is NOT fixed here: `/admin/auth/access-policy` scrolls its
-`.content` by 70/35/24px at 320/390/412 because a banner chip (`span.fut`, `white-space:nowrap`, chain
-`span.fut > div.futonly.bm > div.banner.acc`) is wider than the viewport; `/admin/auth/access-policy?new=1`
-adds 16px at 320 from the subject picker. Both are present in the prototype at the same widths (parity
-behaviour, not introduced by this plane) and `fut.scrollIntoView()` can push `.content.scrollLeft` - which
-is the *shape* of the reported left clipping. They are tracked as a separate mobile batch; a device
-screenshot of the audit page is what #603 itself describes.
+The second overflow this note used to carry belonged to the retired `/admin/auth/access-policy` page
+(the frozen banner chip and the subject picker at 320/390/412). That surface is gone; the 定时授权 page
+that replaced it is scanned at the same widths by the design scene's A2 criterion, so a new
+`.content` overflow there fails the gate instead of being recorded here.
 
 ### Known deviations (honest)
 
@@ -304,7 +306,8 @@ The greenfield plane used to leave the previous Admin UI's view code in the tree
 Git service module still imported it. That chain is gone:
 
 - deleted `access-policy-view.js` (its only importer, `access-policy-routes.js`, was already gone on
-  main; the live AuthZ surface is `routes/access-policy.js` → `pages/authz.js`);
+  main; the AuthZ surface of that day, `routes/access-policy.js` → `pages/authz.js`, has since been
+  retired too and replaced by `routes/authz.js` → `pages/authz-constraints*.js`);
 - deleted `src/admin/vault-git-view.js`, `vault-git-config-form.js`, `admin-html.js` and
   `src/admin/admin-v2/**`;
 - `src/admin/vault-git-routes.js` keeps the **service** (`createVaultGitAdmin`, `resolveActions`,
@@ -322,10 +325,10 @@ Git service module still imported it. That chain is gone:
 Also retired: `scripts/run-admin-window-checks.mjs` and `scripts/web-regression/admin-window-presentation.mjs`.
 That scene read `td[data-label="窗口"] a[data-window-open]`, markup that only ever existed in the
 deleted `access-policy-view.js`, so it had been unrunnable since the AuthZ page was ported. The
-window surfaces are still covered: `pages/authz.js` renders the column, the timeline and the
-`?window=` entry from `access-policy-window-presentation.js`, pinned by
-`test/admin-access-policy-window-presentation.test.js` and `test/admin-redo/authz.test.js`, and the
-list/drawer/editor shapes by the shape gate.
+window surfaces are still covered: the constraint page renders the column, the timeline and the now
+verdict from `access-policy-window-presentation.js` + `pages/authz-window.js`, pinned by
+`test/admin-access-policy-window-presentation.test.js` and the constraint page's own tests, and the
+list/drawer/editor shapes by `scripts/web-regression/admin-layout-constraints.mjs`.
 
 ## Verifying against the prototype
 
@@ -352,6 +355,13 @@ CHROMIUM_EXECUTABLE=<absolute path to a full chromium>/chrome.exe \
 # geometry*, which let a whole extra toolbar or a swapped control type pass unnoticed.
 cd app
 PLAYWRIGHT_MODULE=<path to playwright-core/index.mjs> node scripts/run-admin-layout-checks.mjs
+
+# The same scene, split so it fits a CI shard (#378): `--shard=<i>/<n>` runs one deterministic slice
+# (scene groups in table order, position modulo n; a scene that reads rows another scene seeds shares
+# its group, so the two never split). `npm run admin-layout:shards [n]` runs every shard in sequence
+# and fails if a shard fails, if a check runs twice, or if the slices do not cover every scene once.
+PLAYWRIGHT_MODULE=<path to playwright-core/index.mjs> node scripts/run-admin-layout-checks.mjs --shard=1/3
+npm run admin-layout:shards
 ADMIN_CLIENT_BROWSER_EVIDENCE=1 node --test --test-concurrency=1 test/admin-redo/client-*.test.js
 # full suite: SERIAL, always. On this Windows host the OS hands out ephemeral ports inside undici's
 # blocked-port list (see test/preload-fetch-safe-listen.mjs), which turns an unrelated test red as
@@ -367,3 +377,7 @@ Acceptance for a page: its table columns/cell shapes, banners, panels and empty 
 prototype page element-for-element; no-JS; the pre-existing capability route is still reachable; a
 negative control can make every new check red. The visual/layout standard is the prototype itself —
 enforced by `app/scripts/proto-parity/` (see lane w5), not by a separate selector document.
+
+## Timed authorization operation groups
+
+The canonical operation editor follows the prototype grouped-checkbox pattern (`renderPolicyEditor`), grouping actual operation IDs by the existing toolset catalog (notes, files, search, Git and other source modules), with runtime surface as the fallback. Search never clears checked items. Group selection affects the entire named group, including filtered items; its mixed state reflects all group members. Known groups may collapse; saved unknown IDs remain checked in a separate preservation list. The original null/all marker survives an untouched save; selecting explicit IDs narrows it, and clearing all explicit IDs returns to that marker when present. No-JS users submit the same native checkboxes. The saved-only preview and independent surface filter retain their contracts.

@@ -475,7 +475,9 @@ test("declared output widenings are minimal, and an undeclared one still goes re
   // `get_base.revision` (P1 #629), `file_upload_status.receiptId` (R1, #704 follow-up), and
   // `get_publish_status.kind` / `manage_publish.kind` (Task 8, 2026-11-08 folder publish: the
   // record kind explains the public-path shape).
-  assert.deepEqual(live.compatibleOutputSchemaWidenings, ["file_upload_status", "get_base", "get_publish_status", "manage_publish"]);
+  // `restore_version.sourceRevision` / `.preWriteVersionId` (B, #834): a Git-revision restore names
+  // the commit it read and the snapshot it replaced, so the caller can undo its own restore.
+  assert.deepEqual(live.compatibleOutputSchemaWidenings, ["file_upload_status", "get_base", "get_publish_status", "manage_publish", "restore_version"]);
   assert.deepEqual(live.outputSchemaMismatches, []);
 
   // (b) Negative control: an *undeclared* extra output property must still be reported.

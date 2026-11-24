@@ -1,0 +1,1 @@
+Inspect and import exactly one Agent Skills package ZIP under the managed Skills root. Defaults to dryRun=true and rejects traversal, symlinks, duplicates, encrypted/ZIP64 archives, limits, and destination collisions. Import never authorizes script execution.

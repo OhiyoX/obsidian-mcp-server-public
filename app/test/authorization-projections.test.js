@@ -194,13 +194,13 @@ test("the_admin_projection_carries_no_subject_and_no_account_constraint", async 
     configuredApiKeyEnabled: false,
     authorizationShadow: shadow.shadow,
   };
-  const req = { method: "GET", path: "/access-policy", headers: { cookie: "" } };
+  const req = { method: "GET", path: "/authz", headers: { cookie: "" } };
   const withShadow = await buildCatalog({ deps, req, now: NOW });
   assert.equal(recorder.summary().compared, 1, "one console read is one authorization unit");
   const row = recorder.rows().at(-1);
   assert.equal(row.surface, "admin");
   assert.equal(row.phase, "admin");
-  assert.equal(row.capability, "admin_metadata_read");
+  assert.equal(row.capability, "admin_authorization_manage");
   assert.equal(row.oldAllowed, true);
   assert.equal(row.newAllowed, true, "an admin actor has no subject, so a user revoke cannot deny it");
   assert.equal(recorder.summary().differences, 0);
@@ -208,15 +208,15 @@ test("the_admin_projection_carries_no_subject_and_no_account_constraint", async 
   const withoutShadow = await buildCatalog({ deps: { ...deps, authorizationShadow: null }, req, now: NOW });
   assert.equal(JSON.stringify({ ...withShadow, now: 0 }), JSON.stringify({ ...withoutShadow, now: 0 }), "the Admin explanation is identical");
   // Old-credential grants stay hidden and a broken plane stays unknown, not "normal".
-  assert.notEqual(withShadow.authz.status, "ready", "no policy runtime means an unknown AuthZ state, never a normal one");
+  assert.notEqual(withShadow.constraintPage.status, "ready", "no constraint service means an unknown AuthZ state, never a normal one");
 
   // The adapter builds the console actor with no subject at all.
   assert.deepEqual(adminVerifiedActor().subjectIds, []);
-  assert.equal(adminAuthorizationRequest({ routeKey: "ADMIN GET /access-policy" }).capability, "admin_metadata_read");
-  assert.equal(adminAuthorizationRequest({ routeKey: "ADMIN POST /access-policy/update" }).capability, "admin_authorization_manage");
+  assert.equal(adminAuthorizationRequest({ routeKey: "ADMIN GET /authz" }).capability, "admin_authorization_manage");
+  assert.equal(adminAuthorizationRequest({ routeKey: "ADMIN GET /audit/export.csv" }).capability, "admin_metadata_read");
   assert.equal(adminAuthorizationRequest({ routeKey: "ADMIN GET /nope" }), null);
   // A user revoke cannot even match: the admin actor has no subject to intersect.
-  const adminRequest = adminAuthorizationRequest({ routeKey: "ADMIN GET /access-policy" });
+  const adminRequest = adminAuthorizationRequest({ routeKey: "ADMIN GET /authz" });
   const decision = authorize({ ...adminRequest, nowMs: NOW }, {
     status: "ready",
     document: { ...documentWith([REVOKE]), subjects: {} },

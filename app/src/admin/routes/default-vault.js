@@ -1,6 +1,7 @@
 // #642: identity-scoped default Vault Admin mutations.
 // Kept out of the main Admin router to preserve its existing line budget.
 import { t } from "../../i18n/context.js";
+import { resolveKeyExpiry } from "../../api-key-expiry.js";
 import { listField } from "../http.js";
 
 export function registerDefaultVaultRoutes(router, {
@@ -27,12 +28,17 @@ export function registerDefaultVaultRoutes(router, {
       const vaults = listField(req.body, "allowedVault");
       const selected = defaultChoice(req.body);
       await validateChoice(selected, vaults);
-      const created = await provider.createApiKey(req.body?.label, scopes, vaults.length ? vaults : undefined, selected);
+      const expiresAt = resolveKeyExpiry(req.body?.expiry, req.body?.expiresOn);
+      const created = await provider.createApiKey(req.body?.label, scopes, vaults.length ? vaults : undefined, selected, expiresAt);
       const session = stored(req);
       if (session) session.flashKey = created.secret;
       redirectTab(res, "keys");
     } catch (error) {
-      res.status(400).send(renderError({ title: t("adm.dv.createFailed"), heading: t("adm.dv.keyCreateFailed"), message: String(error?.message || error) }));
+      const code = error?.message;
+      const message = code === "expiry_invalid" ? t("adm.keys.expiryInvalid")
+        : code === "expiry_past" ? t("adm.keys.expiryPast")
+        : String(code || error);
+      res.status(400).send(renderError({ title: t("adm.dv.createFailed"), heading: t("adm.dv.keyCreateFailed"), message }));
     }
   });
 

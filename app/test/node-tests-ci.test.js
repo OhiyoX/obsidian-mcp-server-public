@@ -9,10 +9,11 @@ import { pathToFileURL } from "node:url";
 const APP_ROOT = path.resolve(import.meta.dirname, "..");
 const ADAPTER = path.join(APP_ROOT, "scripts", "run-node-tests-ci.mjs");
 
-function writeHarness({ summary = "", exitCode = 0, hangMs = 0 } = {}) {
+function writeHarness({ summary = "", exitCode = 0, hangMs = 0, printExecArgv = false } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "node-test-gate-"));
   const file = path.join(dir, "stub.mjs");
   fs.writeFileSync(file, [
+    printExecArgv ? `process.stdout.write("execArgv=" + process.execArgv.join(" ") + "\\n");` : "",
     hangMs ? `await new Promise((resolve) => setTimeout(resolve, ${hangMs}));` : "",
     summary ? `process.stdout.write(${JSON.stringify(summary)});` : "",
     `process.exitCode = ${exitCode};`,
@@ -148,6 +149,31 @@ test("Node CI gate rejects filter or extra CLI arguments", () => {
   const result = runHarness({ summary: summary() }, ["--test-name-pattern=only-one"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /filtering\/extra CLI arguments are disabled/);
+});
+
+test("the gate pins the test concurrency instead of inheriting the host core count (#732)", () => {
+  // A full run at `availableParallelism()` fails 1–3 tests per run with a changing failure set, so
+  // the released gate could not be reproduced. The pin has to reach the CHILD's command line: read it
+  // back from execArgv, never from this file's text.
+  const result = runHarness({ summary: summary(), printExecArgv: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /execArgv=.*--test-concurrency=4/, "the child must be told the pinned concurrency");
+});
+
+test("NODE_TEST_GATE_CONCURRENCY reaches the child when set (#732)", () => {
+  const result = runHarness({ summary: summary(), printExecArgv: true }, [], { NODE_TEST_GATE_CONCURRENCY: "2" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /execArgv=.*--test-concurrency=2/);
+});
+
+test("an unparsable NODE_TEST_GATE_CONCURRENCY fails the gate instead of falling back (#732)", () => {
+  // Fail closed: a typo must not silently prove something weaker than the gate claims.
+  for (const bad of ["4x", "0", "99", ""]) {
+    if (bad === "") continue; // unset and empty both mean "use the pin"
+    const result = runHarness({ summary: summary() }, [], { NODE_TEST_GATE_CONCURRENCY: bad });
+    assert.notEqual(result.status, 0, `\`${bad}\` must not be accepted as a concurrency`);
+    assert.match(result.stderr, /NODE_TEST_GATE_CONCURRENCY must be an integer 1\.\.32/);
+  }
 });
 
 test("Node CI gate rejects a test-only harness override under CI", () => {

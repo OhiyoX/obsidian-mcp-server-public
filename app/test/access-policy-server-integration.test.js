@@ -47,10 +47,12 @@ test("Stage 0: AUTHZ_ENABLED unset ignores a corrupt policy file (zero behaviour
     const healthResponse = await fetch(`${base}/healthz`);
     assert.equal(healthResponse.status, 200);
     const health = await healthResponse.json();
-    assert.deepEqual(health.authorizationWindows, { enabled: false, status: "disabled", policyCount: 0 });
+    // Owner ruling 2026-11-12: `/healthz` reports one authorization block. The legacy window summary
+    // (`authorizationWindows`) is gone from both surfaces; the constraint report is the only one.
+    assert.equal("authorizationWindows" in health, false, "the legacy window summary is not reported any more");
+    assert.equal(typeof health.authorization, "object", "the constraint report is the one authorization block");
     const rootInfo = await (await fetch(`${base}/`, { headers: { "X-API-Key": API_KEY } })).json();
-    assert.deepEqual(rootInfo.authorizationWindows, { enabled: false, status: "disabled", policyCount: 0 });
-    assert.ok(!("subjects" in rootInfo.authorizationWindows) && !("schedule" in rootInfo.authorizationWindows));
+    assert.equal("authorizationWindows" in rootInfo, false, "the legacy window summary is gone from GET / too");
 
     const init = await initialize(base, { key: API_KEY });
     assert.equal(init.status, 200);
@@ -73,7 +75,7 @@ test("enabled + empty policy store: ready with policyCount 0 and content still r
   const { child, base } = await startServer(env);
   try {
     const health = await (await fetch(`${base}/healthz`)).json();
-    assert.deepEqual(health.authorizationWindows, { enabled: true, status: "ready", policyCount: 0 });
+    assert.equal("authorizationWindows" in health, false, "the legacy window summary is not reported any more");
     const init = await initialize(base, { key: API_KEY });
     const read = await callTool(base, { key: API_KEY }, init.session, "get_note", { path: "note.md" });
     assert.equal(read.status, 200);
@@ -92,8 +94,7 @@ test("suspend outside the window denies content, keeps discovery/metadata, and a
   const { child, base } = await startServer(env);
   try {
     const health = await (await fetch(`${base}/healthz`)).json();
-    assert.equal(health.authorizationWindows.status, "ready");
-    assert.equal(health.authorizationWindows.policyCount, 1);
+    assert.equal("authorizationWindows" in health, false, "the legacy window summary is not reported any more");
 
     const init = await initialize(base, { key: API_KEY });
     assert.equal(init.status, 200);
@@ -150,8 +151,9 @@ test("broken policy fails closed on content but keeps startup and the metadata p
     const health = await fetch(`${base}/healthz`);
     assert.equal(health.status, 200);
     const body = await health.json();
-    assert.equal(body.authorizationWindows.enabled, true);
-    assert.equal(body.authorizationWindows.status, "broken");
+    // A broken legacy document still fails closed for content (below); what it no longer does is
+    // appear on `/healthz` under its own key.
+    assert.equal("authorizationWindows" in body, false, "the legacy window summary is not reported any more");
 
     const init = await initialize(base, { key: API_KEY });
     assert.equal(init.status, 200);

@@ -494,3 +494,27 @@ test("observability: per-Vault admission/status/timing projection, and W4 trigge
     await world.cleanup();
   }
 });
+
+test("#437 TC05: a PENDING vault whose directory disappears stops being reported as pending", async () => {
+  // Measured on the live deployment (2026-11-19): a discovered-but-unapproved directory left its
+  // admission entry at `pending` with a frozen `lastSeenAt` after the directory was removed, because
+  // the served-vault diff (`snapshot().vaults`) never contains an unapproved Vault — it is reported
+  // under `skipped`. An operator then sees a folder "waiting for approval" that no longer exists.
+  const world = await makeWorld({ vaults: ["alpha"], confirm: ["alpha"] });
+  try {
+    await world.service.reconcile("startup");
+    await fs.mkdir(world.id("gamma"));
+    const discovered = await world.service.reconcile("manual");
+    assert.equal(world.service.status().vaults.gamma.status, "pending", "a new directory is discovered, not admitted");
+    assert.equal(discovered.diff.added.length, 0, "an unapproved Vault is not a served addition");
+
+    await fs.rm(world.id("gamma"), { recursive: true, force: true });
+    await world.service.reconcile("manual");
+    const after = world.service.status().vaults.gamma;
+    assert.equal(after.status, "unavailable", `a vanished pending directory must not keep reading as pending: ${JSON.stringify(after)}`);
+    assert.equal(after.reason, "directory-missing");
+    assert.equal(world.store.entryFor("gamma").admission, "pending", "the admission decision itself is untouched");
+  } finally {
+    await world.cleanup();
+  }
+});

@@ -216,8 +216,13 @@ export async function registerProtoParityChecks(ctx) {
 
   const failWith = (lines) => assert.equal(lines.length, 0, `${lines.length} 条差异：\n${lines.join('\n')}`);
 
-  await check('proto-parity: 结构对照（列名/列数/顺序 + 必需元素 + ?id= 抽屉字段清单）', async () => {
-    failWith([...seeded.errors.map((error) => `[seed] ${error}`), ...pageErrors.map((error) => `[pageerror] ${error}`), ...comparison.failures]);
+  // The prototype stopped being design authority on 2026-11-14 (owner ruling: it is outdated and
+  // must not block a UI fix), so this scene no longer fails on the structural diff against it. The
+  // diff stays in `proto-parity-report.{txt,json}` and in the check's note, because a reader still
+  // wants to know how far the two trees drifted. What stays fatal is the scene's own integrity:
+  // a seeding failure or a page error means the measurement is broken, not that the design moved.
+  await check('proto-parity: 场景完整性（seeding + 无 pageerror；原型结构差异只记录不判红）', async () => {
+    failWith([...seeded.errors.map((error) => `[seed] ${error}`), ...pageErrors.map((error) => `[pageerror] ${error}`)]);
   });
 
   await check('proto-parity: paint gate（原型样式表逐字副本 + token/52px 页头/主按钮不透明/.tw 边框）', async () => {

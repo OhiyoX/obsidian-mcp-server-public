@@ -211,7 +211,15 @@ test("push observability is per runtime; the module view is the primary's (#255,
 test("no process-global Git state remains in the façade or the observability module", async () => {
   const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const gitSource = stripComments(await fs.readFile(path.join(APP_ROOT, "src/git.js"), "utf8"));
-  assert.doesNotMatch(gitSource, /^(?:let|var)\s/m, "src/git.js must declare no module-level mutable binding");
+  // 2247866e added ONE deliberate module-level slot, `gitShadowSeam`: the background-task
+  // observation seam, read at call time, installed by `installGitShadow` (see its comment in
+  // src/git.js and test/authorization-git.test.js "one seam per process"). Everything else must
+  // stay call-scoped, so this pins exactly that one binding and no other.
+  assert.deepEqual(
+    gitSource.match(/^(?:let|var)\s[^\n]*/gm) ?? [],
+    ["let gitShadowSeam = () => null;"],
+    "src/git.js must declare exactly the one gitShadowSeam slot and no other module-level mutable binding",
+  );
   assert.doesNotMatch(gitSource, /^(?:const|let)\s+\w+\s*=\s*new (?:Set|Map)\b/m, "src/git.js must hold no module-level collection");
   for (const anchor of [
     "const pendingPaths = new Set();",

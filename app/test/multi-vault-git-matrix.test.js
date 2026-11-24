@@ -485,3 +485,24 @@ test("§3.4: the git capability is flipped only together with a fully routed too
   for (const required of ROUTING_REQUIRED) assert.ok(source.includes(required), `src/tools/git.js must route through ${required}`);
   for (const facade of FACADE_NAMES) assert.doesNotMatch(source, facade, "the tool module must not use the primary-bound facade directly");
 });
+
+
+test("Git revision restore reads and writes only the selected Vault, disabled Git refuses", async () => {
+  const map = await newMap();
+  const sessions = await toolClient(map);
+  try {
+    const source = "secondary-seed.md";
+    const revision = await headOf(SECONDARY_ROOT);
+    const original = await fs.readFile(path.join(SECONDARY_ROOT, source), "utf8");
+    const primaryBefore = await treeSnapshot(PRIMARY_ROOT);
+    const result = await sessions.call("restore_version", { vaultId: SECONDARY, path: source, revision, destination: "Restored-secondary.md" });
+    assert.equal(result.sourceRevision, revision);
+    assert.equal(await fs.readFile(path.join(SECONDARY_ROOT, "Restored-secondary.md"), "utf8"), original);
+    assert.deepEqual(await treeSnapshot(PRIMARY_ROOT), primaryBefore);
+    const wrongRepo = await sessions.raw("restore_version", { vaultId: SECONDARY, path: "primary-seed.md", revision: "HEAD", destination: "Wrong.md" });
+    assert.equal(wrongRepo.isError, true);
+    const disabled = await sessions.raw("restore_version", { vaultId: DISABLED, path: source, revision: "HEAD", destination: "Wrong.md" });
+    assert.equal(disabled.isError, true);
+    assert.equal(await exists(path.join(DISABLED_ROOT, "Wrong.md")), false);
+  } finally { await sessions.close(); map.release?.(); }
+});

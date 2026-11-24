@@ -41,9 +41,6 @@ import {
 
 const INTERACTION_MODULE = 'scripts/proto-parity/interaction.mjs';
 const INJECTION_MODULE = 'scripts/proto-parity/injection.mjs';
-const POLICY_MODULE = 'scripts/proto-parity/policy.mjs';
-const INTERACTION_SCENE = 'scripts/web-regression/admin-layout-interaction.mjs';
-const GATE_MODULE_LINE_BUDGET = 800;
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..');
 const PROTO_DIR = path.join(REPO_ROOT, 'docs', 'admin-ui-proto');
@@ -109,9 +106,12 @@ const fakeProbe = ({ headers = ['A', 'B', ''], widths = ['40%', '40%', ''], head
 
 const page = { id: 'accounts', proto: '#/accounts', live: '/admin/auth?tab=accounts', table: true, drawer: { kind: '账户详情', protoPrefix: '#/accounts', liveParam: 'id' } };
 
-test('registry: all nine admin pages are paired with a prototype route and a live route', () => {
+test('registry: every admin page that shares the prototype model is paired with a prototype route and a live route', () => {
   const ids = PARITY_PAGES.map((entry) => entry.id);
-  for (const required of ['overview', 'accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'authz', 'vaults']) {
+  // 定时授权 is deliberately absent: the live page is the per-Vault constraint console, which the
+  // prototype does not model (owner ruling 2026-11-12). Its own scenes are `admin-layout-constraints.mjs`.
+  assert.equal(ids.includes('authz'), false, 'the retired legacy page must not be paired');
+  for (const required of ['overview', 'accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'vaults']) {
     assert.ok(ids.includes(required), `the registry must cover ${required}`);
   }
   for (const entry of PARITY_PAGES) {
@@ -322,7 +322,7 @@ test('gate: the drawer URL is joined with query semantics, and the create sentin
   assert.equal(withQuery('/admin/auth/vault-git', { id: 'default' }), '/admin/auth/vault-git?id=default', 'a route without a query gets `?`');
   assert.equal(withQuery('/admin/auth?tab=accounts', { id: 'a b' }), '/admin/auth?tab=accounts&id=a+b', 'a route with a query keeps it and appends with `&`');
   assert.equal(withQuery('/admin/auth?tab=authz&edit=1#authz-window', { id: 'x' }), '/admin/auth?tab=authz&edit=1&id=x#authz-window', 'the fragment stays last');
-  assert.equal(withQuery('/admin/auth/access-policy?new=1', { id: 'p' }), '/admin/auth/access-policy?new=1&id=p');
+  assert.equal(withQuery('/admin/auth/authz?new=1', { id: 'p' }), '/admin/auth/authz?new=1&id=p');
   // `&`-joined URLs are exactly the shape the gate used to build, and they must not come back.
   assert.equal(withQuery('/admin/auth/vault-git', { id: 'default' }).includes('vault-git&'), false);
 
@@ -417,12 +417,9 @@ test('migration: the retired capability-filter helper is gone with the frozen ed
 // Retired assertions are simply gone (git history holds them); the gate does not keep a ledger of
 // what the removed implementation used to assert.
 
-test('d0: the split of the interaction gate stays inside the architecture line budget', async () => {
-  for (const relative of [INTERACTION_MODULE, INJECTION_MODULE, POLICY_MODULE, INTERACTION_SCENE, 'scripts/web-regression/admin-layout-security.mjs', 'scripts/web-regression/admin-layout-noscript.mjs']) {
-    const source = await fs.readFile(path.join(REPO_ROOT, 'app', relative), 'utf8');
-    const lines = source.split('\n').length;
-    assert.ok(lines <= GATE_MODULE_LINE_BUDGET, `${relative} has ${lines} lines (budget ${GATE_MODULE_LINE_BUDGET}): extract a cohesive module instead of registering an exception`);
-  }
+test('d0: the interaction gate stays split into the modules the behaviour table refers to', async () => {
+  // The line-count half of this gate was retired by owner decision (2026-11-13); the
+  // relation checks below are the contract.
   // The three modules are one gate: the behaviour table and verdicts must not silently lose the
   // policy/probe half they refer to.
   const interaction = await fs.readFile(path.join(REPO_ROOT, 'app', INTERACTION_MODULE), 'utf8');
@@ -446,7 +443,9 @@ test('registry: a page may omit a prototype element only with a real, named reas
       assert.equal(/tbl|tbody|td\./.test(item.selector), false, `${entry.id}: the table contract may not be omitted (${item.selector})`);
     }
   }
-  assert.equal(declared, 4, 'the only declared omissions are the frozen 定时授权 card (sect/sect-h/card) and its 新建 CTA');
+  // No page declares an omission any more: the four entries (the frozen 定时授权 preview card and its
+  // 新建 CTA) retired with the legacy page. A new one has to add itself here and justify itself.
+  assert.equal(declared, 0, 'no page may omit a prototype element today');
 });
 
 test('registry: excluded candidates each carry a reason and are not also required', () => {
@@ -607,18 +606,23 @@ test('d0: every in-page probe is self-contained (no module-scope references)', a
 // The scenes only run if they are registered; a dropped registration would silently shrink the gate.
 test('d0: the interaction / security / no-JS scenes are registered in the shared runner', async () => {
   const scene = await fs.readFile(path.join(REPO_ROOT, 'app', 'scripts', 'web-regression', 'admin-layout.mjs'), 'utf8');
+  // Wave Q3 put every scene in one registry (`{ id, run: () => register… }`), so "registered" now
+  // means "present in that registry": a scene that is imported but never listed never runs.
   for (const call of ['registerInteractionChecks', 'registerSecurityChecks', 'registerNoScriptChecks']) {
     assert.ok(scene.includes(`import { ${call} }`), `${call} must be imported by the shared scene`);
-    assert.ok(scene.includes(`await ${call}(`), `${call} must be awaited before the teardown check`);
+    assert.equal((scene.match(new RegExp(`run: \\(\\) => ${call}\\(`, 'g')) ?? []).length, 1, `${call} must be registered as exactly one scene`);
   }
-  assert.ok(scene.indexOf('await registerNoScriptChecks(') < scene.indexOf('teardown is itself a criterion'), 'the new scenes run before the fixture teardown');
+  assert.ok(scene.indexOf('run: () => registerNoScriptChecks(') < scene.indexOf('teardown is itself a criterion'), 'the new scenes run before the fixture teardown');
+  // The registry itself must stay the only way in: a direct call would run a scene twice.
+  assert.equal(/\n\s*await register(?:Interaction|Security|NoScript)Checks\(/.test(scene), false, 'scenes run only through the registry');
 });
 
 test('d0: the no-JS gate covers every category, and the fixture hook is additive', async () => {
-  assert.deepEqual([...NO_SCRIPT_CATEGORIES], ['accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'policies', 'git-repair']);
+  // 策略 retired with the legacy page (owner ruling 2026-11-12): its list and its seven writes are gone.
+  assert.deepEqual([...NO_SCRIPT_CATEGORIES], ['accounts', 'keys', 'clients', 'tokens', 'publishes', 'audit', 'git-repair']);
   const scene = await fs.readFile(path.join(REPO_ROOT, 'app', 'scripts', 'web-regression', 'admin-layout-noscript.mjs'), 'utf8');
-  assert.ok((scene.match(/await check\('admin-nojs:/g) ?? []).length >= 9, 'one check per category plus the page-error check');
-  for (const keyword of ['账户', 'Key', '客户端', 'Token', '发布', '审计', '策略', 'Git 修复']) {
+  assert.ok((scene.match(/await check\('admin-nojs:/g) ?? []).length >= 8, 'one check per category plus the page-error check');
+  for (const keyword of ['账户', 'Key', '客户端', 'Token', '发布', '审计', 'Git 修复']) {
     assert.ok(scene.includes(keyword), `the no-JS scene must cover ${keyword}`);
   }
   assert.ok(scene.includes('javaScriptEnabled: false'), 'the writes must happen with scripting disabled');

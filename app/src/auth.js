@@ -61,14 +61,6 @@ function requestMessages(req) {
   return Array.isArray(req.body) ? req.body : [req.body];
 }
 
-function requestedScopes(req) {
-  const tools = requestMessages(req)
-    .filter((message) => message?.method === "tools/call")
-    .map((message) => projectCompactCall(message?.params?.name, message?.params?.arguments).name)
-    .filter(Boolean);
-  return requiredScopesForTools(tools);
-}
-
 // Contract §9 ("HTTP allowedVault gate"): the required Vault set is derived from the
 // canonical vault-scope registry (`vault-scope.js`, contract §43-3 — never a second
 // hand-maintained set). Global tools (§7.1) and unknown tool names (§9.1) add no Vault
@@ -148,7 +140,6 @@ function usageDeferral(res) {
   };
 }
 
-export { requestedScopes };
 
 export function createAuthMiddleware(oauthService, { accessRuntime, authorization = null, onHardRevoke, authorizationShadow = null } = {}) {
   // The one decision. An injected runtime decides (and, in `legacy` mode, delegates to the
@@ -413,7 +404,18 @@ export function createAuthMiddleware(oauthService, { accessRuntime, authorizatio
           auth = decisionLayer
             ? await oauthService.provider.verifyApiKeyDeferred(candidate)
             : await oauthService.provider.verifyApiKey(candidate, usage);
-        } catch {
+        } catch (error) {
+          // An expired key is not an unknown secret: the record exists, so the refusal names it.
+          // It answers here instead of `continue`-ing, because the fall-through would log a second,
+          // false row ("missing credential") for the same attempt - and a request that also
+          // carried a valid bearer would be served while the audit claimed a refusal.
+          if (error?.code === "api_key_expired") {
+            oauthService.provider.recordAudit({ ...usage, action: "auth.reject", credentialType: "api-key", credentialId: error.keyId, clientId: `api-key:${error.keyId}`, outcome: "failure", detail: "API key expired" });
+            if (res.headersSent) return;
+            res.setHeader("WWW-Authenticate", oauthChallenge(oauthService, OAUTH_SCOPES, "invalid_token", "Invalid or expired API key", req));
+            res.status(401).json({ error: "invalid_token", error_description: "Invalid or expired API key" });
+            return;
+          }
           continue;
         }
         attachSessionAuth(req, usage, auth);

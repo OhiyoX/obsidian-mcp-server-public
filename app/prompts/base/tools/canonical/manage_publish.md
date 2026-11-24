@@ -1,0 +1,1 @@
+Publish or revoke the anonymous read-only link for one Markdown note, or for one folder when kind is "folder" (a folder publishes the notes its index lists). Publishing never exposes Vault browsing, search, backlinks, or attachments.

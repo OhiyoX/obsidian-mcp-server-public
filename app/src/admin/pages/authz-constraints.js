@@ -21,9 +21,9 @@ import { pageBar, table, mcards, emptyState, banner, moreMenu, result, drawer, k
 import { fmtFull, idc, relTitle } from "../presentation/format.js";
 import { presentAccessPolicyWindow, WINDOW_SCOPE_DISCLAIMER } from "../access-policy-window-presentation.js";
 import { t } from "../../i18n/context.js";
-import { AUTHORIZATION_MODES, policyNowLabel, policyNowState, policyTimelineHtml } from "./authz.js";
+import { AUTHORIZATION_MODES, policyNowLabel, policyNowState, policyTimelineHtml } from "./authz-window.js";
 
-/** Where this page lives (Task 5's `DEFAULT_BASE`); the frozen page links here. */
+/** Where this page lives (Task 5's `DEFAULT_BASE`): the whole 定时授权 surface. */
 export const DEFAULT_BASE = "/admin/auth/authz";
 
 /** The constraint field the drawer shows as the timezone: `schedule.timezone`, never a second copy. */
@@ -145,6 +145,27 @@ export function windowCell(constraint, now = Date.now()) {
   return `<div class="nm"><span class="ell">${esc(win.summary.text)}</span><span class="sub2">${marks}${verdict}</span></div>`;
 }
 
+/**
+ * The per-constraint pause/resume form, rendered ON THE ROW (owner, 2026-11-20: 停用/启用 directly on the
+ * table, not only inside the drawer and not only the master switch).
+ *
+ * It is the same POST the drawer's footer sends — `toggle` with the document revision as a
+ * compare-and-swap token — so a stale page gets the same 409 the drawer gets instead of silently
+ * winning a race. Without a readable document revision there is nothing to swap on, so no control is
+ * rendered: a button that cannot succeed is worse than no button.
+ */
+export function toggleControl({ base = DEFAULT_BASE, constraint, csrf = "", revision = null, cls = "btn sm" } = {}) {
+  if (!Number.isInteger(revision)) return "";
+  const enabled = constraint?.enabled !== false;
+  const label = enabled ? t("adm.authz2.action.disable") : t("adm.authz2.action.enable");
+  return `<form class="inline-form" method="post" action="${esc(`${String(base).replace(/\/+$/, "")}/toggle`)}">`
+    + `<input type="hidden" name="csrf" value="${esc(csrf || "")}">`
+    + `<input type="hidden" name="expectedRevision" value="${esc(String(revision))}">`
+    + `<input type="hidden" name="id" value="${esc(constraint.id)}">`
+    + `<input type="hidden" name="enabled" value="${enabled ? "false" : "true"}">`
+    + `<button class="${esc(cls)}" type="submit" aria-label="${esc(label)}" title="${esc(label)}">${ic(enabled ? "pause" : "play")}<span class="hide-m hide-md">${esc(label)}</span></button></form>`;
+}
+
 /** Row ⋯ menu: the drawer and the editor, both plain links. */
 export function rowMenu({ base, constraint }) {
   const id = encodeURIComponent(constraint.id);
@@ -241,7 +262,7 @@ function constraintDrawer(ctx, constraint) {
     [t("adm.authz.drawer.kv.updated"), `${relTitle(constraint.updatedAt, now)} <span class="muted mono">${esc(fmtFull(constraint.updatedAt))}</span>`],
   ])}</div>
 <div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionSubjects"))} <span class="muted" style="font-weight:400">${subjects.length}</span></h3>${subjectHtml}</div>
-<div class="dsec"><h3>${esc(t("adm.authz2.col.caps"))}</h3>${capabilitiesCell(model, constraint)}
+<div class="dsec authz-operation-detail"><h3>${esc(t("adm.authz2.col.caps"))}</h3>${capabilitiesCell(model, constraint)}
 ${atomChips(model, constraint)}${model.importedAtoms?.[constraint.id]?.length ? `<p class="help">${esc(t("adm.authz2.atoms.hint"))}</p>` : ""}</div>
 <div class="dsec"><h3>${esc(t("adm.authz.drawer.sectionWindow"))}</h3><div class="sumbox"><b>${esc(win.summary.text)}</b>${marks ? `<div>${marks}</div>` : ""}<div class="muted" style="margin-top:4px">${esc(WINDOW_SCOPE_DISCLAIMER)}</div></div><div style="margin-top:16px">${policyTimelineHtml(flat, now)}</div>
 <div class="verdict ${state.ok === true ? "ok" : state.ok === false ? "no" : ""}" style="margin-top:12px">${ic(state.ok === false ? "ban" : "checkc")}<span>${esc(t("adm.authz.drawer.now"))} ${esc(policyNowLabel(flat, now))} <span class="mono">${esc(String(flat.timezone ?? ""))}</span> <b>${esc(state.ok === true ? t("adm.authz.drawer.allowedAccess") : state.ok === false ? mode.n : t("adm.authz.undetermined"))}</b> · ${esc(state.why)}</span></div></div>`;
@@ -265,7 +286,7 @@ ${post("delete", `<input type="hidden" name="id" value="${esc(constraint.id)}">`
  * catalog and the shared presentation model. Nothing here reads a store.
  */
 export function renderAuthzPage(model, {
-  base = DEFAULT_BASE, query = {}, now = Date.now(), authorizationMode = null, csrf = "", legacyBase = null, failure = "",
+  base = DEFAULT_BASE, query = {}, now = Date.now(), authorizationMode = null, csrf = "", failure = "",
 } = {}) {
   const constraints = Array.isArray(model?.constraints) ? model.constraints : [];
   const pageBase = String(base || DEFAULT_BASE).replace(/\/+$/, "");
@@ -276,8 +297,8 @@ export function renderAuthzPage(model, {
 <td>${scopeCell(model, constraint)}</td>
 <td>${capabilitiesCell(model, constraint)}${atomChips(model, constraint)}</td>
 <td>${windowCell(constraint, now)}</td>
-<td class="act">${rowMenu({ base: pageBase, constraint })}</td></tr>`);
-  const cards = constraints.map((constraint) => `<div class="mc"><div class="b"><div class="nm"><a class="cell-link block" href="${esc(`${pageBase}?id=${encodeURIComponent(constraint.id)}`)}"><b>${esc(constraint.label)}</b></a><span class="sub2">${esc(t("adm.authz.drawer.subtitle", { status: constraint.enabled !== false ? t("adm.authz.status.enabled") : t("adm.authz.status.disabled"), mode: model.presentation.mode(constraint.mode).n }))}</span></div>${scopeCell(model, constraint)}<div class="meta">${(Array.isArray(constraint.subjects) ? constraint.subjects : []).map((subject) => `<span>${esc(model.presentation.subjectView(subject).name)}</span>`).join("")}</div></div>${rowMenu({ base: pageBase, constraint })}</div>`);
+<td class="act"><div class="actions">${toggleControl({ base: pageBase, constraint, csrf, revision: model?.revision })}${rowMenu({ base: pageBase, constraint })}</div></td></tr>`);
+  const cards = constraints.map((constraint) => `<div class="mc"><div class="b"><div class="nm"><a class="cell-link block" href="${esc(`${pageBase}?id=${encodeURIComponent(constraint.id)}`)}"><b>${esc(constraint.label)}</b></a><span class="sub2">${esc(t("adm.authz.drawer.subtitle", { status: constraint.enabled !== false ? t("adm.authz.status.enabled") : t("adm.authz.status.disabled"), mode: model.presentation.mode(constraint.mode).n }))}</span></div>${scopeCell(model, constraint)}<div class="meta">${(Array.isArray(constraint.subjects) ? constraint.subjects : []).map((subject) => `<span>${esc(model.presentation.subjectView(subject).name)}</span>`).join("")}</div></div><div class="act">${toggleControl({ base: pageBase, constraint, csrf, revision: model?.revision })}${rowMenu({ base: pageBase, constraint })}</div></div>`);
   const writable = model?.status === "ready";
   const empty = emptyState(
     "cal",
@@ -286,24 +307,20 @@ export function renderAuthzPage(model, {
     writable ? `<a class="btn primary" href="${esc(`${pageBase}?new=1`)}">${esc(t("adm.authz2.new"))}</a>` : "",
   );
   const columns = [
-    [t("adm.authz2.col.constraint"), "20%", "", ""],
-    [t("adm.authz.col.status"), "12%", "", ""],
-    [t("adm.authz.col.subjects"), "18%", "", ""],
-    [t("adm.authz2.col.scope"), "14%", "", ""],
-    [t("adm.authz2.col.caps"), "16%", "", ""],
-    [t("adm.authz.col.window"), "20%", "", ""],
+    // The widths leave room for the action column: percentages that add up to 100% pushed the row
+    // control outside the table once a row got two buttons (measured in a 1440px screenshot).
+    [t("adm.authz2.col.constraint"), "18%", "", ""],
+    [t("adm.authz.col.status"), "11%", "", ""],
+    [t("adm.authz.col.subjects"), "16%", "", ""],
+    [t("adm.authz2.col.scope"), "12%", "", ""],
+    [t("adm.authz2.col.caps"), "15%", "", ""],
+    [t("adm.authz.col.window"), "18%", "", ""],
     ["", "", "act", ""],
   ];
   const notice = failure ? result(false, esc(String(failure))) : "";
   const newAction = writable
     ? `<a class="btn primary" href="${esc(`${pageBase}?new=1`)}">${ic("plus")}<span class="hide-m">${esc(t("adm.authz2.new"))}</span></a>`
     : "";
-  // The frozen legacy page, as a plain read-only link (Task 7 item B): the sidebar leads here, so the
-  // history must stay reachable from here instead of from a nav entry that looks editable.
-  const legacyAction = legacyBase
-    ? `<a class="btn ghost" href="${esc(legacyBase)}">${esc(t("adm.authz2.legacyLink"))}</a>`
-    : "";
-
   // The drawer, or a missing-constraint drawer: the editor is `?edit=`, and it belongs to the editor
   // module, so this list page never renders a form for a constraint.
   const wanted = typeof query.id === "string" && query.id.trim() ? query.id.trim() : "";
@@ -318,7 +335,7 @@ export function renderAuthzPage(model, {
       })
       : "";
 
-  const content = `${pageBar({ title: t("adm.nav.accessPolicy"), count: constraints.length, actions: `${legacyAction}${newAction}` })}<div class="content scroll"><div class="page wide">
+  const content = `${pageBar({ title: t("adm.nav.accessPolicy"), count: constraints.length, actions: newAction })}<div class="content scroll"><div class="page wide">
 ${notice}
 ${decidingBanner(authorizationMode)}
 ${planeBanner(model, { base: pageBase, csrf })}

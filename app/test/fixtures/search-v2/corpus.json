@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "description": "Frozen synthetic corpus for the Search v2 relevance gate (Task S1). Every note is invented; nothing here comes from a real Vault. `raw` is written byte-for-byte to a temporary Vault, so the index, evaluator, and retrieval path under test are the production ones. Edits to this file invalidate the frozen fixture hash in qrels.json. Notes are written oldest-first: array order is the file-time order, and the index settles equal scores by recency, so the array order is part of the frozen fixture.",
+  "frozenAt": "2026-11-10",
+  "notes": [
+    {
+      "path": "Notes/Network Troubleshooting.md",
+      "raw": "---\ntitle: Network Troubleshooting\ntags:\n  - project/openwrt\n---\n# Network Troubleshooting\n\n记录 OpenWrt 路由器网络故障的处理顺序。\n\n## 症状\n\n网络故障表现为丢包与 DNS 超时。\n\n## 处理\n\n重启服务后检查系统日志。\n"
+    },
+    {
+      "path": "Notes/中文说明.md",
+      "raw": "---\ntitle: 中文说明\n---\n# 中文说明\n\n这是一篇中文内容说明，提到网络与故障排查的基本概念。\n\n## 范围\n\n只讨论概念，不含具体步骤。\n"
+    },
+    {
+      "path": "Archive/Legacy Network Log.md",
+      "raw": "---\ntitle: Legacy Network Log\ntags:\n  - status/archived\n---\n# Legacy Network Log\n\n历史记录：网络抖动与丢包的时间线，已归档。\n\n## 备注\n\n旧的排障样本。\n"
+    },
+    {
+      "path": "Notes/OpenWrt Router Config.md",
+      "raw": "---\ntitle: OpenWrt Router Config\ntags:\n  - project/openwrt\n---\n# OpenWrt Router Config\n\nOpenWrt 路由器的网络配置与防火墙规则。\n\n## 端口\n\n转发规则写在 /etc/config/firewall。\n"
+    },
+    {
+      "path": "Code/Trash Restore.md",
+      "raw": "---\ntitle: Trash Restore\ntags:\n  - project/search\n---\n# Trash Restore\n\nThe restore_from_trash helper moves a note back from the trash folder.\n\n## Notes\n\nrestore_from_trash returns the restored path.\n"
+    },
+    {
+      "path": "Notes/Search Design.md",
+      "raw": "---\ntitle: Search Design\ntags:\n  - project/search\n  - status/active\n---\n# Search Design\n\nSearch reads the index built by app/src/search.js.\n\n## API\n\nThe restore_from_trash helper and planRestoreVersion are described here.\n\n## Paths\n\nSee app/src/search.js for the scoring code.\n"
+    },
+    {
+      "path": "Code/Restore Planner.md",
+      "raw": "---\ntitle: Restore Planner\ntags:\n  - project/search\n---\n# Restore Planner\n\nplanRestoreVersion computes the planned restore version.\n\n## Behavior\n\nplanRestoreVersion never writes to disk.\n"
+    },
+    {
+      "path": "Code/app/src/search.js.md",
+      "raw": "---\ntitle: search.js notes\n---\n# search.js notes\n\nFile notes for app/src/search.js.\n\n## Role\n\nsearch.js runs the exact pass and the fusion step.\n"
+    },
+    {
+      "path": "Code/app/src/index.js.md",
+      "raw": "---\ntitle: index.js notes\n---\n# index.js notes\n\nFile notes for app/src/index.js.\n\n## Role\n\nindex.js wires the server tools.\n"
+    },
+    {
+      "path": "Ops/Changelog.md",
+      "raw": "---\ntitle: Changelog\ntags:\n  - ops/runbook\n---\n# Changelog\n\ncommit 2c1a9f0 moved the restore helper behind a flag.\n\n## 1.4.0\n\nRestore planner shipped as experimental.\n"
+    },
+    {
+      "path": "Notes/Release Notes Draft.md",
+      "raw": "---\ntitle: Release Notes Draft\ntags:\n  - status/draft\n---\n# Release Notes Draft\n\nDraft: quoting commit 2c1a9f0 in the release mail, not final yet.\n"
+    },
+    {
+      "path": "Ops/Deploy Runbook.md",
+      "raw": "---\ntitle: Deploy Runbook\ntags:\n  - ops/runbook\n---\n# Deploy Runbook\n\nDeploy steps for the search service, including a retry budget for flaky jobs.\n\n## Steps\n\n1. drain the queue\n2. deploy the container\n3. watch the refresh timer\n"
+    },
+    {
+      "path": "Ops/Rollback Checklist.md",
+      "raw": "---\ntitle: Rollback Checklist\ntags:\n  - ops/runbook\n---\n# Rollback Checklist\n\nRollback steps after a failed deploy.\n\n## Steps\n\n1. stop the new container\n2. start the previous tag\n"
+    },
+    {
+      "path": "Notes/Deploy Notes.md",
+      "raw": "---\ntitle: Deploy Notes\n---\n# Deploy Notes\n\nNotes about deploy habits outside the runbook.\n"
+    },
+    {
+      "path": "Notes/Vault Index Notes.md",
+      "raw": "---\ntitle: Vault Index Notes\ntags:\n  - search/index\n---\n# Vault Index Notes\n\nThe vault index refresh rebuilds note records and link targets.\n\n## Refresh\n\nA refresh timer arms after every write.\n"
+    },
+    {
+      "path": "Notes/Embedding Pipeline.md",
+      "raw": "---\ntitle: Embedding Pipeline\ntags:\n  - search/index\n---\n# Embedding Pipeline\n\nThe embedding pipeline handles vector cache eviction.\n\n## Batch\n\nA batch is dropped when the vector cache is full.\n"
+    },
+    {
+      "path": "Ops/Backup Policy.md",
+      "raw": "---\ntitle: Backup Policy\nowner: Ada\nstatus: active\n---\n# Backup Policy\n\nNightly backup of the vault and the search data folder.\n\n## Retention\n\nKeep 14 daily backups.\n"
+    },
+    {
+      "path": "Notes/Backup Notes.md",
+      "raw": "---\ntitle: Backup Notes\nowner: Grace\n---\n# Backup Notes\n\nBackup notes copied from the old wiki.\n\n## Retention\n\nOld retention rules are unclear.\n"
+    },
+    {
+      "path": "Notes/Retry Policy.md",
+      "raw": "---\ntitle: Retry Policy\ntags:\n  - status/active\n---\n# Retry Policy\n\nThe retry policy uses a delayed retry budget.\n\n## Limits\n\nA delayed retry budget caps total wait time.\n"
+    },
+    {
+      "path": "Notes/Retry Policy Draft.md",
+      "raw": "---\ntitle: Retry Policy Draft\ntags:\n  - status/draft\n---\n# Retry Policy Draft\n\nDraft retry policy, not agreed.\n\n## Idea\n\nA retry policy with no backoff cap.\n"
+    },
+    {
+      "path": "Notes/Retry Budget Policy.md",
+      "raw": "---\ntitle: Retry Budget Policy\ntags:\n  - status/active\n---\n# Retry Budget Policy\n\nA retry budget policy limits retries per job.\n\n## Example\n\nA delayed retry budget of 30 seconds.\n"
+    },
+    {
+      "path": "Notes/Retry Backoff Notes.md",
+      "raw": "---\ntitle: Retry Backoff Notes\n---\n# Retry Backoff Notes\n\nRetry backoff grows with each attempt.\n\n## Budget\n\nDelayed attempts share a budget across retries.\n"
+    },
+    {
+      "path": "Archive/Retry Policy Old.md",
+      "raw": "---\ntitle: Retry Policy Old\ntags:\n  - status/archived\n---\n# Retry Policy Old\n\nThe old retry policy retried forever.\n"
+    }
+  ]
+}

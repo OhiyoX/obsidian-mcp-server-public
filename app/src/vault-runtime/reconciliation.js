@@ -16,6 +16,7 @@
 // published set visible and never rolls back a tightened refusal gate (contract §4/§10).
 // `unavailable` here is a runtime projection only — the admission decision lives in the store.
 
+import { ADMISSION_APPROVED } from "./admission-document.js";
 import { ADMISSIONS_REVISION_CONFLICT, serializeRegistrySnapshot } from "./admission-store.js";
 import { resolveVaultIdentity } from "./identity.js";
 import { initializeConfirmedVaults, approveConfirmedVault } from "./explicit-enrollment.js";
@@ -316,6 +317,16 @@ export function createReconciliationService({
       if (decided.has(id)) continue; // this round already decided it (e.g. `identity-changed`)
       // §5: a vanished directory is `unavailable`; the admission decision is untouched.
       mutateStatus(id, { status: RUNTIME_UNAVAILABLE, reason: "directory-missing", code: null, lastSeenAt: run.atIso });
+    }
+    // #437 TC05: an UNAPPROVED Vault never enters `diff.removed`, because `snapshot().vaults` holds
+    // only served Vaults and an unapproved one is reported under `skipped`. Without this, a directory
+    // that was discovered and then deleted kept reading as `pending` forever (measured 2026-11-19 on
+    // the live deployment), so the Admin listed a folder that no longer existed as waiting for
+    // approval. The admission decision stays `pending`; only the runtime projection moves.
+    for (const [id, entry] of Object.entries(run.entries ?? {})) {
+      if (run.observations[id] !== undefined || decided.has(id)) continue;
+      if (diff.removed.includes(id) || entry.admission === ADMISSION_APPROVED) continue;
+      mutateStatus(id, { admission: entry.admission ?? null, status: RUNTIME_UNAVAILABLE, reason: "directory-missing", code: null, lastSeenAt: run.atIso });
     }
 
     const activationErrors = [];

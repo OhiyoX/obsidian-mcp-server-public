@@ -415,10 +415,13 @@ registerFeature("overlays", (ctx) => {
     closeMenus();
     details.open = true;
     details.dataset.floating = "1";
+    const fallbackPosition = menu.getAttribute("style");
+    document.body.append(menu);
     menu.classList.add("on");
     // The SSR stylesheet positions `.mn > .menu` inside its cell; the prototype floats it, so the
     // override is inline and removed again on close — no stylesheet and no markup is rewritten.
     menu.style.position = "fixed";
+    menu.style.bottom = "auto";
     menu.style.right = "auto";
     menu.style.minWidth = `${MENU_MIN_WIDTH}px`;
     menu.style.display = "block";
@@ -445,7 +448,9 @@ registerFeature("overlays", (ctx) => {
         window.removeEventListener("resize", reposition);
         window.removeEventListener("scroll", reposition, true);
         menu.classList.remove("on");
-        for (const property of ["position", "left", "top", "right", "minWidth", "display"]) menu.style.removeProperty(property);
+        details.append(menu);
+        if (fallbackPosition === null) menu.removeAttribute("style");
+        else menu.setAttribute("style", fallbackPosition);
         delete details.dataset.floating;
         details.open = false;
         releaseScrollLock();
@@ -555,7 +560,11 @@ registerFeature("overlays", (ctx) => {
     }
 
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const anchor = target.closest?.("a[href]");
+    const directLink = target.closest?.("a[href]");
+    const rowLink = !target.closest?.("button,input,select,textarea,label,summary,.act") && !window.getSelection()?.toString()
+      ? target.closest?.("tr.click")?.querySelector("a.cell-link[href]")
+      : null;
+    const anchor = directLink ?? rowLink;
     if (anchor && (!anchor.target || anchor.target === "_self") && !anchor.hasAttribute("download")) {
       const overlay = classify(anchor.getAttribute("href"));
       if (overlay) {
@@ -563,7 +572,7 @@ registerFeature("overlays", (ctx) => {
         return;
       }
     }
-    if (target.closest?.("details.mn")) return; // a click inside an open row menu (incl. its `<hr>`)
+    if (target.closest?.("details.mn, .menu.on")) return;
     closeMenus();
   }, true);
 

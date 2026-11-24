@@ -336,7 +336,7 @@ async function ensureServer() {
   const { startAdminLayoutFixture } = await import(pathToFileURL(path.join(appRoot, "scripts", "web-regression", "admin-layout-fixture.mjs")).href);
   state.root = await fs.mkdtemp(path.join(os.tmpdir(), "admin-overlays-"));
   state.fixture = await startAdminLayoutFixture({ root: state.root, appRoot, serverErrors: state.serverErrors });
-  await waitForHttp(`${state.fixture.base}/healthz`, 30000);
+  await waitForHttp(`${state.fixture.base}/healthz`, 120000); // CIFS cold boot measured 7-56 s (2026-11-13)
   return state.fixture;
 }
 
@@ -568,7 +568,7 @@ test("menu: the row menu floats next to its button, inside the viewport, and Esc
     await page.click("details.mn > summary");
     await page.waitFor('document.querySelector("details.mn").open === true', { label: "menu open" });
     const box = await page.evaluate(`(() => {
-      const menu = document.querySelector("details.mn > .menu");
+      const menu = document.querySelector("body > .menu.on");
       const style = getComputedStyle(menu);
       const rect = menu.getBoundingClientRect();
       return { position: style.position, display: style.display, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, minWidth: style.minWidth, viewport: innerWidth, height: innerHeight, on: menu.classList.contains("on") };
@@ -590,8 +590,8 @@ test("menu: the row menu floats next to its button, inside the viewport, and Esc
     await page.press("Escape");
     await page.waitFor('document.querySelectorAll("details.mn[open]").length === 0', { label: "Esc closes the menu" });
     await page.clickFirstVisible("details.mn > summary");
-    await page.waitFor('document.querySelector("details.mn[open] > .menu.on") !== null', { label: "menu open on a narrow viewport" });
-    const narrowBox = await page.evaluate(`(() => { const rect = document.querySelector("details.mn[open] > .menu.on").getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, viewport: innerWidth, height: innerHeight }; })()`);
+    await page.waitFor('document.querySelector("body > .menu.on") !== null', { label: "menu open on a narrow viewport" });
+    const narrowBox = await page.evaluate(`(() => { const rect = document.querySelector("body > .menu.on").getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, viewport: innerWidth, height: innerHeight }; })()`);
     assert.ok(narrowBox.left >= 7 && narrowBox.right <= narrowBox.viewport - 7, `clamped horizontally on a narrow viewport (${JSON.stringify(narrowBox)})`);
     assert.ok(narrowBox.top >= 0 && narrowBox.bottom <= narrowBox.height + 1, `clamped vertically on a narrow viewport (${JSON.stringify(narrowBox)})`);
     await page.setViewport(VIEWPORT);
@@ -646,9 +646,12 @@ test("modal: ?confirm= is centred, focuses the typed input, and Esc cancels back
     await page.markDocument();
     await page.click("details.mn > summary");
     await page.waitFor('document.querySelector("details.mn").open === true', { label: "menu open" });
-    await page.click('.menu a[href*="confirm=delete"]');
+    await page.clickFirstVisible('.menu a[href*="confirm=delete"]');
     await page.waitFor('document.querySelector(".modal.on") !== null', { label: "modal mounted" });
     await page.waitForSettled(".modal.on");
+    // Settled geometry is not a settled fade: under a loaded machine the opacity transition can
+    // still be at 0.99 when the box stops moving, and the visibility check below reads that.
+    await page.waitFor('parseFloat(getComputedStyle(document.querySelector(".modal.on")).opacity) === 1', { label: "modal faded in" });
     assert.equal(await page.documentAlive(), true, "the confirm is an overlay, not a page load");
     const geometry = await page.evaluate(`(() => {
       const modal = document.querySelector(".modal.on");
@@ -688,7 +691,7 @@ test("modal: ?confirm= is centred, focuses the typed input, and Esc cancels back
     // focus falls back to the dialog's own control instead of the typed input.
     await page.click("details.mn > summary");
     await page.waitFor('document.querySelector("details.mn").open === true', { label: "menu open again" });
-    await page.click('.menu a[href*="confirm=disable"]');
+    await page.clickFirstVisible('.menu a[href*="confirm=disable"]');
     await page.waitFor('document.querySelector(".modal.on") !== null', { label: "plain confirm mounted" });
     await page.waitForSettled(".modal.on");
     assert.equal(await page.evaluate('document.querySelector(".modal input[name=confirm]") === null'), true, "this shape has no typed input");
@@ -738,7 +741,7 @@ test("no script: links, the row menu and the confirm form still complete every p
     const box = await page.evaluate(`(() => { const menu = document.querySelector("details.mn > .menu"); return { display: getComputedStyle(menu).display, links: menu.querySelectorAll("a").length, forms: menu.querySelectorAll("form").length }; })()`);
     assert.notEqual(box.display, "none", "the native menu is visible without script");
     assert.ok(box.links + box.forms > 0, "the native menu carries the real actions");
-    await page.click('.menu a[href*="confirm=delete"]');
+    await page.clickFirstVisible('.menu a[href*="confirm=delete"]');
     await page.waitFor('document.querySelector(".modal.show") !== null', { timeoutMs: 10000, label: "SSR confirm page" });
     assert.equal(await page.evaluate('document.querySelector(".modal input[name=confirm]") !== null'), true, "the typed-confirm field is there without script");
     assert.equal(await page.evaluate('document.querySelector(".modal button[type=submit]").disabled'), false, "without script the confirm button must stay enabled (the server compares `confirm`)");
@@ -756,7 +759,7 @@ test("modal: Enter submits the real form, and the result line becomes a 3.2s toa
   try {
     await page.click("details.mn > summary");
     await page.waitFor('document.querySelector("details.mn").open === true', { label: "menu open" });
-    await page.click('.menu a[href*="confirm=delete"]');
+    await page.clickFirstVisible('.menu a[href*="confirm=delete"]');
     await page.waitFor('document.querySelector(".modal.on") !== null', { label: "modal mounted" });
     await page.waitForSettled(".modal.on");
     const typed = (await page.evaluate('document.querySelector(".modal .tc code")?.textContent ?? ""')).trim();

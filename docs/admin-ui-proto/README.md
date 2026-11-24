@@ -1,6 +1,6 @@
 # Obsidian MCP 授权管理（Admin）· UI 原型
 
-这是 Admin 后台（`/admin/auth`、`/admin/auth/access-policy`、`/admin/auth/vault-git`）的高保真重设计原型。视觉与交互沿用已认可的 Message Server 原型（Notification Server 仓库的 UI 原型，不在本仓库）的设计体系：4px 栅格、字号只用 13 / 14 / 16 / 20、字重只用 400 / 600、52px 页头、`data-theme` 深浅色两套 token（accent / amber / danger），以及类似 Linear 的密度。
+这是 Admin 后台（`/admin/auth`、`/admin/auth/authz`、`/admin/auth/vault-git`）的高保真重设计原型。视觉与交互沿用已认可的 Message Server 原型（Notification Server 仓库的 UI 原型，不在本仓库）的设计体系：4px 栅格、字号只用 13 / 14 / 16 / 20、字重只用 400 / 600、52px 页头、`data-theme` 深浅色两套 token（accent / amber / danger），以及类似 Linear 的密度。
 
 > **仅作设计参考，未接入服务端：** 位于 `docs/admin-ui-proto/`，不由服务端提供，也不进 Docker 镜像（镜像只构建 `app/`）。 页面里的数据全部是写死的 dummy mock，没有真实密钥。当前 Admin 是无脚本 SSR（CSP `default-src 'none'`），原型里有些即时交互，比如实时生效预览和主体搜索，正式实现时要么放宽 CSP，要么改成「预览」提交按钮的无脚本形态，见「待决问题」。
 >
@@ -174,7 +174,9 @@
 | 失败行标红 | 整行淡红底色 | — |
 | 凭据名称解析（`resolveAuditCredential`） | 凭据列「客户端 · 账户」/「API Key · 名称」 | 「none」显示为「匿名」 |
 
-### 定时授权（access-policy*.js）
+### 定时授权（旧 access-policy*.js）
+
+> **已退役（2026-11-12）**：`/admin/auth/access-policy` 页面与它的写端点已删除，Admin 只剩按 Vault 的约束模型 `/admin/auth/authz`。下表保留为设计沿革，`#/authz` 原型页不再与任何服务端页面配对。
 
 | 现有功能 | 原型位置 | 增强点 |
 | --- | --- | --- |

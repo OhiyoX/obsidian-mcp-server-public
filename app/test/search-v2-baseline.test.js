@@ -82,18 +82,22 @@ test("hybrid fusion, exact scoring, snippets, and hard filters match the frozen 
   assert.deepEqual(observations.hybrid, golden.hybrid);
 });
 
-test("exact scoring uses 1 + min(matchCount, 20) / 20 and preserves quoted phrases", () => {
+test("exact scoring is field-weighted and bounded, and preserves quoted phrases", () => {
   const chinese = hybridCase("exact-chinese-text");
   assert.equal(chinese.hybridUsed, false);
   assert.equal(chinese.semanticUsed, false);
   assert.equal(chinese.results[0].path, "Notes/Network Troubleshooting.md");
   assert.equal(chinese.results[0].matchCount, 3);
-  assert.equal(chinese.results[0].score, 1 + Math.min(3, 20) / 20);
-  assert.deepEqual(chinese.results[0].reasons, ["exact", "query:网络故障"]);
+  // S3 replaced 1 + min(matchCount, 20) / 20 with a field-weighted BM25F score squashed into
+  // (1, 2): exact hits stay above every semantic score, and matchCount no longer decides order.
+  assert.ok(chinese.results[0].score > 1 && chinese.results[0].score < 2);
+  assert.deepEqual(chinese.results[0].reasons.slice(0, 2), ["exact", "query:网络故障"]);
   assert.ok(chinese.results[0].snippets[0].includes("网络故障"));
 
   const phrase = hybridCase("exact-quoted-phrase");
-  assert.deepEqual(phrase.results.map((item) => item.path), ["Notes/Search Design.md", "Archive/Old Search.md"]);
+  // Both notes hold the phrase once and nowhere else, so the score is equal and the path breaks
+  // the tie: "Archive" sorts before "Notes". See the archived-note note in the tag case below.
+  assert.deepEqual(phrase.results.map((item) => item.path), ["Archive/Old Search.md", "Notes/Search Design.md"]);
   assert.ok(phrase.results[0].snippets[0].includes("exact phrase"));
 });
 
@@ -102,8 +106,11 @@ test("semantic candidate path cannot bypass hard filters or negatives", () => {
   assert.equal(tagFiltered.hybridUsed, true);
   assert.equal(tagFiltered.semanticUsed, false);
   assert.equal(tagFiltered.semanticError, "Embedding provider is not configured; lexical hybrid ranking was used");
-  // Every result satisfies tag:project/search.
-  assert.deepEqual(tagFiltered.results.map((item) => item.path), ["Notes/Search Design.md", "Archive/Old Search.md"]);
+  // Every result satisfies tag:project/search. Both notes carry the term exactly once in the
+  // body and nowhere else, so S3 scores them equal and breaks the tie by path — the archived
+  // note can come first. Demoting stale or archived notes belongs to S6 (provenance ranking),
+  // not to the lexical ranker; this assertion pins the current, deterministic order.
+  assert.deepEqual(tagFiltered.results.map((item) => item.path), ["Archive/Old Search.md", "Notes/Search Design.md"]);
 
   const violation = hybridCase("hard-filter-violation");
   assert.equal(violation.results.length, 0, "a semantic candidate must not revive a record that fails a hard filter");

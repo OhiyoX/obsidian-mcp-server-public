@@ -344,7 +344,7 @@ export function probeMenuState() {
     if (!(rect.width > 0 && rect.height > 0)) return false;
     return rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight;
   };
-  const panels = [...document.querySelectorAll("#menu.on, .mn[open] > .menu, .row-menu-panel, [data-menu-panel]")].filter(visible);
+  const panels = [...document.querySelectorAll(".menu.on, .mn[open] > .menu, .row-menu-panel, [data-menu-panel]")].filter(visible);
   const panel = panels[0] ?? null;
   const button = document.querySelector("[data-menu], details.mn > summary, .row-menu > summary");
   const rect = panel?.getBoundingClientRect() ?? null;

@@ -96,7 +96,6 @@ function payload(vaultId, notePath, record) {
 export function registerPublishTools(server) {
   server.registerTool("get_publish_status", {
     title: "Get note publish status",
-    description: "Return the authenticated document route and current anonymous Publish status for one Markdown note or folder. Vault access is limited by the credential allowlist.",
     inputSchema: {
       path: z.string().min(1),
     },
@@ -112,7 +111,6 @@ export function registerPublishTools(server) {
 
   server.registerTool("manage_publish", {
     title: "Manage note Publish",
-    description: "Publish or revoke the anonymous read-only link for one Markdown note, or for one folder when kind is \"folder\" (a folder publishes the notes its index lists). Publishing never exposes Vault browsing, search, backlinks, or attachments.",
     inputSchema: {
       action: z.enum(["publish", "revoke"]),
       path: z.string().min(1),

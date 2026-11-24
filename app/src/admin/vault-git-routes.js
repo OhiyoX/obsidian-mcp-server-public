@@ -147,6 +147,36 @@ function capabilityList(descriptor) {
 }
 
 /**
+ * Host of a Git remote URL, or `null` when the value names no host at all. SCP-style
+ * (`git@host:x/y.git`) is not a URL, so it is read by its own rule. A trailing dot is a legal FQDN
+ * spelling (`github.com.`), so it is stripped before the comparison.
+ */
+function hostOf(value) {
+  const scp = /^[^@/\s]+@([^:/\s]+):/.exec(value);
+  if (scp) return scp[1].toLowerCase().replace(/\.$/, "");
+  try {
+    return new URL(value).hostname.toLowerCase().replace(/\.$/, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The GitHub-backed fact card's reading of one remote URL (design C): `github` / `other` / `none`
+ * (empty — the remote configures no URL) / `null` (nothing to read).
+ *
+ * The URL is consumed HERE and never leaves: the model carries the kind only, so neither the URL
+ * nor a credential inside it can reach a page, a log or a generic stringifier.
+ */
+export function remoteKindFromUrl(url) {
+  if (url === null || url === undefined) return null;
+  const value = String(url).trim();
+  if (value === "") return "none";
+  const host = hostOf(value);
+  return host === "github.com" || (host !== null && host.endsWith(".github.com")) ? "github" : "other";
+}
+
+/**
  * The POST body, narrowed to the canonical record fields.
  *
  * Returns `{ ok: true, vaultId, expectedRevision, patch }` or
@@ -234,7 +264,37 @@ export function createVaultGitAdmin({ registry, store, runtimeFor = () => null, 
     }
   }
 
-  function toVault(descriptor, record, editable) {
+  /**
+   * The remote kind of one Vault for the GitHub-backed fact card
+   * (`docs/ADMIN_VAULT_GIT.md` owns the config, the runtime owns the state).
+   *
+   * ONE gate decides whether this read may happen at all — the same two the drawer's state uses:
+   *   * `refusesGit` (a refused Vault has no runtime status either, so it has no remote fact);
+   *   * the effective `enabled` switch: a disabled Vault never reaches `runGit` (it would throw
+   *     DISABLED) and says `disabled` instead of logging a warning on every page render.
+   * The read itself is local: `git config --get` touches no network and writes nothing. A failed
+   * read is logged WITHOUT its message (git echoes configuration values in its errors).
+   */
+  async function remoteKindFor(vault, refused) {
+    if (refused) return null;
+    const config = vault?.git?.config;
+    // A config that could not be resolved has no `enabled` to read: unknown, never "disabled".
+    if (!config) return null;
+    if (config.enabled !== true) return "disabled";
+    const remote = config.remote;
+    const runtime = runtimeFor(vault.id);
+    if (!remote || !runtime || typeof runtime.runGit !== "function") return null;
+    try {
+      // git exit 1 = this remote configures no URL: a fact, not a failure.
+      const result = await runtime.runGit(["config", "--get", `remote.${remote}.url`], { allowExitCodes: [1] });
+      return remoteKindFromUrl(result.exitCode === 0 ? result.stdout.trim() : "");
+    } catch {
+      logger?.warn?.(`vault-git: the remote URL of ${vault.id} could not be read`);
+      return null;
+    }
+  }
+
+  function toVault(descriptor, record, editable, refused) {
     let config = null;
     let configSource = null;
     let resolutionError = null;
@@ -250,7 +310,7 @@ export function createVaultGitAdmin({ registry, store, runtimeFor = () => null, 
     } catch (error) {
       resolutionError = { name: error?.name ?? "Error", message: error?.message ?? String(error) };
     }
-    const status = registry.refusesGit?.(descriptor.id) ? null : safeStatus(runtimeFor(descriptor.id));
+    const status = refused ? null : safeStatus(runtimeFor(descriptor.id));
     const pending = status?.pending ?? null;
     const paths = Array.isArray(pending?.paths) ? pending.paths : [];
     return {
@@ -290,7 +350,13 @@ export function createVaultGitAdmin({ registry, store, runtimeFor = () => null, 
     // A broken store fails closed: every form is disabled and the repair card is
     // rendered instead of letting an operator submit a write that cannot land.
     const editable = storeSnapshot.status === "ready";
-    const vaults = registry.list().map((descriptor) => toVault(descriptor, records[descriptor.id] ?? null, editable && !registry.refusesGit?.(descriptor.id)));
+    const vaults = await Promise.all(registry.list().map(async (descriptor) => {
+      // One refusal lookup per Vault, used by both the status and the remote read: two rules for
+      // "may this Vault do git work" would be one too many.
+      const refused = registry.refusesGit?.(descriptor.id) === true;
+      const vault = toVault(descriptor, records[descriptor.id] ?? null, editable && !refused, refused);
+      return { ...vault, git: { ...vault.git, remoteKind: await remoteKindFor(vault, refused) } };
+    }));
     const primary = vaults.find((vault) => vault.primary === true);
     return {
       vaults,

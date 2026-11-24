@@ -115,7 +115,7 @@ export function preferAgentAttribution(current, candidate) {
   return preferredRank < keptRank ? preferred : kept;
 }
 
-/** API Key `label` fallback; never outranks session/clientInfo attribution. */
+/** API Key `label` fallback — the #285 Agent label when bound, else the key's label; never outranks session/clientInfo attribution. */
 export function attributeApiKeyLabel(usage, label) {
   const candidate = attributionLayer(label, "apiKeyLabel");
   if (!candidate) return usage;

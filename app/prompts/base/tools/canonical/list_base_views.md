@@ -1,0 +1,1 @@
+List the declared views of an Obsidian .base file as lightweight summaries (name, type, filters, sort, limit, groupBy, summaries, isDefault) with the view `query_base` uses when `view` is omitted. Use it to pick a view before querying. Returns no YAML body and no row data.

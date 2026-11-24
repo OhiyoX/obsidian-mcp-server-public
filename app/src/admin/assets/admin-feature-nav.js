@@ -4,7 +4,7 @@
 // bar carries `<button class="ibtn mobile-only" data-act="mmenu">` (`5-render.js:106`) but that marker
 // is dead: `.mobile-only` has no rule, the button is inline-`display:none` in both viewports, and no
 // handler in `6-app.js` listens for `mmenu`. The owner therefore decided that the plane gets a real
-// narrow-screen menu; `docs/QUALITY_AUDIT.md` and `docs/admin/README.md` record it as an addition.
+// narrow-screen menu; `docs/admin/README.md` records it as an addition.
 //
 // It reuses no new breakpoint: the plane's own mobile layout is `@media (max-width:720px)`
 // (`docs/admin-ui-proto/src/1-head.html:353`), and the overlay is that same viewport's sidebar.

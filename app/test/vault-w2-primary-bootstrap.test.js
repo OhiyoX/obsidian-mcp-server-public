@@ -32,6 +32,10 @@ const { vaultRuntimeMap: map } = createVaultCompositionRoot({ registry: registry
   primaryRoot: root, dataRoot: data, writable: true });
 const exists = file => fs.access(file).then(() => true, () => false);
 const worker = primaryGitRuntime(); const indexFile = path.join(data, "retrieval-index.json");
+// M2: the runtime publishes a v2 generation, so "the index exists" is the published pointer.
+const { openIndexStore } = await import("../src/vault-runtime/retrieval-index-store.js");
+const indexStore = openIndexStore({ legacyIndexPath: indexFile });
+const indexExists = () => fs.access(indexStore.currentPath).then(() => true, () => false);
 // Observe the REAL startup probes so directory replacement waits for entered git children.
 // This adds no timing assumption and preserves every start call and its returned promise.
 const startupFlights = new Set(); const startWorker = worker.start;
@@ -71,7 +75,7 @@ test("F3: managed import/start refuses before initialization and binds without r
   assert.equal(allowPrimaryAuthorization(), false, "allow cannot revive revoked authorization");
   assert.equal(timer.cleared, true);
   await retrieval.drainRetrievalIndex();
-  assert.equal(await exists(indexFile), false, "release must cancel, never promote, the unstarted debounce");
+  assert.equal(await indexExists(), false, "release must cancel, never promote, the unstarted debounce");
   assert.equal((await timer.fn()).committed, false);
   assert.equal(await git(["rev-parse", "HEAD"]), control);
   assert.equal(registry.webVaultRegistry.refusal("vault").httpStatus, 403);
@@ -94,12 +98,12 @@ test("F4: actual exported direct sync refuses after durable revoke and creates z
   const result = await retrieval.syncRetrievalIndex({ embeddings: false, force: true });
   assert.equal(result.unavailable, true);
   assert.equal(result.reason, "vault_runtime_lease_revoked");
-  assert.equal(await exists(indexFile), false);
+  assert.equal(await indexExists(), false);
   assert.equal((await retrieval.retrievalIndexStatus()).indexJob, null, "read-only status is still usable");
   await registry.approveVaultAdmission("vault", { actor: "admin:test" });
   searchRuntimeFor(map.get("vault")); // Re-bind after approval
   const allowed = await retrieval.syncRetrievalIndex({ embeddings: false, force: true });
-  assert.ok(allowed.notes > 0); assert.equal(await exists(indexFile), true);
+  assert.ok(allowed.notes > 0); assert.equal(await indexExists(), true);
 });
 
 test("R-C: restored primary proof and equal-generation approval renew real Git/search while old consumers stay dead", async () => {
@@ -120,7 +124,7 @@ test("R-C: restored primary proof and equal-generation approval renew real Git/s
     return captured.refreshCallback;
   };
   const oldRefresh = captureRefresh(oldSearch);
-  await fs.rm(indexFile, { force: true });
+  await fs.rm(path.dirname(indexStore.currentPath), { recursive: true, force: true });
   const generation = oldLease.generation;
   const proofFile = path.join(root, INCARNATION_FILE); const proof = await fs.readFile(proofFile);
   const binding = registry.webVaultRegistry.admission("vault").identityDigest;
@@ -148,15 +152,15 @@ test("R-C: restored primary proof and equal-generation approval renew real Git/s
   await assert.rejects(async () => oldGit.sweepNow(), { code: "git_runtime_lease_revoked" });
   assert.throws(() => oldSearch.retrieval.startRetrievalIndex({ embeddings: false }), { code: "VAULT_RUNTIME_LEASE_REVOKED" });
   oldRefresh(); await retrieval.drainRetrievalIndex();
-  assert.equal(await exists(indexFile), false, "old retrieval callback cannot write after the fresh binding");
+  assert.equal(await indexExists(), false, "old retrieval callback cannot write after the fresh binding");
   assert.equal(await git(["rev-parse", "HEAD"]), head, "old Git work never commits");
   assert.equal(gitRuntimeFor(fresh), currentGit); assert.equal(searchRuntimeFor(fresh), currentSearch);
   assert.equal((await currentTimer.fn()).committed, true, "fresh real Git timer commits");
   assert.notEqual(await git(["rev-parse", "HEAD"]), head);
   assert.equal(await git(["show", "HEAD:rc-recovered.md"]), "# recovered primary work");
   captureRefresh(currentSearch)(); await retrieval.drainRetrievalIndex();
-  assert.equal(await exists(indexFile), true, "fresh real search callback writes the index");
-  const index = JSON.parse(await fs.readFile(indexFile, "utf8"));
+  assert.equal(await indexExists(), true, "fresh real search callback writes the index");
+  const index = await indexStore.load();
   assert.ok(JSON.stringify(index).includes("recovered primary work"));
   assert.throws(() => old.localFs.readLimitedText(path.join(root, "baseline.md")), { code: "VAULT_RUNTIME_LEASE_REVOKED" });
   assert.equal(oldLease.revoked, true);
@@ -172,7 +176,7 @@ test("R-B: real primary Git callback and direct retrieval refuse a replacement b
   const handle = map.get("vault");
   const oldTimer = timers.filter(timer => !timer.cleared).at(-1);
   assert.equal(typeof oldTimer.fn, "function");
-  await fs.rm(indexFile, { force: true });
+  await fs.rm(path.dirname(indexStore.currentPath), { recursive: true, force: true });
   // Replace the actual managed directory; no resolver/stat injection.
   await fs.rm(root, { recursive: true, force: true }); await fs.mkdir(root);
   await git(["init", "-q"]); await git(["config", "user.email", "test@example.com"]); await git(["config", "user.name", "Test"]);
@@ -184,12 +188,12 @@ test("R-B: real primary Git callback and direct retrieval refuse a replacement b
   assert.equal((await worker.sweepNow()).committed, false);
   assert.equal(await git(["rev-parse", "HEAD"]), head);
   assert.equal((await retrieval.syncRetrievalIndex({ embeddings: false, force: true })).unavailable, true);
-  assert.equal(await exists(indexFile), false);
+  assert.equal(await indexExists(), false);
   assert.throws(() => handle.localFs.readLimitedText(path.join(root, "replacement.md")), error => error.code === "VAULT_RUNTIME_LEASE_REVOKED");
   assert.equal((await registry.reconcileVaults("manual", { actor: "admin:test" })).status, "committed");
   await assert.rejects(registry.approveVaultAdmission("vault", { actor: "admin:test" }), error => error.code === "VAULT_ADMISSION_IDENTITY_CONFLICT");
   assert.equal((await oldTimer.fn()).committed, false);
   assert.equal((await retrieval.syncRetrievalIndex({ embeddings: false, force: true })).unavailable, true);
-  assert.equal(await exists(indexFile), false);
+  assert.equal(await indexExists(), false);
   assert.equal(await git(["rev-parse", "HEAD"]), head);
 });

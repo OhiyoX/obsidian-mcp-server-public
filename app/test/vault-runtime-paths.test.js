@@ -264,8 +264,9 @@ test("the source assertion is not vacuous (control fixture + scan proof)", () =>
     "the scanner must detect the pattern it forbids");
   const source = moduleSource();
   assert.equal(source.includes("process.env"), false);
-  assert.ok(source.split("\n").length > 40 && source.split("\n").length <= 500,
-    "module must be non-trivial and inside the local 500-line cap");
+  // The hard code-line gate was retired by owner decision (2026-11-13); the lower bound stays
+  // as a vacuity control for the scan above.
+  assert.ok(source.split("\n").length > 40, "module must be non-trivial");
   for (const name of ["PRIMARY_PATH_KEYS", "SECONDARY_PATH_KEYS", "isVaultDataKey",
     "primaryVaultDataPaths", "secondaryVaultDataPaths", "vaultDataPaths", "requiredDirectories"]) {
     assert.match(source, new RegExp(`export (?:const|function) ${name}\\b`), `${name} must stay exported`);

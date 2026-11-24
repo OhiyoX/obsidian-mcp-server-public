@@ -1,6 +1,6 @@
 # Web 安装元数据（#471 P1）
 
-> **状态：candidate**（分支已提交，未合并 / 未 tag / 未部署）。本文只描述 **P1**：可安装**元数据**。
+> **状态：shipped（P1 已合并并在线上生效，2026-11-22 复核）**。本文只描述 **P1**：可安装**元数据**；线上 `/app/assets/manifest.webmanifest` 返回真实 manifest（`id/start_url/scope = /app/`）。
 > **没有 Service Worker**（`/app/sw.js`、预缓存、更新提示、离线页都属 **P2**，见 `docs/QUALITY_AUDIT.md` 与 Vault 的 `DEVELOPMENT - Issue 471 …`）。跟踪 [#471](https://github.com/OhiyoX/obsidian-mcp-server/issues/471)。
 
 ## 1. 这一刀落什么

@@ -138,7 +138,6 @@ export function registerWorkflowTools(server) {
     "list_tasks",
     {
       title: "List Obsidian Tasks",
-      description: "List Markdown tasks with stable path:line references and status filtering.",
       inputSchema: {
         pathPrefix: z.string().optional(),
         query: z.string().optional(),
@@ -174,7 +173,6 @@ export function registerWorkflowTools(server) {
     "update_task",
     {
       title: "Update Obsidian Task",
-      description: "Toggle or set one Markdown task status using a path:line reference.",
       inputSchema: {
         ref: z.string().optional(),
         path: z.string().optional(),
@@ -215,7 +213,6 @@ export function registerWorkflowTools(server) {
     "daily_note",
     {
       title: "Manage Obsidian Daily Note",
-      description: "Resolve, read, create, append, or prepend a Daily Note using vault configuration and templates.",
       inputSchema: {
         action: z.enum(["path", "read", "create", "append", "prepend"]).default("path"),
         date: z.string().optional(),
@@ -265,7 +262,6 @@ export function registerWorkflowTools(server) {
     "list_templates",
     {
       title: "List Obsidian Templates",
-      description: "List Markdown templates from the Templates core plugin folder.",
       inputSchema: { includeContent: z.boolean().default(false), limit: z.number().int().min(1).max(1000).default(200) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -289,7 +285,6 @@ export function registerWorkflowTools(server) {
     "create_from_template",
     {
       title: "Create Obsidian Note From Template",
-      description: "Render Obsidian date/time/title variables plus custom variables into a new note.",
       inputSchema: {
         template: z.string().min(1),
         path: z.string().min(1),
@@ -324,7 +319,6 @@ export function registerWorkflowTools(server) {
     "list_properties",
     {
       title: "List Obsidian Properties",
-      description: "Aggregate note properties, inferred or configured types, occurrence counts, and optional file paths.",
       inputSchema: { pathPrefix: z.string().optional(), includeFiles: z.boolean().default(false), nameRegex: z.string().optional() },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -356,7 +350,6 @@ export function registerWorkflowTools(server) {
     "rename_property",
     {
       title: "Rename Obsidian Property",
-      description: "Rename a frontmatter property across notes with conflict handling and dry-run support.",
       inputSchema: {
         from: z.string().min(1),
         to: z.string().min(1),
@@ -404,7 +397,6 @@ export function registerWorkflowTools(server) {
     "list_aliases",
     {
       title: "List Obsidian Aliases",
-      description: "List frontmatter aliases with their target note paths.",
       inputSchema: { pathPrefix: z.string().optional(), nameRegex: z.string().optional(), limit: z.number().int().min(1).max(5000).default(500) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -432,7 +424,6 @@ export function registerWorkflowTools(server) {
     "set_property_type",
     {
       title: "Set Obsidian Property Type",
-      description: "Update the vault-wide Obsidian property type registry in .obsidian/types.json.",
       inputSchema: { name: z.string().min(1), type: z.enum(["text", "multitext", "number", "checkbox", "date", "datetime", "aliases", "tags"]), remove: z.boolean().default(false) },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -455,7 +446,6 @@ export function registerWorkflowTools(server) {
     "list_bases",
     {
       title: "List Obsidian Bases",
-      description: "List .base files in the vault.",
       inputSchema: { pathPrefix: z.string().optional(), limit: z.number().int().min(1).max(1000).default(200) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -475,7 +465,6 @@ export function registerWorkflowTools(server) {
     "get_base",
     {
       title: "Get Obsidian Base",
-      description: "Read, parse, and validate an Obsidian .base YAML document. Returns `revision` — the sha256 of the document's bytes, the same token this server's write faces use as their precondition — so it can be passed straight into `patch_base`'s `ifMatch` or `write_base`'s `ifMatch`.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -507,7 +496,6 @@ export function registerWorkflowTools(server) {
       // Honest labelling (Issue #629): this tool re-serialises the whole document, so it
       // cannot preserve what YAML dumping does not carry. `patch_base` is the tool for a
       // document that must stay byte-identical outside the edited lines.
-      description: "Validate and atomically create or replace an Obsidian .base YAML document. This is a WHOLE-DOCUMENT rewrite: the document is re-serialised from the parsed mapping, so formatting is normalised, key order is not guaranteed and comments or unknown keys may not survive. Use `patch_base` when the file must keep everything you did not ask to change.",
       inputSchema: { path: z.string().min(1), base: z.record(z.string(), z.unknown()), overwrite: z.boolean().default(false), ifMatch: z.string().optional() },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -536,13 +524,6 @@ export function registerWorkflowTools(server) {
     "patch_base",
     {
       title: "Patch Obsidian Base (line-surgical, CAS)",
-      description:
-        "Apply a line-surgical increment to an Obsidian .base document: only the addressed lines change, so comments, unknown keys, key order, quote style, line endings and the final-newline state outside them survive byte-for-byte. An addressed line is rewritten from the new value, so bytes *inside* an addressed line are not preserved (a non-UTF-8 byte there does not survive); lines outside them keep their bytes exactly, even bytes that are not valid UTF-8. " +
-        "A document holding bytes that are not valid UTF-8 supports in-place replacements and appends at the end of the document, where every existing line keeps its bytes exactly; a structural edit that cannot be mapped back byte-for-byte — inserting a line in the middle, or deleting any line — fails closed with `base-not-patchable`, because line identity is not recoverable from a lossy decode — use `write_base` for that. " +
-        "`ifMatch` is mandatory (the `revision` from `get_base`): a missing precondition fails with `precondition-required`, a stale one with `revision-conflict`, and in both cases the document is left untouched. " +
-        "Only the desktop write whitelist is addressable (view options, `formulas.<name>`, `properties.<name>.displayName`); anything else fails closed with `base-not-patchable` / `base-unknown-key`. " +
-        "The response always carries `warnings`: a non-empty array means `query_base` cannot serve the patched document (this server's query subset is narrower than the write whitelist), so do not assume the patch is queryable without reading it. " +
-        "`mutationId` is accepted for parity with the Web PATCH face and is not used as an idempotency key here — the CAS revision is the concurrency guard. Use `write_base` only when the whole document should be re-serialised.",
       inputSchema: {
         path: z.string().min(1),
         // Optional in the schema on purpose: a missing precondition is refused *by the
@@ -609,7 +590,6 @@ export function registerWorkflowTools(server) {
     "query_base",
     {
       title: "Query Obsidian Base (Portable Subset)",
-      description: "Query common safe Base filters and sorting in Docker. Supports and/or/not, comparisons, contains, startsWith, endsWith, file.inFolder, file.hasTag, and file.hasLink. Also evaluates the safe file.asLink(if(property, property, file.name)) formula subset into structured link cells; unsupported formulas fail closed. `format` selects the response rendering: json (default, unchanged DTO), csv, tsv, md, or paths. When the selected view declares `groupBy` / `summaries`, the DTO additionally carries `groups` (group key, keyType, count, rowPaths, per-group summaries) and — when declared — the view-wide `summaries`; both keys are absent when nothing is declared, and the csv/tsv/md/paths text never expresses grouping (read `structuredContent` for it). Three optional ad-hoc inputs narrow or reorder one call without writing the .base file: `filters` (the .base filter-group dialect: and/or/not groups, {key,op,value} leaves from the frozen operator list, or an advanced expression string) is AND-combined with the base and view filters; `sort` ([{property, direction}], direction asc|desc, default asc) REPLACES the view sort; `search` (case-insensitive substring over the view columns, like the Web `q`) is AND-combined with the filters. Pipeline order is filters -> search -> sort -> limit -> grouping -> summaries; `limit` keeps its historical meaning (an explicit row ceiling that overrides the view limit).",
       inputSchema: {
         path: z.string().min(1),
         view: z.string().optional(),
@@ -695,7 +675,6 @@ export function registerWorkflowTools(server) {
     "list_base_views",
     {
       title: "List Obsidian Base Views",
-      description: "List the declared views of an Obsidian .base file as lightweight summaries (name, type, filters, sort, limit, groupBy, summaries, isDefault) with the view `query_base` uses when `view` is omitted. Use it to pick a view before querying. Returns no YAML body and no row data.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

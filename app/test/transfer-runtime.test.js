@@ -384,7 +384,9 @@ test("the runtime instance exposes exactly the frozen B5 seam and holds no modul
 
   const source = await fs.readFile(RUNTIME_MODULE, "utf8");
   const lines = source.split("\n").length;
-  assert.ok(lines > 100 && lines <= 500, `module must stay inside the line gate, saw ${lines}`);
+  // The hard code-line gate was retired by owner decision (2026-11-13); the lower bound stays
+  // as a vacuity control for the source scans below.
+  assert.ok(lines > 100, `module must be non-trivial, saw ${lines} lines`);
   assert.match(source, /export function createTransferRuntime\(/, "positive control: the factory must stay exported");
   assert.match(source, /export const VAULT_CONTEXT_MISMATCH = "VAULT_CONTEXT_MISMATCH";/, "positive control: the stable code must stay exported");
 

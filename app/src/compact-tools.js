@@ -3,6 +3,10 @@
 // remain the sole execution authority; this module only builds a bounded view.
 import { TOOL_NAMES } from "./config.js";
 import { MCP_TOOL_SCOPE_REQUIREMENTS } from "./scopes.js";
+// The intent sentence of every group lives in the Base pack; the fixed framing
+// below stays code, because it states the action list and the credential rule.
+import { bundledPromptRegistry } from "./prompt-registry/bundled.js";
+import { livePromptSnapshot } from "./prompt-registry/live.js";
 
 export const COMPACT_GROUPS = Object.freeze({
   agent_bootstrap: ["agent_bootstrap"],
@@ -32,6 +36,9 @@ export const COMPACT_GROUPS = Object.freeze({
   obsidian_publish_read: ["get_publish_status"],
   obsidian_publish_write: ["manage_publish"],
 });
+
+const COMPACT_PREFIX = "Obsidian actions / 笔记操作: ";
+const COMPACT_TAIL = "Choose action then supply its native params; credentials and Vault policy are checked per action.";
 
 // Preserve these discoverable entry points unchanged, including their native
 // schemas. server_info must also remain reachable during a temporal suspension.
@@ -78,26 +85,51 @@ function suffixFor(name, descriptor) {
 }
 
 function actionInputSchema(members) {
+  // Every branch used to repeat `type`, `required` and `additionalProperties: false`, which the
+  // parent already states: the whole list paid about 11 KB for a restatement that changes no
+  // validation result. The branch now carries only what the parent cannot say — which action, and
+  // which parameters that action takes.
   const branches = members.map((tool) => ({
-    type: "object",
-    properties: {
-      action: { type: "string", const: tool.name },
-      params: tool.inputSchema,
-    },
-    required: ["action", "params"],
-    additionalProperties: false,
+    properties: { action: { const: tool.name }, params: tool.inputSchema },
   }));
+  // A property whose schema is identical in every branch of the group constrains nothing per
+  // action (that is why every tool declares `vaultId` the same way); it is stated once on the
+  // parent instead. Branch `required` stays where it is: it may legitimately differ per action.
+  const shared = sharedParamsProperties(members);
+  if (shared) {
+    const hoisted = new Set(Object.keys(shared));
+    members.forEach((tool, index) => {
+      const branchParams = branches[index].properties.params;
+      const kept = Object.entries(branchParams.properties).filter(([key]) => !hoisted.has(key));
+      if (kept.length === 0) delete branches[index].properties.params.properties;
+      else branches[index].properties.params = { ...branchParams, properties: Object.fromEntries(kept) };
+    });
+  }
   return {
     type: "object",
     description: "Choose an action and pass its native validated parameters inside params.",
     properties: {
       action: { type: "string", enum: members.map((tool) => tool.name) },
-      params: { type: "object" },
+      params: shared ? { type: "object", properties: shared } : { type: "object" },
     },
     required: ["action", "params"],
     additionalProperties: false,
     oneOf: branches,
   };
+}
+
+// Returns the properties that carry the same schema in every branch, or null when there are none
+// (or when a schema forbids unknown properties, where hoisting would make a valid call invalid).
+function sharedParamsProperties(members) {
+  const [first, ...rest] = members.map((tool) => tool.inputSchema ?? {});
+  if (first.additionalProperties === false) return null;
+  if (rest.some((schema) => schema.additionalProperties === false)) return null;
+  const candidate = first.properties ?? {};
+  const shared = {};
+  for (const [key, schema] of Object.entries(candidate)) {
+    if (rest.every((other) => JSON.stringify(other.properties?.[key]) === JSON.stringify(schema))) shared[key] = schema;
+  }
+  return Object.keys(shared).length ? shared : null;
 }
 
 /**
@@ -108,7 +140,9 @@ function actionInputSchema(members) {
  * The full native list determines names; the caller's per-request view reduces
  * membership and description *before* any virtual descriptor is emitted.
  */
-export function compactToolView(nativeTools, allowedToolNames) {
+export function compactToolView(nativeTools, allowedToolNames, { promptSnapshot } = {}) {
+  const values = (promptSnapshot ?? livePromptSnapshot()).values;
+  const summaryOf = (domain) => values[`tools.compact.${domain}.summary`] ?? "";
   const native = new Map(nativeTools.map((tool) => [tool.name, tool]));
   if (native.size !== canonical.size || TOOL_NAMES.some((name) => !native.has(name))) {
     throw new Error("Native tool list is out of sync with the compact mapping");
@@ -136,8 +170,9 @@ export function compactToolView(nativeTools, allowedToolNames) {
       descriptors.push({
         name,
         title: domain.replaceAll("_", " ") + " (" + visible.length + " actions)",
-        description: "Obsidian actions / 笔记操作: " + visible.map((tool) => tool.name).join(", ") +
-          ". Choose action then supply its native params; credentials and Vault policy are checked per action.",
+        description: COMPACT_PREFIX + visible.map((tool) => tool.name).join(", ") +
+          ". " + (summaryOf(domain) ? summaryOf(domain) + "。 " : "") +
+          COMPACT_TAIL,
         inputSchema: actionInputSchema(visible),
         annotations,
       });

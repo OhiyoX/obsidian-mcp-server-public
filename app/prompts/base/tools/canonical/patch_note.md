@@ -1,0 +1,1 @@
+Append, prepend, or replace note content. replace swaps the ENTIRE targeted heading body (or block line / frontmatter value), not one matching line; a write shrinking the note by more than 20% is refused unless confirmShrink is true. 修改笔记里某一节的文字、追加或整段替换用它。

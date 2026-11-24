@@ -7,6 +7,8 @@
 // `admin-layout` checks (prototype-parity structure/paint/no-JS + the migrated defect criteria).
 //
 //   PLAYWRIGHT_MODULE=<path to playwright-core/index.mjs> node scripts/run-admin-layout-checks.mjs
+//   ... --shard=<i>/<n>              # one deterministic slice of the scene (issue #378); the sharded
+//                                    # runner `scripts/run-admin-layout-shards.mjs` ties the slices together
 //   WEB_TEST_OUTPUT=<dir>            # optional trace output directory (default: a scratch dir outside the repo)
 //
 // The default output goes to the OS temp directory on purpose: the trace is a run artefact, not
@@ -18,9 +20,19 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { results, check, sleep } from './web-regression/recorder.mjs';
 import { exportHarnessChromiumExecutable, loadPlaywrightChromium, playwrightRuntimeExecutablePath } from './web-regression/chromium-binary.mjs';
+import { parseShardArg } from './web-regression/admin-layout-shard.mjs';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const outputRoot = path.resolve(process.env.WEB_TEST_OUTPUT || path.join(os.tmpdir(), 'obsidian-admin-layout-evidence'));
+
+// `--shard=<i>/<n>` runs one deterministic slice of the scene (issue #378); no flag is today's run.
+let shard;
+try {
+  shard = parseShardArg(process.argv.slice(2));
+} catch (error) {
+  console.error(`SETUP FAILED: ${error.message}`);
+  process.exit(2);
+}
 
 // The Admin gate drives no gesture/fling timing, but it uses the same pinned full Chromium build as
 // the Web harness so a verdict can never depend on which browser build the machine happened to
@@ -44,7 +56,7 @@ try {
   await fs.mkdir(outputRoot, { recursive: true });
   console.log(`[admin-layout] chromium=${chromiumBinary.executablePath} source=${chromiumBinary.source}`);
   browser = await chromium.launch({ headless: true, executablePath: chromiumBinary.executablePath });
-  await registerAdminLayoutChecks({ check, sleep, browser, root, appRoot, outputRoot, serverErrors });
+  await registerAdminLayoutChecks({ check, sleep, browser, root, appRoot, outputRoot, serverErrors, shard });
   await fs.writeFile(path.join(outputRoot, 'admin-layout-results.json'), JSON.stringify({ results, serverErrors }, null, 2));
 } catch (error) {
   console.error(`SETUP FAILED: ${error?.stack ?? error}`);
@@ -56,5 +68,5 @@ try {
   }
 }
 const failed = results.filter((item) => !item.pass);
-console.log(`\nadmin-layout checks: ${results.length - failed.length}/${results.length} passed`);
+console.log(`\nadmin-layout checks${shard ? ` (shard ${shard.index}/${shard.count})` : ''}: ${results.length - failed.length}/${results.length} passed`);
 if (failed.length > 0 && process.exitCode === undefined) process.exitCode = 1;

@@ -54,11 +54,15 @@ function assertConfirmInputBound(html, label) {
   assert.fail(`${label}: the input must belong to the POST form (inside it, or bound by form=)`);
 }
 
+// 2026-11-16: `layout.js` injects the pre-paint column-widths script before the enhancement
+// module, so the policy is "that classic script plus exactly one whitelisted module".
+const D0_PREPAINT_SCRIPT = /^<script src="\/admin\/auth\/assets\/admin-column-widths\.js"><\/script>$/i;
 function assertScriptPolicy(html) {
   const scripts = [...html.matchAll(/<script\b[^>]*>(?:<\/script>)?/gi)].map((match) => match[0]);
-  if (scripts.length > 0) {
-    assert.equal(scripts.length, 1, "no script beyond the one whitelisted same-origin module");
-    assert.match(scripts[0], D0_MODULE_SCRIPT, "the single script is the whitelisted same-origin module");
+  const enhancement = scripts.filter((script) => !D0_PREPAINT_SCRIPT.test(script));
+  if (enhancement.length > 0) {
+    assert.equal(enhancement.length, 1, "no script beyond the one whitelisted same-origin module");
+    assert.match(enhancement[0], D0_MODULE_SCRIPT, "the single script is the whitelisted same-origin module");
   }
   assert.doesNotMatch(html, /[\s"']on(?:click|change|input|submit|load|error|mouseover|focus|blur|toggle|keydown|keyup)\s*=/i, "no inline event handlers");
   assert.doesNotMatch(html, /javascript:/i, "no javascript: URLs");

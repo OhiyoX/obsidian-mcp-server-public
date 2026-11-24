@@ -23,7 +23,8 @@ function selectionReveals(state, from, to) {
 }
 
 // Half-open semantic ranges keep the next element from activating the previous one.
-function selectionActivatesContext(state, from, to) {
+// Exported so the #780 test can assert both directions of the heading-mark reveal.
+export function selectionActivatesContext(state, from, to) {
   return state.selection.ranges.some((range) => {
     const lo = Math.min(range.from, range.to);
     const hi = Math.max(range.from, range.to);
@@ -170,6 +171,87 @@ export function highlightSpans(state, from = 0, to = state.doc.length, excluded 
 /** The character after `pos`, or "" at the end of the document. */
 function nextCharAfter(state, pos) {
   return pos < state.doc.length ? state.sliceDoc(pos, pos + 1) : "";
+}
+
+/**
+ * #747/#780: the source character that decides whether a heading's `HeaderMark` applies.
+ *
+ * ATX: the character after the heading's *opening* mark. One heading is one decision, asked
+ * twice: for its line class and for each of its two `HeaderMark`s, so both callers must read the
+ * same position. Asking about the character after a node's own end is wrong for either half: a
+ * closing mark (`# A ##`) ends its line, so its `\n` refused every tail mark and leaked it into
+ * idle Live Preview; and a fixed offset from the heading start lands on unrelated text, because
+ * `# A` and `##### A` differ by four characters. `#tag` stays literal text because its opening
+ * mark is followed by `t`.
+ *
+ * Setext: the `HeaderMark` IS the underline, and a setext underline always ends at a line break,
+ * so it has no character of its own to ask. The title's first character stands in: the node only
+ * exists when a title line precedes the underline (`===` alone is a paragraph), so an existing
+ * setext heading is never "still being typed".
+ */
+export function headingGateChar(state, node) {
+  const owner = node.name === "HeaderMark" ? node.node.parent : node.node;
+  if (!owner?.name?.startsWith("ATXHeading")) {
+    return owner ? state.sliceDoc(owner.from, owner.from + 1) : "";
+  }
+  return nextCharAfter(state, owner.firstChild?.to ?? node.from);
+}
+
+/**
+ * #780: the source lines that take the heading face, as `{ from, className }`.
+ *
+ * ATX: the single line the heading starts on. Setext: the node covers the title lines AND the
+ * closing underline, so only the title lines qualify — the underline is chrome (its own
+ * `HeaderMark`), and the heading face would paint `===` as part of the title.
+ */
+export function headingLines(state, node) {
+  const level = /^(?:ATX|Setext)Heading([1-6])$/.exec(node.name)?.[1];
+  if (!level) return [];
+  const className = `cm-live-heading cm-live-h${level} HyperMD-header HyperMD-header-${level}`;
+  if (!node.name.startsWith("SetextHeading")) {
+    return [{ from: state.doc.lineAt(node.from).from, className }];
+  }
+  const first = state.doc.lineAt(node.from).number;
+  const underline = state.doc.lineAt(Math.max(node.from, node.to - 1)).number;
+  const lines = [];
+  for (let number = first; number < underline; number += 1) {
+    lines.push({ from: state.doc.line(number).from, className });
+  }
+  return lines;
+}
+
+/**
+ * #785: the end of the range whose selection reveals a heading's own marks.
+ *
+ * For every other node this is `node.to` unchanged. A setext heading ends ON its underline line,
+ * so `node.to` is the last position of the underline itself, not the start of the next block: under
+ * the half-open rule a caret parked there (ArrowDown from the title with a far-right goal column)
+ * counted as "outside", which left it on a collapsed row with a 0px caret (measured). One position
+ * wider keeps that caret inside its own heading, and stops before the next line.
+ */
+export function headingRevealEnd(state, node) {
+  if (!node.name?.startsWith("SetextHeading")) return node.to;
+  return Math.min(node.to + 1, state.doc.length);
+}
+
+/**
+ * #785: the setext underline's own source line, collapsed to nothing while idle, or null.
+ *
+ * CodeMirror has no block margins, so the hidden `===` still carried a full row: the gap below a
+ * setext heading measured one row more than below ATX (measured 39.84px vs 15.84px). The underline
+ * is chrome, not a line of the document, so its row goes with its characters.
+ *
+ * Reveal is the underline's own reveal: the same `selectionActivatesContext` range the `HeaderMark`
+ * loop uses, so the row and the `===` can never disagree. Read-only hides every mark, so it
+ * collapses too.
+ */
+export function setextUnderlineRow(state, node) {
+  if (!node.name?.startsWith("SetextHeading")) return null;
+  if (!state.readOnly && selectionActivatesContext(state, node.from, headingRevealEnd(state, node))) return null;
+  return {
+    from: state.doc.lineAt(Math.max(node.from, node.to - 1)).from,
+    className: "cm-live-setext-underline-hidden",
+  };
 }
 
 function collectReplacedRanges(state) {
@@ -332,14 +414,20 @@ function buildLiveDecorations(view) {
       // Never apply line/mark decorations inside it: source chrome must not
       // participate in the table's visual layout.
       if (node.name === "Table") return false;
-      const heading = /^ATXHeading([1-6])$/.exec(node.name);
+      const heading = /^(?:ATX|Setext)Heading([1-6])$/.exec(node.name);
       const headingApplies = heading === null
         ? true
-        : blockMarkApplies("HeaderMark", nextCharAfter(view.state, node.from + heading[0].length));
-      addObsidianSemanticClass(ranges, node, semanticThemeRanges, { headingApplies });
+        : blockMarkApplies("HeaderMark", headingGateChar(view.state, node));
+      addObsidianSemanticClass(ranges, node, semanticThemeRanges, { headingApplies, state: view.state });
 
       if (heading && headingApplies) {
-        ranges.push(Decoration.line({ class: `cm-live-heading cm-live-h${heading[1]} HyperMD-header HyperMD-header-${heading[1]}` }).range(view.state.doc.lineAt(node.from).from));
+        for (const line of headingLines(view.state, node)) {
+          ranges.push(Decoration.line({ class: line.className }).range(line.from));
+        }
+        const underlineRow = setextUnderlineRow(view.state, node);
+        if (underlineRow) {
+          ranges.push(Decoration.line({ class: underlineRow.className }).range(underlineRow.from));
+        }
       }
       if (node.name === "Blockquote" && blockMarkApplies("QuoteMark", nextCharAfter(view.state, node.from + 1))) {
         decorateLines(view, node.from, node.to, "cm-live-quote HyperMD-quote", ranges);
@@ -486,13 +574,17 @@ function buildLiveDecorations(view) {
         }
       }
       const context = node.node.parent || node.node;
+      // #747/#780: a `HeaderMark` asks the heading's own gate, not its own end; see the helper.
+      const markGateChar = node.name === "HeaderMark"
+        ? headingGateChar(view.state, node)
+        : nextCharAfter(view.state, node.to);
       const chrome = idleChromeRange(
         node.name,
         node.from,
         node.to,
         context.name,
         ESCAPE_LIKE.has(node.name) ? view.state.sliceDoc(node.from, node.from + 1) : "",
-        nextCharAfter(view.state, node.to),
+        markGateChar,
       );
       if (!chrome) return;
       if (overlapsReplaced(replaced, context.from, context.to)) return;
@@ -501,7 +593,7 @@ function buildLiveDecorations(view) {
       const localLine = chrome.local ? view.state.doc.lineAt(chrome.from) : null;
       const active = !view.state.readOnly && (localLine
         ? selectionReveals(view.state, localLine.from, localLine.to)
-        : selectionActivatesContext(view.state, context.from, context.to));
+        : selectionActivatesContext(view.state, context.from, headingRevealEnd(view.state, context)));
       if (!active) {
         if (node.name === "CodeMark" && context.name === "InlineCode") {
           ranges.push(Decoration.mark({ class: "cm-live-source-mark-hidden" }).range(chrome.from, chrome.to));

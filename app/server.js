@@ -13,7 +13,13 @@ import { createTlsListener } from "./src/tls-listener.js";
 import { createMcpSessionRegistry } from "./src/mcp-sessions.js";
 import { getVaultHealth, primaryRuntime } from "./src/vault.js";
 import { createVaultCompositionRoot } from "./src/vault-runtime/vault-composition-root.js";
-import { AGENT_INSTRUCTIONS } from "./src/agent-bootstrap.js";
+import { getInitializeInstructions } from "./src/agent-bootstrap.js";
+import { bundledBasePack } from "./src/prompt-registry/bundled.js";
+import { setLivePromptRegistry, livePromptStatus } from "./src/prompt-registry/live.js";
+import { createPromptRegistry } from "./src/prompt-registry/registry.js";
+import { createPromptRegistryStore } from "./src/prompt-registry/store.js";
+import { createPromptAdminService } from "./src/prompt-registry/service.js";
+import { createPromptNotificationFanout } from "./src/prompt-registry/notification-fanout.js";
 import { createOAuthService, DEFAULT_VAULT_ID, OAUTH_SCOPES } from "./src/oauth-provider.js";
 import { oauthEndpointHardening } from "./src/oauth/hardening.js";
 import { createAdminRouter } from "./src/admin/router.js";
@@ -33,6 +39,8 @@ import { publishService } from "./src/publish/service.js";
 import { recoverPendingBatches } from "./src/batch-journal.js";
 import { deployedVersion, deployTimeFields } from "./src/release-version.js";
 import { auditHealth, startupHousekeeping } from "./src/direct-upload-housekeeping.js";
+import { warmVaultIndex } from "./src/vault-index-warmup.js";
+import { primaryIndexRuntime } from "./src/vault-index.js";
 import { AUTHORIZATION_MODES, createAuthorizationRuntime, createLegacyDecisionBackend } from "./src/authorization/runtime.js";
 import { createShadowRecorder } from "./src/authorization/shadow.js";
 import { createDeploymentDocument } from "./src/authorization/deployment-document.js";
@@ -51,6 +59,18 @@ if (discoveryOperatorConfig.warning) console.warn(`[discovery] ${discoveryOperat
 
 await startupHousekeeping({ dataRoot: DATA_PATH });
 
+// Prompt Registry (#825): one process-wide registry, read once before any MCP session
+// exists. A corrupt head or a missing pack degrades to the bundled Base and stays
+// observable in `/healthz` and `server_info`; it never blocks startup.
+const promptStore = createPromptRegistryStore({
+  headFile: path.join(DATA_PATH, "agent-prompts.json"),
+  packsDir: path.join(DATA_PATH, "prompt-registry", "packs"),
+  bundledBase: bundledBasePack(),
+});
+await promptStore.ready;
+const promptRegistry = createPromptRegistry({ bundledBase: bundledBasePack(), store: promptStore });
+setLivePromptRegistry(promptRegistry);
+
 // Wave D / D0: the per-Vault runtime map, assigned once the composition root has built the
 // canonical registry below. `createMcpServer` runs per session, long after module init.
 let vaultScopeDeps;
@@ -59,10 +79,12 @@ function createMcpServer() {
   const server = new McpServer({
     name: MCP_SERVER_NAME,
     version: MCP_SERVER_VERSION,
-  }, { instructions: AGENT_INSTRUCTIONS });
+  }, { instructions: getInitializeInstructions() });
 
-  const discovery = createDiscoveryRuntimePolicy(server, discoveryOperatorConfig, { authDisabled: authMode === "none" });
-  registerObsidianCapabilities(discovery, { accessRuntime: accessPolicy.runtime, authorization: authorizationRuntime, vaultScope: vaultScopeDeps, authorizationShadow: authorizationShadowObserver });
+  // The registry is injected here, not read from a module global: this is what pins one
+  // prompt snapshot per request (tools/list, tools/call, prompts/*, memory guidance).
+  const discovery = createDiscoveryRuntimePolicy(server, discoveryOperatorConfig, { authDisabled: authMode === "none", promptRegistry });
+  registerObsidianCapabilities(discovery, { accessRuntime: accessPolicy.runtime, authorization: authorizationRuntime, vaultScope: vaultScopeDeps, authorizationShadow: authorizationShadowObserver, promptRegistry });
   discovery.install();
   return server;
 }
@@ -70,6 +92,10 @@ function createMcpServer() {
 // MCP session lifecycle (registry, stale-session recovery, principal ownership,
 // hard-revoke close, idle TTL reaper) is owned by src/mcp-sessions.js.
 const { sessions, sessionRecovery, createSessionTransport, closeSessionsForClient, sessionBelongsToAuth, startReaper } = createMcpSessionRegistry({ createServer: createMcpServer });
+
+// Prompt copy notifications: one protocol hint per publish for sessions already open
+// (created here so `/healthz` can report its counters).
+const promptNotifications = createPromptNotificationFanout({ sessions, log: (line) => console.warn(line) });
 
 function isInitializeRequest(body) {
   if (Array.isArray(body)) {
@@ -446,6 +472,28 @@ if (oauthService) {
   // W4 (#437): after the startup round published, arm the two long-lived automatic triggers. The
   // switch (`VAULT_DISCOVERY_ENABLED`) is the only gate; with it off nothing is started here.
   await startVaultDiscoverySchedulers({ logger: console });
+  // Prompt copy publishing shares the console's session + CSRF. The audit entry is the
+  // provider's own ring: it records revisions and digests, never the prompt text.
+  const promptAdminService = createPromptAdminService({
+    store: promptStore,
+    bundledBase: bundledBasePack(),
+    audit: async (entry) => {
+      try {
+        oauthService?.provider?.recordAudit({
+          action: entry.action,
+          credentialType: "admin-session",
+          outcome: entry.outcome === "success" ? undefined : "failure",
+          detail: `${entry.outcome} revision=${entry.revision ?? "-"} digest=${(entry.digest ?? entry.candidateDigest ?? "").slice(0, 19)}`,
+        });
+      } catch {
+        // An audit failure never turns a durable publish into an error for the caller.
+      }
+    },
+  });
+  // Already connected sessions get one protocol hint that the lists moved. A failure
+  // here never touches the revision that is already durable.
+  promptAdminService.subscribe((snapshot) => promptNotifications.notifyPublished(snapshot));
+
   const authAdminRouter = createAdminRouter({
     provider: oauthService.provider,
     adminPassword: oauthService.provider.adminPassword,
@@ -455,12 +503,17 @@ if (oauthService) {
     listVaults: listWebVaults,
     publishService,
     publicBaseUrl: PUBLIC_BASE_URL,
+    // #669: the overview's Agent connect block states what this deployment really offers.
+    oauthEnabled: OAUTH_ENABLED,
+    readOnly: READ_ONLY,
     accessPolicyAdmin: accessPolicy.admin,
     authorizationAdmin,
     vaultGitAdmin,
     vaultGitStore,
     authorization: authorizationRuntime,
     authorizationShadow: authorizationShadowObserver,
+    promptRegistryStore: promptStore,
+    promptAdminService,
   });
   // Keep the historical admin entry point usable while the canonical router lives under /admin/auth.
   app.get("/admin", (_req, res) => res.redirect(302, "/admin/auth"));
@@ -525,7 +578,6 @@ app.get("/", mcpAuthMiddleware, (_req, res) => {
     oauthEnabled,
     authMode,
     tools: TOOL_NAMES,
-    authorizationWindows: accessPolicy.summary(),
     authorizationShadow: authorizationRuntime.summary().shadow,
     sessions: sessions.size,
     sessionRecovery: sessionRecovery.stats(),
@@ -564,7 +616,8 @@ app.get("/healthz", PROTECT_HEALTH ? mcpAuthMiddleware : (_req, _res, next) => n
     authMode,
     protectHealth: PROTECT_HEALTH,
     authorization: authorizationReport(),
-    authorizationWindows: accessPolicy.summary(),
+    promptRegistry: livePromptStatus(),
+    promptNotifications: promptNotifications.status(),
     authorizationShadow: authorizationShadowCounts(),
     sessions: sessions.size,
     sessionRecovery: sessionRecovery.stats(),
@@ -690,6 +743,9 @@ await recoverPendingBatches();
 const httpServer = app.listen(PORT, HOST, () => {
   console.log(`Obsidian MCP Streamable HTTP server listening on http://${HOST}:${PORT}${MCP_PATH}`);
 });
+// #476: the first search after a restart paid a cold Vault index build (9.8 s for 1,048 notes).
+// Build it once in the background; a failure only leaves the index cold, as it already was.
+warmVaultIndex({ index: primaryIndexRuntime });
 // The edge proxy terminates the browser's TLS and reaches this process over a second, private hop;
 // that hop is encrypted here (docs/RELEASE_AND_DEPLOY.md -> "Encrypted upstream hop"). The plaintext
 // listener stays for local health checks, in-container probes and rollback.
@@ -727,6 +783,8 @@ function withDeadline(promise, deadlineAt, label) {
 }
 
 function shutdown(signal) {
+  // Stop publishing hints into sessions that are about to close.
+  promptNotifications.close();
   if (shutdownPromise) return shutdownPromise;
   shutdownPromise = (async () => {
     const deadlineAt = Date.now() + SHUTDOWN_DEADLINE_MS;

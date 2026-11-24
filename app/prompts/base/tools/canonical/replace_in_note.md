@@ -1,0 +1,1 @@
+Run literal or regex replacements against a note body while preserving frontmatter. A search text is not an anchor: it replaces EVERY match in the note unless that replacement sets replaceAll: false, which replaces only the first match.

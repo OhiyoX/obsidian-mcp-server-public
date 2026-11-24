@@ -124,10 +124,14 @@ test("Live snapshots merge across the whole scroll range, ends included", () => 
   assert.equal(merged.hr.values.color, "rgb(1, 2, 3)", "the first found entry wins");
 });
 
-test("the Chromium job wires the narrow gate and uploads its artifacts", () => {
+test("the narrow gate keeps its runner, and CI no longer claims to run it", () => {
+  // 2026-11-19: this used to pin the Chromium job in `.github/workflows/ci.yml`. The owner
+  // retired the heavy mirror jobs on 2026-11-14 (the workflow header says which gate replaced
+  // them), so the assertions were red on a decision. What still holds: the runner exists with
+  // its own output directory contract, and the workflow does not pretend to run it.
+  const runner = readRepo("app/scripts/render-parity-phase1-mobile.mjs");
+  assert.match(runner, /RENDER_PARITY_OUTPUT/, "the runner still writes its evidence somewhere");
   const ci = readRepo(".github/workflows/ci.yml");
-  assert.match(ci, /node scripts\/render-parity-phase1-mobile\.mjs/);
-  assert.match(ci, /timeout --signal=TERM --kill-after=15s 300s node scripts\/render-parity-phase1-mobile\.mjs/);
-  assert.match(ci, /name: render-parity-phase1-mobile/);
-  assert.match(ci, /RENDER_PARITY_OUTPUT: \$\{\{ runner\.temp \}\}\/render-parity-phase1-mobile/);
+  assert.doesNotMatch(ci, /render-parity-phase1-mobile\.mjs/, "the retired Chromium job must not come back quietly");
+  assert.match(ci.split("\n").slice(0, 20).join("\n"), /2026-11-14/, "the retirement stays written down");
 });

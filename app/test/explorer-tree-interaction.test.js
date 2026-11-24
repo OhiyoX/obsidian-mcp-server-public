@@ -207,7 +207,10 @@ test("the renderer and its extracted hover binding hold no timer and no network 
   // create flow) moved to create-draft.js; the renderer itself now owns no timer at all.
   assert.equal((treeSource.match(/setTimeout\(/g) ?? []).length, 0, "the renderer owns no timer");
   assert.equal((draftSource.match(/setTimeout\(/g) ?? []).length, 1, "the draft row keeps exactly the one deferred-blur timer");
-  assert.match(draftSource, /input\.addEventListener\("blur", \(\) => setTimeout\(cancel, 0\)\)/);
+  // 09ef65c7 wrapped the deferred cancel in a focus guard (a repaint that detached the focused
+  // row fired blur; cancelling there killed a row nobody had left). The invariant holds: the one
+  // timer of the create flow still lives in the blur handler and nothing else defers work.
+  assert.match(draftSource, /input\.addEventListener\("blur", \(\) => setTimeout\(\(\) => \{[\s\S]{0,120}?const documentRef = input\.ownerDocument[\s\S]{0,200}?if \(documentRef\?\.activeElement === input\) return;[\s\S]{0,40}?cancel\(\);[\s\S]{0,20}?\}, 0\)\)/);
   assert.equal((prefetchHoverSource.match(/setTimeout\(/g) ?? []).length, 0, "the hover binding must not own a timer");
   for (const source of [treeSource, draftSource, prefetchHoverSource]) {
     for (const forbidden of [

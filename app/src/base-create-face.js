@@ -85,11 +85,6 @@ export const BASE_CREATE_WIRE_CODES = new Set([
 
 export const CREATE_BASE_ENTRY_TOOL = Object.freeze({
   title: "Create Obsidian Base Entry",
-  description:
-    "Create the note a Base view is looking for, and refuse to create one it would not show. The target folder and the frontmatter defaults are derived from the .base itself, exactly like the desktop's `base:create`/\"New\" button: `newItemFolder`, then a `newItemTemplate` note's parent folder and frontmatter, then the folder implied by the view's own filters (`file.folder == \"X\"` / `file.inFolder(\"X\")`), then the .base file's own folder; properties come from the view's readable filter rules (`note.<prop> ==|>=|<= <literal>`, `note.<prop>.isEmpty()`, `file.hasTag(x)`, `file.hasProperty(x)`) plus every `order` key as present-but-null. `values` overrides those defaults. `file` is the new note's path RELATIVE TO THE DERIVED FOLDER (desktop composes `folder + name`), default \"Untitled.md\"; an existing target is refused with `entry-exists` and never overwritten, and a traversal/absolute `file` with `entry-path-invalid`. Before writing anything, the planned record is evaluated with the same view evaluator `query_base` uses: if the view's filters would not return it, the call fails with `entry-not-queryable` and nothing is written; a view configuration this query subset cannot evaluate reports `query-precheck-inconclusive` in `warnings` instead of claiming the entry is queryable. The .base document is never modified.",
-  // `ifMatch` is optional because this tool does not write the .base — but when given it
-  // is a hard precondition, refused with the same `revision-conflict` code `patch_base`
-  // uses (A4b's 409), read from the same one-read bytes.
   inputSchema: {
     path: z.string().min(1),
     view: z.string().optional(),

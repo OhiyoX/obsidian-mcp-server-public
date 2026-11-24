@@ -1,4 +1,5 @@
 import { requestUserAgent } from "../agent-identity.js";
+import { livePromptStatus } from "../prompt-registry/live.js";
 import { ok } from "../result.js";
 import { effectiveVaultId } from "../default-vault.js";
 import { deployedVersion, formatDeployTime } from "../release-version.js";
@@ -11,6 +12,8 @@ import { listWebVaults, webVaultRegistry } from "../app/vault-registry.js";
 // gate and the MCP registrar both use THIS constant (`WEB_DEFAULT_VAULT || "vault"`). With
 // WEB_DEFAULT_VAULT unset and VAULT_PATH=<root>/alpha the two answer differently ("alpha" vs
 // "vault"), so the metadata could name a Vault the routing boundary would never choose.
+import { WRITE_TOOLS } from "../capability-catalog.js";
+import { READ_ONLY } from "../config.js";
 import { DEFAULT_VAULT_ID } from "../oauth/primitives.js";
 import { defaultCapabilitiesFor } from "../vault-runtime/registry.js";
 import { getAgentBootstrap, MEMORY_POLICY_URI, MEMORY_POLICY_VERSION } from "../agent-bootstrap.js";
@@ -24,6 +27,22 @@ import { getSessionAuthor, setSessionAuthor } from "../session-author.js";
 // (`src/app/vault-registry.js`), so this plane reports the same per-Vault runtime facts the Web
 // face and Admin do; before the registry has published a usable snapshot the fail-closed A2
 // default is reported instead of guessing (§3.4).
+// #276: writability must be visible on a READ path, not only in the write tools an agent cannot see.
+// With every write tool in a deferred tier — and a host search that drops CJK, so "写入笔记" matches
+// nothing — an agent sees six read tools and concludes it cannot write at all. `server_info` is direct
+// everywhere, so it names the ability, counts it and shows examples; `agent_bootstrap` carries the
+// full list. The names come from the scope table, so this cannot drift from what ships.
+const WRITE_EXAMPLES = Object.freeze(["write_note", "append_to_note", "patch_note", "move_note"]);
+function writeCapabilitySummary() {
+  const named = WRITE_EXAMPLES.filter((name) => WRITE_TOOLS.includes(name));
+  return Object.freeze({
+    enabled: !READ_ONLY,
+    count: READ_ONLY ? 0 : WRITE_TOOLS.length,
+    examples: READ_ONLY ? [] : (named.length > 0 ? named : WRITE_TOOLS.slice(0, 3)),
+    fullList: "agent_bootstrap",
+  });
+}
+
 function safeVaultMetadata(vault) {
   return {
     id: vault.id,
@@ -89,7 +108,6 @@ function rememberSessionAuthor(server, args = {}, extra) {
 export function registerInfoTools(server) {
   server.registerTool("agent_bootstrap", {
     title: "Obsidian Agent Memory Bootstrap",
-    description: "Start here for durable project work: load the shared recall, note-taking, verification and privacy workflow once per conversation. Pass client and model so writes get correct mcp_author when the host cannot send _meta (especially when clientInfo.name is mcp-client). Works with any agent; never stores the conversation.",
     inputSchema: {
       client: z.string().trim().min(1).max(80).optional().describe("Optional client label, e.g. codex, cursor, workbuddy, openclaw, hermes. When MCP initialize used a generic name (mcp-client), this becomes the session write author."),
       model: z.string().trim().min(1).max(160).optional().describe("Optional model name for mcp_author on later writes (e.g. grok, composer, gpt-5.6). Sticky across MCP session reconnects for the same auth client when the host cannot send _meta."),
@@ -111,7 +129,6 @@ export function registerInfoTools(server) {
     "server_info",
     {
       title: "Obsidian Server Info",
-      description: "Return server configuration, health, tools and memory onboarding. For shared project-memory conventions start with agent_bootstrap.",
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -135,6 +152,8 @@ export function registerInfoTools(server) {
         discovery: discoveryPolicySummary(view),
         index: getVaultIndexStats(),
         onboarding: { tool: "agent_bootstrap", policyUri: MEMORY_POLICY_URI, policyVersion: MEMORY_POLICY_VERSION },
+        writes: writeCapabilitySummary(),
+        promptRegistry: livePromptStatus(),
       });
     },
   );

@@ -67,7 +67,9 @@ test("the inline draft row is shared by all three create entries, with no prompt
   assert.match(draftSource, /export function hasActiveDraft\(/);
   assert.match(draftSource, /row\.className = isFolder \? "note-create-row folder-create-row" : "note-create-row"/);
   assert.match(draftSource, /input\.className = isFolder \? "note-create-input folder-create-input" : "note-create-input"/);
-  assert.match(draftSource, /input\.placeholder = isFolder \? "文件夹名称" : "笔记名称"/);
+  // 71cf0ec1 (2026-11-07, explorer rename row + F2) gave the row a rename mode: the rename
+  // literal is new, both create literals stay, and the no-prompt rule below still holds.
+  assert.match(draftSource, /input\.placeholder = renaming\s*\? t\("explorer\.rename\.placeholder"\)\s*: isFolder \? "文件夹名称" : "笔记名称"/);
   assert.match(draftSource, /const created = await draft\.onCommit\?\.\(/);
   assert.doesNotMatch(draftSource, /prompt\(/);
 });
@@ -75,7 +77,9 @@ test("the inline draft row is shared by all three create entries, with no prompt
 test("the draft survives a background re-render and does not hide the empty state", () => {
   // The draft is rebuilt from module state on every render, restored with focus.
   assert.match(draftSource, /export function preserveActiveDraft\(\)/);
-  assert.match(draftSource, /isDraftInput\(globalThis\.document\?\.activeElement\)/);
+  // 09ef65c7 reads the focus from the row's own document, falling back to the global one; the
+  // invariant is unchanged: a re-render keeps the draft only while its input holds the focus.
+  assert.match(draftSource, /const active = draft\.row\?\.ownerDocument\?\.activeElement \?\? globalThis\.document\?\.activeElement;[\s\S]{0,80}isDraftInput\(active\)/);
   assert.match(draftSource, /if \(preserved\) \{\s*input\.focus\(\);/);
   assert.match(source, /const preserved = preserveActiveDraft\(\);/);
   assert.match(source, /renderDraft\(\{ host, phase: "root", preserved \}\)/);

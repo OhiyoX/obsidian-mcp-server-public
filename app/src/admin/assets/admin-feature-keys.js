@@ -207,8 +207,8 @@ registerFeature("keys", (ctx) => {
 
   /**
    * Prototype `$(".bar [data-act^=new-]")` (`6-app.js:431`). The SSR page bar renders the create
-   * entry as a GET form to `?id=new` (`pages/accounts.js`, `pages/keys.js`) or, on the policy list,
-   * as an anchor (`pages/authz.js`).
+   * entry as a GET form to `?id=new` (`pages/accounts.js`, `pages/keys.js`) or, on the constraint
+   * list, as an anchor to `?new=1` (`pages/authz-constraints.js`).
    */
   function createEntry() {
     const form = document.querySelector('.bar form[method="get"] input[name="id"][value="new"]')?.closest("form");
@@ -246,13 +246,13 @@ registerFeature("keys", (ctx) => {
   }
 
   /**
-   * Prototype `savePolicy()` (`6-app.js:421-422`) — only the policy editor has this shortcut. The
-   * SSR editor keeps its save button in `.ped-foot` and points it at the form via `form="authz-form"`.
+   * Prototype `savePolicy()` (`6-app.js:421-422`) — only an editor page has this shortcut. The SSR
+   * editors keep their save button in `.ped-foot` and point it at their own form via `form="…"`.
    */
   function editorForm() {
     const button = document.querySelector('.ped-foot button[type="submit"][form]');
     const owned = button ? document.getElementById(button.getAttribute("form")) : null;
-    return owned || document.querySelector("form#authz-form");
+    return owned;
   }
 
   function submitEditor() {

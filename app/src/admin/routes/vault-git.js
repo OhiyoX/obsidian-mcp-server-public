@@ -168,7 +168,6 @@ export function registerVaultGitRoutes(router, {
   requireCsrf,
   actions = {},
   mountPath = DEFAULT_MOUNT_PATH,
-  accessPolicyBase = null,
   provider = null,
   gitConfigStore = null,
 } = {}) {
@@ -207,7 +206,6 @@ export function registerVaultGitRoutes(router, {
     const options = {
       activeTab: DEFAULT_TAB,
       vaultGitBase: urls.base,
-      accessPolicyBase,
       session: req.adminSession,
       request: req,
       content: page.content,

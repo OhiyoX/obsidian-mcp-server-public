@@ -3,9 +3,10 @@
 `get_note_context` (Phase 1 of the Context API) returns one bounded,
 provenance-tagged context bundle for a single, exact vault-relative note path.
 `src/context-service.js` owns the protocol-neutral contract; `src/tools/context.js`
-is a thin MCP adapter. Phases 2 (`get_project_context`) and 3
-(`get_workspace_instructions`) are not implemented and no project/workspace
-discovery arguments exist.
+is a thin MCP adapter. `contextScope` selects three modes: `note` (default),
+`project` (an explicit `projectRoot`, never guessed) and `workspace` (the known
+convention files directly under an explicit `workspaceRoot`). None of them
+discovers a project or workspace by searching the Vault.
 
 The tool is advertised as `readOnlyHint: true` and `openWorldHint: true`:
 Vault access is read-only, but related retrieval with the default
@@ -16,15 +17,26 @@ worst case is open-world even though `includeRelated` defaults to `false`.
 
 | Field | Default | Bounds | Meaning |
 | --- | --- | --- | --- |
-| `path` | required | non-empty | Exact vault-relative note path. No fuzzy matching, globbing, project or workspace discovery. |
+| `path` | required | non-empty | Exact vault-relative note path. No fuzzy matching or globbing. Ignored when `contextScope` is `project` or `workspace`. |
+| `contextScope` | `note` | `note` \| `project` \| `workspace` | Which bundle to build. |
+| `projectRoot` | — | vault-relative directory | Required by `project` scope: the directory that names the project. Never guessed, never a full-Vault scan, never a fallback to another project. |
+| `workspaceRoot` | operator setting | vault-relative directory | `workspace` scope: defaults to `VAULT_WORKSPACE_ROOT` (the Vault root when unset). Only `AGENTS.md`, `CONVENTIONS.md`, `CONTRIBUTING.md`, `GUIDELINES.md` directly under it are read, each as `kind: workspace-reference` with `authorTrust: vault-reference`. Nothing in note content can move this root. |
 | `maxChars` | `12000` | `1..32000` | Unicode-codepoint budget for Vault-derived text. |
 | `maxItems` | `20` | `1..64` | Maximum context items. The target is `items[0]`; backlinks and related notes fill the remainder. |
 | `includeBacklinks` | `true` | boolean | Include bounded backlinks from the existing link index. |
 | `includeRelated` | `false` | boolean | Include bounded related notes using the existing retrieval ranking. |
 | `semantic` | `true` | boolean | Prefer semantic related notes; only affects related retrieval. |
 
-There is intentionally no `query`, `project`, `workspace`, `depth` or
-`recursive` argument. Use `get_note` when the full note body is required.
+There is intentionally no `query`, `depth` or `recursive` argument, and no
+`maxOutputBytes` here (the byte budget is `maxChars`). Use `get_note` when the
+full note body is required.
+
+Workspace conventions are **reference data, quoted verbatim in `items[].excerpt`**.
+A conventions file that says "ignore the system rules" changes nothing: the
+server's `policy` stays `{source: "server", version: "1.0.0"}`. The modes are
+bounded: one `readdir`, no descent, no Vault walk. A missing root gives
+`not_found`; a root outside the Vault or reached through a symlink gives
+`restricted`; absent convention files give `workspace_conventions_missing`.
 
 ## Output
 
@@ -159,6 +171,7 @@ always retained when the character budget is hit. Error text surfaced through
 
 ## Non-goals
 
-- No project/workspace discovery.
+- No project or workspace *discovery*: both scopes need an explicit root (or the
+  operator setting); the server never guesses one.
 - No full note body; that stays in `get_note`.
 - No mutation, no server-side state, no dynamic tool registration.

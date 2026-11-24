@@ -86,7 +86,9 @@ export async function startServer(env) {
   child.stdout.on("data", (chunk) => output.push(chunk.toString()));
   child.stderr.on("data", (chunk) => output.push(chunk.toString()));
   const base = `http://127.0.0.1:${env.PORT}`;
-  for (let attempt = 0; attempt < 450; attempt += 1) {
+  // 1200 x 100 ms = 120 s: a cold boot on this container's CIFS mount measured 7-56 s depending on
+  // how many suites start at once (2026-11-13). 450 x 100 ms = 45 s measured the mount, not a hang.
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`server exited early (${child.exitCode}): ${output.join("")}`);
     try {
       const response = await fetch(`${base}/healthz`);

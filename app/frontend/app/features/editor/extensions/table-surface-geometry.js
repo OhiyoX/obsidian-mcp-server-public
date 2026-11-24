@@ -5,6 +5,7 @@ import {
   computeTableOverflowGeometry,
   measureLiveTableMetrics,
 } from "../../document/table-overflow-geometry.js";
+import { scrollTableHorizontally } from "../../document/table-wheel-scroll.js";
 
 function tableRows(table) {
   return [...table.rows].map((row) => [...row.cells].map((cell) => (
@@ -184,14 +185,6 @@ export function primeTableSurfaceGeometry(view, shell) {
   return writeTableGeometry(measurement);
 }
 
-function horizontalWheelDelta(event, viewport) {
-  let delta = Number(event.deltaX) || 0;
-  if (Math.abs(delta) < 0.5 && event.shiftKey) delta = Number(event.deltaY) || 0;
-  if (Math.abs(delta) < 0.5) return 0;
-  const factor = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientWidth : 1;
-  return delta * factor;
-}
-
 function tableForDOMSelection(view, selection) {
   if (!selection?.rangeCount || selection.isCollapsed) return null;
   const range = selection.getRangeAt(0);
@@ -226,15 +219,7 @@ export const tableSurfaceGeometry = ViewPlugin.fromClass(class {
       const viewport = event.target?.closest?.(".cm-table-viewport");
       if (!viewport || !this.view.scrollDOM.contains(viewport)) return;
       if (viewport.dataset.tableOverflow !== "true") return;
-      if (viewport.scrollWidth <= viewport.clientWidth + 1) return;
-      const delta = horizontalWheelDelta(event, viewport);
-      if (!delta) return;
-      const before = viewport.scrollLeft;
-      viewport.scrollLeft += delta;
-      if (Math.abs(viewport.scrollLeft - before) > 0.5) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+      scrollTableHorizontally(event, viewport);
     };
     // Listen at the root scroller in capture phase. CodeMirror owns the outer
     // scroller and may consume wheel input before a nested widget's bubble

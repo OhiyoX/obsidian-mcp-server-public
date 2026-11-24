@@ -39,7 +39,7 @@ function visibleSemanticSpans(node) {
  * Marks cover only visible content, never hidden Markdown chrome, so the
  * semantic class survives the source-marker replacement decorations.
  */
-export function addObsidianSemanticClass(ranges, node, seen, { headingApplies = true } = {}) {
+export function addObsidianSemanticClass(ranges, node, seen, { headingApplies = true, state = null } = {}) {
   const mapped = NODE_CLASS.get(node.name);
   if (mapped) {
     for (const span of visibleSemanticSpans(node)) {
@@ -53,8 +53,20 @@ export function addObsidianSemanticClass(ranges, node, seen, { headingApplies = 
     if (!headingApplies) return;
     const context = node.node.parent || node.node;
     const level = /^ATXHeading([1-6])$/.exec(context.name)?.[1];
-    if (!level) return;
-    pushMark(ranges, seen, `cm-header cm-header-${level}`, node.to, context.to);
+    if (level) {
+      pushMark(ranges, seen, `cm-header cm-header-${level}`, node.to, context.to);
+      return;
+    }
+    // A setext `HeaderMark` is the underline itself, so `node.to === context.to` and the ATX
+    // span is empty. The title is what carries the class then: `context.from` up to the
+    // underline, minus the trailing line break / indent, so a theme that paints a
+    // `.cm-header` background cannot colour the end of the title line.
+    const setextLevel = /^SetextHeading([12])$/.exec(context.name)?.[1];
+    if (!setextLevel) return;
+    const titleEnd = state
+      ? context.from + state.sliceDoc(context.from, node.from).replace(/\s+$/u, "").length
+      : node.from;
+    pushMark(ranges, seen, `cm-header cm-header-${setextLevel}`, context.from, titleEnd);
     return;
   }
 

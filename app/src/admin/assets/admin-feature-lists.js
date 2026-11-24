@@ -95,7 +95,7 @@ function createFilter(ctx) {
     [...row.querySelectorAll("td:not(.act)")].map((cell) => cell.textContent).join(" "),
     // The audit row's expandable detail panel is the only place the recorded UA/reason/detail is
     // rendered, and the server's own `?q=` filter searches those fields (`searchText` in audit.js).
-    row.querySelector("td.act .uax")?.textContent ?? "",
+    row.nextElementSibling?.querySelector(".uax")?.textContent ?? "",
   ].join(" ").toLowerCase();
 
   const showEmptyState = (tw, table, labels) => {

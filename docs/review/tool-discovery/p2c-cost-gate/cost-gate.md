@@ -1,7 +1,7 @@
 # Progressive Tool Discovery — Phase 2C eval & cost gate
 
 Status: **candidate** (offline, deterministic branch artifact). Default production profile stays `full`.
-Source commit: `1ac421359e433d8e377e648ef68012d121fb2b1d`.
+Source commit: `8ccc2be02fbec631ee773602a09524f1ee458af4`.
 
 This slice is evaluation/evidence only. It changes no registration, no visibility default,
 no Scope truth, and no Vault behavior. It reuses the frozen 50 task fixtures and the native
@@ -18,7 +18,7 @@ in-memory `tools/list` descriptors; it does not rebuild the inventory or catalog
 | `no-scope-escalation` | pass | scope x profile rows with a visibility leak: 0 |
 | `historical-inventory-preserved` | pass | all 86 historical inventory tools still registered |
 | `fixture-contract` | pass | fixtures valid=true, count=50 |
-| `static-coverage-expressible` | pass | best fixed module bundle statically covers every expected tool with 91/86 tools (2.2% descriptor reduction); single-toolset/core profiles do not |
+| `static-coverage-expressible` | pass | best fixed module bundle statically covers every expected tool with 91/86 tools (3.0% descriptor reduction); single-toolset/core profiles do not |
 | `default-shrink-readiness` | **fail** | HELD: the TODO requires end-to-end task-success (critical safety/recovery/auth) evidence before any production default shrink. This slice has no agent harness; static expected-tool coverage is explicitly not task success. Default stays `full`. |
 | `baseline-limit-disclosed` | pass | additive tools: delete_file, start_direct_upload, patch_base, create_base_entry, list_base_views, get_note_context; unreferenced tools: 22 |
 
@@ -27,7 +27,7 @@ Blockers:
 
 ## Catalog baseline
 
-- Native catalog: **92** tools; descriptor 174791 bytes (~43698 est. tokens); inputSchema 42147 bytes; outputSchema 73956 bytes.
+- Native catalog: **92** tools; descriptor 179985 bytes (~44997 est. tokens); inputSchema 46042 bytes; outputSchema 74147 bytes.
 - Canonical membership order (`TOOL_NAMES`, `server_info.tools`, Scope tables): 92 names — **immutable membership order, not the wire order**.
 - Native wire order (raw `tools/list`): positional mismatches vs canonical membership = **56**; set equality = `true`. The two orders are recorded separately; neither is inferred from the other.
 - Wired runtime parity (full profile, all scopes): output deep-equals raw native descriptors in order = **true** (names true, descriptors true).
@@ -41,19 +41,19 @@ Blockers:
 
 | Profile | Visible | Hidden | Descriptor B | Est. tokens | Bytes saved | Critical recall | Fixtures fully covered | Missing critical refs |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `full` | 92 | 0 | 174791 | ~43698 | 0.0% | 100.0% | 50/50 | 0 |
-| `core` | 6 | 86 | 17272 | ~4318 | 90.1% | 24.1% | 8/50 | 44 |
-| `module:info` | 2 | 90 | 5476 | ~1369 | 96.9% | 10.3% | 2/50 | 52 |
-| `module:notes` | 8 | 84 | 16690 | ~4173 | 90.5% | 19.0% | 7/50 | 47 |
-| `module:search` | 4 | 88 | 9191 | ~2298 | 94.7% | 5.2% | 2/50 | 55 |
-| `module:files` | 18 | 74 | 36164 | ~9041 | 79.3% | 8.6% | 5/50 | 53 |
-| `module:links` | 13 | 79 | 16902 | ~4226 | 90.3% | 6.9% | 4/50 | 54 |
-| `module:workflows` | 16 | 76 | 30937 | ~7735 | 82.3% | 8.6% | 5/50 | 53 |
-| `module:git` | 6 | 86 | 8137 | ~2035 | 95.3% | 8.6% | 4/50 | 53 |
-| `module:intelligence` | 13 | 79 | 24480 | ~6120 | 86.0% | 15.5% | 7/50 | 49 |
-| `module:context` | 1 | 91 | 3793 | ~949 | 97.8% | 0.0% | 0/50 | 58 |
-| `module:publish` | 2 | 90 | 3942 | ~986 | 97.7% | 5.2% | 3/50 | 55 |
-| `module:plans` | 9 | 83 | 19079 | ~4770 | 89.1% | 12.1% | 7/50 | 51 |
+| `full` | 92 | 0 | 179985 | ~44997 | 0.0% | 100.0% | 50/50 | 0 |
+| `core` | 6 | 86 | 18501 | ~4626 | 89.7% | 24.1% | 8/50 | 44 |
+| `module:info` | 2 | 90 | 5476 | ~1369 | 97.0% | 10.3% | 2/50 | 52 |
+| `module:notes` | 8 | 84 | 17346 | ~4337 | 90.4% | 19.0% | 7/50 | 47 |
+| `module:search` | 4 | 88 | 9681 | ~2421 | 94.6% | 5.2% | 2/50 | 55 |
+| `module:files` | 18 | 74 | 36525 | ~9132 | 79.7% | 8.6% | 5/50 | 53 |
+| `module:links` | 13 | 79 | 17291 | ~4323 | 90.4% | 6.9% | 4/50 | 54 |
+| `module:workflows` | 16 | 76 | 30937 | ~7735 | 82.8% | 8.6% | 5/50 | 53 |
+| `module:git` | 6 | 86 | 8137 | ~2035 | 95.5% | 8.6% | 4/50 | 53 |
+| `module:intelligence` | 13 | 79 | 25637 | ~6410 | 85.8% | 15.5% | 7/50 | 49 |
+| `module:context` | 1 | 91 | 5471 | ~1368 | 97.0% | 0.0% | 0/50 | 58 |
+| `module:publish` | 2 | 90 | 3942 | ~986 | 97.8% | 5.2% | 3/50 | 55 |
+| `module:plans` | 9 | 83 | 19542 | ~4886 | 89.1% | 12.1% | 7/50 | 51 |
 
 ### Wrong/missing-tool exposure (annotation/Scope derived, not a selection rate)
 
@@ -76,13 +76,13 @@ Blockers:
 ## Module oracle (upper bound, not a deployment)
 
 - All fixtures expressible by a toolset union: **true**.
-- Per-fixture cover descriptor bytes: min 3942, p50 19079, p95 36164, max 36164.
+- Per-fixture cover descriptor bytes: min 3942, p50 19542, p95 36525, max 36525.
 
 ## Best fixed module bundle (diagnostic optimizer)
 
 - Toolsets: `info`, `notes`, `search`, `files`, `links`, `workflows`, `git`, `intelligence`, `publish`, `plans`.
 - Omitted toolsets: `context`.
-- Visible tools 91; descriptor 170998 bytes; descriptor reduction vs full 2.2%.
+- Visible tools 91; descriptor 174514 bytes; descriptor reduction vs full 3.0%.
 
 ## Scope-negative matrix
 
@@ -184,5 +184,5 @@ Blockers:
 - host/client deferred loading behavior (Phase 3 live host evidence)
 - deployed-server scope enforcement (needs a scope-limited credential)
 
-Content digest (excludes `source`): `f13dd49cc1f234d2cc25f020f01b216673f380b00d481ae046e7cfaadd0337da` (110347 bytes).
+Content digest (excludes `source`): `b98eb1fc17cb11546c61238e699052fc0db1808293dc25ad40e28d006d357c37` (110344 bytes).
 

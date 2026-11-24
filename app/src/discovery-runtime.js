@@ -18,13 +18,16 @@
 //   list_changed notification). A hidden tool stays registered but unreachable.
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, GetPromptRequestSchema, ListPromptsRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { CAPABILITY_CATALOG, CAPABILITY_CATALOG_TOOL_COUNT } from "./capability-catalog.js";
 import { buildCapabilityPolicyView } from "./capability-policy.js";
 import { MCP_SCOPES } from "./scopes.js";
 import { loadDiscoveryOperatorConfig } from "./discovery-config.js";
 import { compactToolView, isCompactProfile, projectCompactCall } from "./compact-tools.js";
 import { compactDescriptorFingerprint } from "./compact-descriptor-integrity.js";
+import { livePromptSnapshot } from "./prompt-registry/live.js";
+import { runWithPromptSnapshot } from "./prompt-registry/request-snapshot.js";
+import { projectNativeToolDescriptions } from "./prompt-registry/tool-projection.js";
 
 export const DISCOVERY_RUNTIME_SCHEMA_VERSION = 1;
 
@@ -100,7 +103,7 @@ function unknownToolResult(name) {
 // Wraps a live McpServer for registration and installs the per-request view on
 // tools/list and tools/call. Registration still flows through the real
 // McpServer so descriptors, schemas, and handlers keep native parity.
-export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOperatorConfig, { authDisabled = false } = {}) {
+export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOperatorConfig, { authDisabled = false, promptRegistry = null } = {}) {
   const protocol = server?.server;
   if (!protocol || typeof protocol.setRequestHandler !== "function") {
     throw new Error("Discovery runtime policy requires an McpServer with an underlying protocol server");
@@ -115,12 +118,16 @@ export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOpe
   const originalSetRequestHandler = protocol.setRequestHandler.bind(protocol);
   let nativeListTools = null;
   let nativeCallTool = null;
+  let nativeListPrompts = null;
+  let nativeGetPrompt = null;
 
   // Capture the SDK handlers as McpServer installs them so the filtered view
   // delegates to the exact native descriptor builder and execution path.
   protocol.setRequestHandler = (schema, handler) => {
     if (schema === ListToolsRequestSchema) nativeListTools = handler;
     else if (schema === CallToolRequestSchema) nativeCallTool = handler;
+    else if (schema === ListPromptsRequestSchema) nativeListPrompts = handler;
+    else if (schema === GetPromptRequestSchema) nativeGetPrompt = handler;
     return originalSetRequestHandler(schema, handler);
   };
 
@@ -133,8 +140,12 @@ export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOpe
       throw new Error("Discovery runtime policy could not capture native tool handlers");
     }
 
-    protocol.setRequestHandler(ListToolsRequestSchema, async (request, extra) => {
-      const result = await nativeListTools(request, extra);
+    protocol.setRequestHandler(ListToolsRequestSchema, async (request, extra) => runWithPromptSnapshot(promptRegistry, async () => {
+      const snapshot = livePromptSnapshot();
+      const native = await nativeListTools(request, extra);
+      // Only the description text is projected; names, schemas, annotations and order
+      // stay the SDK's own output.
+      const result = { ...native, tools: projectNativeToolDescriptions(native.tools, snapshot) };
       const view = resolveDiscoveryView({ authInfo: extra?.authInfo, authDisabled: frozenAuthDisabled, operatorConfig: frozenConfig });
       const visible = new Set(view.toolNames);
       const nativeNames = result.tools.map((tool) => tool.name);
@@ -150,13 +161,35 @@ export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOpe
       if (isCompactProfile(view.profile)) {
         // Virtual descriptors are generated from SDK-native schemas and the
         // *already authorized* original names; underlying registrations stay unchanged.
-        return { ...result, tools: compactToolView(result.tools, view.toolNames).tools };
+        return { ...result, tools: compactToolView(result.tools, view.toolNames, { promptSnapshot: snapshot }).tools };
       }
       // Full/core/module/custom must retain exact original descriptor parity.
       return { ...result, tools: result.tools.filter((tool) => visible.has(tool.name)) };
-    });
+    }));
 
-    protocol.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+    // MCP prompts: the SDK stores the registered title/description per session, so
+    // the list is projected from the request's snapshot; the get handler reads the
+    // same snapshot for its body. Names, schemas and roles stay the SDK's.
+    if (nativeListPrompts) {
+      protocol.setRequestHandler(ListPromptsRequestSchema, async (request, extra) => runWithPromptSnapshot(promptRegistry, async () => {
+        const snapshot = livePromptSnapshot();
+        const result = await nativeListPrompts(request, extra);
+        return {
+          ...result,
+          prompts: result.prompts.map((prompt) => {
+            const title = snapshot.values[`prompts.${prompt.name}.title`];
+            const description = snapshot.values[`prompts.${prompt.name}.description`];
+            if (title === undefined && description === undefined) return prompt;
+            return { ...prompt, ...(title === undefined ? {} : { title }), ...(description === undefined ? {} : { description }) };
+          }),
+        };
+      }));
+    }
+    if (nativeGetPrompt) {
+      protocol.setRequestHandler(GetPromptRequestSchema, (request, extra) => runWithPromptSnapshot(promptRegistry, () => nativeGetPrompt(request, extra)));
+    }
+
+    protocol.setRequestHandler(CallToolRequestSchema, async (request, extra) => runWithPromptSnapshot(promptRegistry, async () => {
       const view = resolveDiscoveryView({ authInfo: extra?.authInfo, authDisabled: frozenAuthDisabled, operatorConfig: frozenConfig });
       if (!isCompactProfile(view.profile)) {
         if (!view.toolNames.includes(request.params.name)) return unknownToolResult(request.params.name);
@@ -166,7 +199,7 @@ export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOpe
       // Recompute from the SDK's complete descriptors and caller's current
       // request policy; denyTools, revoked Scope and hidden actions fail closed.
       const native = await nativeListTools({ method: "tools/list", params: {} }, extra);
-      const compact = compactToolView(native.tools, view.toolNames);
+      const compact = compactToolView(native.tools, view.toolNames, { promptSnapshot: livePromptSnapshot() });
       const permitted = compact.routing.get(request.params.name);
       if (!permitted) return unknownToolResult(request.params.name);
       const payload = request.params.arguments;
@@ -189,7 +222,7 @@ export function createDiscoveryRuntimePolicy(server, operatorConfig = defaultOpe
       }
       const delegated = { ...request, params: { ...request.params, name: projected.name, arguments: projected.args } };
       return viewStore.run({ ...view, exposedToolCount: compact.tools.length, exposedToolNames: compact.tools.map((tool) => tool.name) }, () => nativeCallTool(delegated, extra));
-    });
+    }));
   }
 
   const registrar = {

@@ -17,6 +17,14 @@ RUN npm config set registry "$NPM_REGISTRY" \
     && npm cache clean --force
 
 COPY . ./
+# The image must not inherit file modes from the build machine's checkout. Measured 2026-11-21 on a
+# failing build: /app/server.js and /app/package.json were root:root 770 while the just-changed
+# authz-constraints.js was 664 — Docker reuses a cached COPY layer, so the modes of every UNCHANGED
+# file are frozen at whatever the layer was built with, and a tree that once handed out 0770 keeps
+# poisoning the image long after it stops doing so. The container runs as 1002:10, so a 770 root:root
+# file is EACCES: the container crash-loops with `permission denied, open '/app/server.js'` and the
+# deploy reports "unhealthy" after its budget. Normalize once, after the copy.
+RUN chmod -R a+rX /app && chown -R 1002:10 /app
 
 ENV HOST=0.0.0.0 \
     PORT=18923 \

@@ -1,6 +1,6 @@
 # Agent execution guide
 
-The permanent development and test contract is [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md). Apply its complete Reader/Live rendering matrix, exact semantic style rules, fail-closed sampling, real HTTP/CLI/browser integration evidence, bounded subprocesses and single-owner coordination. The current audit evidence, PR snapshots and remaining gaps are in [QUALITY_AUDIT.md](QUALITY_AUDIT.md); they are evidence records, not permission to skip unresolved acceptance items.
+The permanent development and test contract is [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md). Apply its complete Reader/Live rendering matrix, exact semantic style rules, fail-closed sampling, real HTTP/CLI/browser integration evidence, bounded subprocesses and single-owner coordination. Dated audit evidence, PR snapshots and remaining gaps live in the Obsidian project notes (`_Workspace/40-Projects/obsidian_mcp_server/History/`), never in this repository; they are evidence records, not permission to skip unresolved acceptance items.
 
 This guide is written for implementation agents that need an explicit, low-ambiguity procedure. It does not replace `AGENTS.md`, architecture documents, tests, or task-specific acceptance criteria.
 
@@ -70,7 +70,7 @@ For bug fixes:
 1. create a deterministic failing regression when feasible;
 2. make the smallest implementation change;
 3. prove the regression passes;
-4. run the relevant full suite.
+4. run the suites the change touches; add a broader run only when the integration risk asks for it.
 
 For architecture work, first record the current dependency/call path and preserve observable behavior unless the acceptance criteria explicitly change it.
 

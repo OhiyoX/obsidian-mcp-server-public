@@ -27,8 +27,8 @@ test("the scriptless toggle keeps every other query parameter", () => {
     "every existing parameter survives, order kept, nav appended",
   );
   assert.equal(
-    navState({ originalUrl: "/admin/auth/access-policy?new=1&day=3" }).href,
-    "/admin/auth/access-policy?new=1&day=3&nav=1",
+    navState({ originalUrl: "/admin/auth/authz?new=1&day=3" }).href,
+    "/admin/auth/authz?new=1&day=3&nav=1",
     "the editor keeps its draft/day state as well",
   );
   assert.equal(navState({ originalUrl: "/admin/auth" }).href, "/admin/auth?nav=1", "no parameters, no stray ?&");

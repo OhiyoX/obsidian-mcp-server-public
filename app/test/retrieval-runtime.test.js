@@ -23,6 +23,7 @@ import { vaultDataKey } from "../src/vault-runtime/descriptor.js";
 import { vaultDataPaths } from "../src/vault-runtime/paths.js";
 import { createVaultRuntime } from "../src/vault-runtime/runtime.js";
 import { DEFAULT_RETRIEVAL_CONFIG, createRetrievalRuntime } from "../src/vault-runtime/retrieval-runtime.js";
+import { openIndexStore } from "../src/vault-runtime/retrieval-index-store.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(TEST_DIR, "..");
@@ -98,8 +99,42 @@ function makeRuntime(vault, { calls, config = {}, embeddingProvider = null, deps
   return runtime;
 }
 
+// M2: the runtime publishes a v2 generation, so observable index content is read
+// through the store rather than the legacy JSON file (which is no longer written).
 async function readIndex(file) {
-  return JSON.parse(await fs.readFile(file, "utf8"));
+  const state = await openIndexStore({ legacyIndexPath: file }).load();
+  if (state === null) {
+    const error = new Error(`no published v2 generation for ${file}`);
+    error.code = "ENOENT";
+    throw error;
+  }
+  return state;
+}
+
+async function indexFingerprint(file) {
+  const root = path.join(path.dirname(file), "retrieval-index-v2");
+  const walk = async (directory) => {
+    const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => []);
+    const rows = [];
+    for (const entry of entries) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) rows.push(...await walk(full));
+      else {
+        const stat = await fs.stat(full);
+        rows.push(`${path.relative(root, full)}:${stat.size}:${stat.mtimeMs}`);
+      }
+    }
+    return rows;
+  };
+  return (await walk(root)).sort().join("|");
+}
+
+async function manifestText(file) {
+  const directory = path.join(path.dirname(file), "retrieval-index-v2", "manifests");
+  const names = await fs.readdir(directory).catch(() => []);
+  const parts = [];
+  for (const name of names) parts.push(await fs.readFile(path.join(directory, name), "utf8"));
+  return parts.join("\n");
 }
 
 test("reindexing A never touches B's index file or B's state (contract §40)", async () => {
@@ -122,15 +157,15 @@ test("reindexing A never touches B's index file or B's state (contract §40)", a
   // B's own index is independent and self-contained.
   const betaResult = await betaRuntime.syncRetrievalIndex({ force: true });
   assert.equal(betaResult.notes, 1);
-  const betaBytes = await fs.readFile(beta.paths.retrievalIndex, "utf8");
-  const betaIndex = JSON.parse(betaBytes);
+  const betaBytes = await indexFingerprint(beta.paths.retrievalIndex);
+  const betaIndex = await readIndex(beta.paths.retrievalIndex);
   assert.ok(betaIndex.notes["Note.md"].chunks.some((chunk) => chunk.text.includes("BETA-ONLY-NEEDLE")));
-  assert.ok(!betaBytes.includes("ALPHA-ONLY-NEEDLE"), "B's index must not contain A's content");
+  assert.ok(!(await manifestText(beta.paths.retrievalIndex)).includes("ALPHA-ONLY-NEEDLE"), "B's index must not contain A's content");
 
   // Re-indexing A (`force`) must leave B's index bytes untouched.
   const alphaAgain = await alphaRuntime.syncRetrievalIndex({ force: true });
   assert.equal(alphaAgain.notes, 1);
-  assert.equal(await fs.readFile(beta.paths.retrievalIndex, "utf8"), betaBytes, "reindex A must not rewrite B's index");
+  assert.equal(await indexFingerprint(beta.paths.retrievalIndex), betaBytes, "reindex A must not rewrite B's index");
   assert.equal(alphaRuntime.indexPath, alpha.paths.retrievalIndex);
   assert.equal(betaRuntime.indexPath, beta.paths.retrievalIndex);
   assert.notEqual(alphaRuntime.indexPath, betaRuntime.indexPath);
@@ -141,11 +176,14 @@ test("A's index load failure does not make B dirty (contract §40)", async () =>
   const beta = await makeVault("BetaFail", "BETA-FAIL-NEEDLE");
   const betaRuntime = makeRuntime(beta, { calls: [] });
   await betaRuntime.syncRetrievalIndex({ force: true });
-  const betaBytes = await fs.readFile(beta.paths.retrievalIndex, "utf8");
+  const betaBytes = await indexFingerprint(beta.paths.retrievalIndex);
 
-  // Corrupt A's index on disk, then build a fresh A runtime so it must actually load it.
-  await fs.mkdir(path.dirname(alpha.paths.retrievalIndex), { recursive: true });
-  await fs.writeFile(alpha.paths.retrievalIndex, "{ not json", "utf8");
+  // Publish A's v2 generation, corrupt its pointer, then build a fresh A runtime so it
+  // must actually load it.
+  const alphaSeed = makeRuntime(alpha, { calls: [] });
+  created.push(alphaSeed);
+  await alphaSeed.syncRetrievalIndex({ force: true });
+  await fs.writeFile(path.join(path.dirname(alpha.paths.retrievalIndex), "retrieval-index-v2", "current.json"), "{ not json", "utf8");
   const logged = [];
   const alphaRuntime = createRetrievalRuntime({
     vaultRuntime: alpha.vaultRuntime,
@@ -154,13 +192,16 @@ test("A's index load failure does not make B dirty (contract §40)", async () =>
   created.push(alphaRuntime);
 
   const alphaStatus = await alphaRuntime.retrievalIndexStatus();
-  assert.equal(alphaStatus.available, true, "a broken index file degrades to an empty index, not to unavailable");
+  assert.equal(alphaStatus.available, false, "an unreadable v2 generation must not read as an empty index");
+  assert.match(alphaStatus.reason, /unreadable/u);
   assert.equal(alphaStatus.notes, 0);
   assert.equal(logged.length, 1);
-  assert.match(logged[0], /Retrieval index load failed/);
+  assert.match(logged[0], /Retrieval index v2 load failed/);
+  const refused = await alphaRuntime.syncRetrievalIndex({ force: true });
+  assert.equal(refused.unavailable, true, "A must not overwrite an unreadable generation");
 
   // B is untouched by A's failure.
-  assert.equal(await fs.readFile(beta.paths.retrievalIndex, "utf8"), betaBytes);
+  assert.equal(await indexFingerprint(beta.paths.retrievalIndex), betaBytes);
   const betaStatus = await betaRuntime.retrievalIndexStatus();
   assert.equal(betaStatus.notes, 1);
   assert.equal(betaRuntime.retrievalIndexStatusSnapshot().notes, 1);
@@ -366,4 +407,19 @@ test("purity scanner self-proof: it flags a module-level `let`, an env read and 
   assert.ok(!code.includes("process.env"), "template bodies are blanked");
   assert.ok(!code.includes("config.js"), "the module specifier is blanked");
   assert.match(fixture, /from\s*["']\.\/config\.js["']/);
+});
+
+test("a blocked index reports the same reason in the snapshot and the status payload", async () => {
+  const alpha = await makeVault("AlphaBlocked", "ALPHA-BLOCKED-NEEDLE");
+  await fs.mkdir(path.dirname(alpha.paths.retrievalIndex), { recursive: true });
+  await fs.writeFile(alpha.paths.retrievalIndex, JSON.stringify({ version: 1, updatedAt: null, embeddingModel: null, notes: {} }), "utf8");
+  const runtime = makeRuntime(alpha, { calls: [] });
+  created.push(runtime);
+  const status = await runtime.retrievalIndexStatus();
+  const snapshot = runtime.retrievalIndexStatusSnapshot();
+  assert.equal(status.available, false);
+  assert.match(String(status.reason), /migration_required/u);
+  assert.notEqual(snapshot, null);
+  assert.equal(snapshot.available, false, "the snapshot must not claim an available empty index");
+  assert.equal(snapshot.reason, status.reason);
 });

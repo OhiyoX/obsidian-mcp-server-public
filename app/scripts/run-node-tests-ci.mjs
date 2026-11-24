@@ -6,6 +6,8 @@
 // exercised without recursively spawning the full repository suite.
 
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -17,9 +19,39 @@ const harnessOverride = testing && process.env.NODE_TEST_GATE_HARNESS
   ? path.resolve(process.env.NODE_TEST_GATE_HARNESS)
   : "";
 const configuredTimeout = Number.parseInt(process.env.NODE_TEST_GATE_TIMEOUT_MS || "", 10);
-const timeoutMs = testing && Number.isFinite(configuredTimeout)
-  ? Math.max(50, Math.min(configuredTimeout, DEFAULT_TIMEOUT_MS))
-  : DEFAULT_TIMEOUT_MS;
+// The 15-minute default is the CI budget. A local run on a slow mount may need more: this container
+// cancels ~360 tests at 900 s while reporting zero failures, because a module import costs seconds
+// there (measured 2026-11-13). An explicit override may raise the cap to one hour — never shorten it,
+// so nobody can make the gate cheaper by accident.
+const MAX_OVERRIDE_MS = 60 * 60 * 1000;
+const timeoutMs = !Number.isFinite(configuredTimeout) || configuredTimeout <= 0
+  ? DEFAULT_TIMEOUT_MS
+  // In test mode the number may go down as well, so a negative contract can make a hung child time out.
+  : testing
+    ? Math.max(50, Math.min(configuredTimeout, DEFAULT_TIMEOUT_MS))
+    : Math.max(DEFAULT_TIMEOUT_MS, Math.min(configuredTimeout, MAX_OVERRIDE_MS));
+
+// #732: a full run at the host's default concurrency (`availableParallelism()`) fails 1–3 tests per
+// run on a loaded machine, and the failing SET changes between runs (health-check waits against a
+// spinning CPU, wall-clock deadline assertions). That made the release gate unreproducible, which is
+// worse than slow: a red gate nobody can re-run is a gate people route around. The gate therefore
+// pins a concurrency instead of inheriting the core count; `NODE_TEST_GATE_CONCURRENCY` overrides it
+// for diagnosis. A value that is not a small positive integer fails closed rather than silently
+// falling back — a typo must not change what the gate proves.
+// #795/#732: several suites (`authorization-*`, the Web catalog routes) refuse to run without
+// `DATA_PATH` — their first assertion is "DATA_PATH must point at the isolated test root", because
+// they write a real state file. This adapter inherited no such isolation, so any local run of the
+// release gate was red for a reason that had nothing to do with the code under test (measured
+// 2026-11-20: 54 failures, all from that guard). The adapter now creates its own temp root exactly
+// like `run-node-tests-local.mjs`: an explicit `DATA_PATH` is respected and never deleted.
+const CONCURRENCY_DEFAULT = 4;
+const CONCURRENCY_MAX = 32;
+function resolveConcurrency(raw) {
+  if (raw === undefined || raw === "") return CONCURRENCY_DEFAULT;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > CONCURRENCY_MAX || String(parsed) !== String(raw).trim()) return null;
+  return parsed;
+}
 
 const problems = [];
 
@@ -91,11 +123,22 @@ if (problems.length === 0) {
   // URL with scheme `d:` and every test file dies with ERR_UNSUPPORTED_ESM_URL_SCHEME — so pass a
   // `file://` URL (`pathToFileURL`), which works on both platforms.
   const PRELOAD_SPECIFIER = pathToFileURL(PRELOAD_PATH).href;
-  const args = harnessOverride ? [harnessOverride] : [PRELOAD, PRELOAD_SPECIFIER, "--test"];
+  // The pinned concurrency travels on the child's own command line (execArgv), so the negative
+  // contracts can read it back instead of trusting the source text.
+  const concurrency = resolveConcurrency(process.env.NODE_TEST_GATE_CONCURRENCY);
+  if (concurrency === null) fail(`NODE_TEST_GATE_CONCURRENCY must be an integer 1..${CONCURRENCY_MAX}`);
+  const concurrencyFlag = `--test-concurrency=${concurrency ?? CONCURRENCY_DEFAULT}`;
+  const args = harnessOverride ? [concurrencyFlag, harnessOverride] : [PRELOAD, PRELOAD_SPECIFIER, "--test", concurrencyFlag];
+  // A harness run executes one stub file and touches no state, so it keeps the caller's environment.
+  const ownDataPath = !harnessOverride && (process.env.DATA_PATH === undefined || process.env.DATA_PATH === "");
+  const dataPath = ownDataPath ? fs.mkdtempSync(path.join(os.tmpdir(), "obsidian-ci-tests-")) : process.env.DATA_PATH;
+  const releaseDataPath = () => {
+    if (ownDataPath) fs.rmSync(dataPath, { recursive: true, force: true });
+  };
   await new Promise((resolve) => {
     const child = spawn(process.execPath, args, {
       cwd: APP_ROOT,
-      env: { ...process.env, NODE_TEST_GATE_HARNESS: "", NODE_TEST_GATE_TESTING: "" },
+      env: { ...process.env, NODE_TEST_GATE_HARNESS: "", NODE_TEST_GATE_TESTING: "", ...(ownDataPath ? { DATA_PATH: dataPath } : {}) },
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -133,6 +176,7 @@ if (problems.length === 0) {
     });
   });
 
+  releaseDataPath();
   if (timedOut) fail(`Node test suite timed out after ${timeoutMs}ms`);
   if (signal) fail(`Node test suite terminated by signal ${signal}`);
   if (exitCode !== 0) fail(`Node test suite exited with code ${exitCode}`);

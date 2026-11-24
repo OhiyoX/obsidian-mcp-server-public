@@ -45,6 +45,7 @@ import fs from "node:fs/promises";
 import { mayScheduleWork } from "./runtime-lease.js";
 import { createVaultIndexRuntime } from "./vault-index-runtime.js";
 import { createRetrievalRuntime } from "./retrieval-runtime.js";
+import { createSearchService } from "../search/search-service.js";
 
 /** Stable machine-readable failure code; consumers/tests never match on prose. */
 export const VAULT_SEARCH_RUNTIME_INVALID = "VAULT_SEARCH_RUNTIME_INVALID";
@@ -204,6 +205,7 @@ export function createVaultSearchRuntime(input = {}) {
     primary: vaultRuntime.primary === true,
     index: indexRuntime,
     retrieval: retrievalRuntime,
+    searchService: createSearchService({ vaultRuntime, index: indexRuntime, retrieval: retrievalRuntime }),
     capability,
     semanticCapability,
     capabilities,

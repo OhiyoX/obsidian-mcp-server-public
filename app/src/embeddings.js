@@ -39,12 +39,35 @@ export function embeddingConfiguration(overrides = {}) {
   return { provider, baseUrl, model, timeoutMs, apiKey, enabled, identity: enabled ? `${provider}:${model}` : null };
 }
 
+const RETRY_ATTEMPTS = 3;
+const RETRY_BASE_MS = 2000;
+
+// Bounded: a queue that stays full past the last attempt fails the batch as before.
+async function withRetry(request) {
+  for (let attempt = 1; ; attempt += 1) {
+    try { return await request(); }
+    catch (error) {
+      if (attempt >= RETRY_ATTEMPTS || !error?.retryable) throw error;
+      await new Promise((resolve) => setTimeout(resolve, error.retryAfterMs || RETRY_BASE_MS * attempt));
+    }
+  }
+}
+
 async function requestJson(url, options, config) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 500)}`);
+    if (!response.ok) {
+      const error = new Error(`HTTP ${response.status}: ${(await response.text()).slice(0, 500)}`);
+      error.status = response.status;
+      // 5xx and 429 are the gateway's own retryable answers: a full edge queue or an edge
+      // forward that ran out of time. 4xx stays permanent so a bad request is not replayed.
+      error.retryable = response.status === 429 || response.status >= 500;
+      const retryAfterSeconds = Number(response.headers.get("retry-after"));
+      if (retryAfterSeconds > 0) error.retryAfterMs = retryAfterSeconds * 1000;
+      throw error;
+    }
     return await response.json();
   } catch (error) {
     if (error?.name === "AbortError") throw new Error(`Embedding API timed out after ${config.timeoutMs}ms`);
@@ -69,13 +92,16 @@ function createProviderClient(config) {
     const requestConfig = options.model ? { ...config, model: options.model } : config;
     if (!requestConfig.enabled) throw new Error("Semantic retrieval is disabled because no embedding provider is configured");
     if (!inputs.length) return [];
+    // Only background work retries: an interactive Recall that the gateway refused answers
+    // just as fast as before, while index batches ride out a transient edge queue.
+    const run = (url, body) => options.priority === "background" ? withRetry(() => requestJson(url, { method: "POST", headers: headers(requestConfig, true, options.priority, options.route, options.mode), body: JSON.stringify(body) }, requestConfig)) : requestJson(url, { method: "POST", headers: headers(requestConfig, true, options.priority, options.route, options.mode), body: JSON.stringify(body) }, requestConfig);
     if (requestConfig.provider === "ollama") {
-      const body = await requestJson(`${ollamaBase(requestConfig.baseUrl)}/api/embed`, { method: "POST", headers: headers(requestConfig, true, options.priority, options.route, options.mode), body: JSON.stringify({ model: requestConfig.model, input: inputs }) }, requestConfig);
+      const body = await run(`${ollamaBase(requestConfig.baseUrl)}/api/embed`, { model: requestConfig.model, input: inputs });
       const embeddings = body.embeddings || (body.embedding ? [body.embedding] : null);
       if (!Array.isArray(embeddings) || embeddings.length !== inputs.length) throw new Error("Ollama embedding API returned an unexpected response");
       return embeddings;
     }
-    const body = await requestJson(`${openAiBase(requestConfig.baseUrl)}/embeddings`, { method: "POST", headers: headers(requestConfig, true, options.priority, options.route, options.mode), body: JSON.stringify({ model: requestConfig.model, input: inputs, encoding_format: "float" }) }, requestConfig);
+    const body = await run(`${openAiBase(requestConfig.baseUrl)}/embeddings`, { model: requestConfig.model, input: inputs, encoding_format: "float" });
     if (!Array.isArray(body.data) || body.data.length !== inputs.length) throw new Error("OpenAI-compatible embedding API returned an unexpected response");
     return [...body.data].sort((left, right) => left.index - right.index).map((item) => item.embedding);
   }

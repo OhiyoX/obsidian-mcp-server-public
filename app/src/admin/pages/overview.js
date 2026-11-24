@@ -2,7 +2,7 @@
 // eight stat cards, 需要关注 / 最近失败 on the left, 运行状态 / 说明 on the right.
 // Every number comes from the snapshot; a value the service does not provide renders as `—`, never 0.
 import { pageBar } from "../ui.js";
-import { esc, fut, rel, relTitle } from "../presentation/format.js";
+import { esc, rel, relTitle } from "../presentation/format.js";
 import { ic } from "../assets/icons.js";
 import { actionLabel, credentialKindLabel, gitRuntimeLabel, publishLifecycleLabel } from "../presentation/labels.js";
 import { t } from "../../i18n/context.js";
@@ -55,7 +55,7 @@ function gitStateCell(vault) {
 }
 
 export function renderOverviewPage(ctx) {
-  const { model, snapshot, keys, grants, publishCounts, vaults, authz, transfers, publications } = ctx;
+  const { model, snapshot, keys, grants, publishCounts, vaults, transfers, publications } = ctx;
   const accounts = Array.isArray(snapshot?.oauthUsers) ? snapshot.oauthUsers : [];
   const clients = Array.isArray(snapshot?.clients) ? snapshot.clients : [];
   const audit = Array.isArray(snapshot?.audit) ? snapshot.audit : [];
@@ -68,7 +68,12 @@ export function renderOverviewPage(ctx) {
   const retired = Math.max(0, publishTotal - publishActive);
   const failures24 = audit.filter((row) => isFailure(row) && Date.parse(rowTime(row) || 0) >= Date.now() - DAY);
   const gitEnabled = vaults.filter((vault) => vault?.git?.enabled).length;
-  const authzBroken = authz.status === "broken";
+  // 定时授权 is the per-Vault constraint page (plan Task 7 item B): its rows are the constraints, and
+  // a subject no credential holds any more is marked on the row itself (`presentation.subjectView`).
+  const constraints = Array.isArray(ctx.constraintPage?.constraints) ? ctx.constraintPage.constraints : [];
+  const constraintsEnabled = constraints.filter((constraint) => constraint?.enabled !== false).length;
+  const orphanSubjects = [...new Set(constraints.flatMap((constraint) => (Array.isArray(constraint?.subjects) ? constraint.subjects : [])))].filter((subject) => model.subjectView(subject).missing);
+  const authzBroken = ctx.constraintPage?.status === "broken" || ctx.constraintPage?.available === false;
 
   const stats = [
     stat("/admin/auth?tab=accounts", "user", t("adm.nav.accounts"), accounts.length, disabled ? `<span class="w">${esc(t("adm.overview.stat.accountsDisabled", { count: disabled }))}</span>` : esc(t("adm.overview.stat.accountsAllEnabled"))),
@@ -77,7 +82,7 @@ export function renderOverviewPage(ctx) {
     stat("/admin/auth?tab=tokens", "ticket", t("adm.overview.stat.grants"), activeGrants.length, esc(t("adm.overview.stat.grantsTotal", { count: grants.length }))),
     stat("/admin/auth?tab=publishes", "globe", t("adm.overview.stat.published"), publishActive, retired ? `<span class="w">${esc(t("adm.overview.stat.publishedRetired", { count: retired }))}</span>` : esc(t("adm.overview.stat.publishedNone"))),
     stat("/admin/auth?tab=audit&outcome=failure", "list", t("adm.overview.stat.audit"), audit.length, failures24.length ? `<span class="w">${esc(t("adm.overview.stat.auditFailures", { count: failures24.length }))}</span>` : esc(t("adm.overview.stat.auditNone"))),
-    stat(ctx.accessPolicyBase || "/admin/auth", "cal", t("adm.nav.accessPolicy"), `${authz.enabledCount} / ${authz.count}`, authzBroken ? `<span class="w">${esc(t("adm.overview.authzBroken"))}</span>` : esc(t("adm.overview.stat.authzDetail"))),
+    stat(ctx.constraintBase || "/admin/auth", "cal", t("adm.nav.accessPolicy"), `${constraintsEnabled} / ${constraints.length}`, authzBroken ? `<span class="w">${esc(t("adm.overview.authzBroken"))}</span>` : esc(t("adm.overview.stat.authzDetail"))),
     stat(ctx.vaultGitBase || "/admin/auth", "db", "Vault", vaults.length, esc(t("adm.overview.stat.vaultGit", { count: gitEnabled }))),
   ];
 
@@ -94,8 +99,8 @@ export function renderOverviewPage(ctx) {
   if (retired) {
     attention.push(`<a class="li" href="/admin/auth?tab=publishes"><span class="dot amber"></span><b>${esc(t("adm.overview.publishOrphaned", { count: retired }))}</b><span class="ell">${esc(t("adm.overview.publishOrphanedWhy"))}</span></a>`);
   }
-  if (authz.orphaned?.length) {
-    attention.push(`<a class="li" href="${esc(ctx.accessPolicyBase || "/admin/auth")}"><span class="dot amber"></span><b>${esc(t("adm.overview.authzOrphaned", { count: authz.orphaned.length }))}</b><span class="ell">${esc(t("adm.overview.authzOrphanedWhy"))}</span></a>`);
+  if (orphanSubjects.length) {
+    attention.push(`<a class="li" href="${esc(ctx.constraintBase || "/admin/auth")}"><span class="dot amber"></span><b>${esc(t("adm.overview.authzOrphaned", { count: orphanSubjects.length }))}</b><span class="ell">${esc(t("adm.overview.authzOrphanedWhy"))}</span></a>`);
   }
   for (const vault of vaults) {
     const state = vault?.runtime?.state || vault?.git?.state || "unknown";
@@ -136,19 +141,47 @@ export function renderOverviewPage(ctx) {
   // compares it byte for byte with the manifest) on the same `span.muted` the prototype's row
   // already has — no new node, so the proto-shape comparison is unaffected — which is what lets a
   // later client-side route rewrite the label without touching this markup.
-  const authzLine = authz.available === false
+  const authzLine = ctx.constraintPage?.available === false
     ? `<span class="st off"><span class="dot"></span>${esc(t("adm.overview.authzNotConnected"))}</span>`
     : authzBroken
       ? `<span class="st danger"><span class="dot"></span>${esc(t("adm.overview.authzBroken"))}</span>`
-      : authz.enabled
-        ? `<span class="st ok"><span class="dot"></span>${esc(t("adm.overview.authzEnabled"))}</span> <span class="muted">· ${esc(t("adm.overview.authzPolicies", { count: authz.enabledCount }))}</span>`
-        : `<span class="st off"><span class="dot"></span>${esc(t("adm.overview.authzRegistered"))}</span> <span class="muted">· ${esc(t("adm.overview.authzPolicyCount", { count: authz.count }))}</span>`;
+      : ctx.constraintPage?.timeConstraintsEnabled === true
+        ? `<span class="st ok"><span class="dot"></span>${esc(t("adm.overview.authzEnabled"))}</span> <span class="muted">· ${esc(t("adm.overview.authzPolicies", { count: constraintsEnabled }))}</span>`
+        : `<span class="st off"><span class="dot"></span>${esc(t("adm.overview.authzRegistered"))}</span> <span class="muted">· ${esc(t("adm.overview.authzPolicyCount", { count: constraints.length }))}</span>`;
   const health = `<div class="kv">
-<div class="k">${esc(t("adm.nav.accessPolicy"))}</div><div>${authzLine} ${fut("Stage 5")}</div>
+<div class="k">${esc(t("adm.nav.accessPolicy"))}</div><div>${authzLine}</div>
 ${vaults.map((vault) => `<div class="k">${esc(vault.name || vault.id)}</div><div>${gitStateCell(vault)}</div>`).join("")}
 <div class="k">${esc(t("adm.foot.deployVersion"))}</div><div><span class="mono">${esc(release.version || "—")}</span>${release.commit ? ` <span class="muted"${release.deployedAt ? ` data-deployed-at="${esc(release.deployedAt)}"` : ""}>· commit ${esc(release.commit)}${release.deployedAt ? ` · ${esc(deployTimeLabel)}` : ""}</span>` : ""}</div>
 <div class="k">${esc(t("adm.overview.lastDeploy"))}</div><div>${release.deployedAt ? `${relTitle(release.deployedAt)} <span class="mono">· ${esc(release.version || "—")}</span>` : `<span class="muted">${esc(t("adm.overview.notDeployed"))}</span>`}</div>
 </div>`;
+
+  // #669: what an operator needs to connect an agent, generated from this deployment. With
+  // OAUTH_ENABLED the server refuses to start without an HTTPS PUBLIC_BASE_URL
+  // (oauth-provider.js), so the endpoint is that URL; the fallback message stays for a build
+  // whose invariant changed rather than printing an address a public host cannot reach. No key
+  // is ever rendered: the templates carry `<API_KEY>`.
+  const publicBase = String(ctx.publicBaseUrl || "").replace(/\/+$/, "");
+  const endpoint = publicBase ? `${publicBase}/mcp` : "—";
+  const authModes = [ctx.oauthEnabled ? "OAuth 2.1 + PKCE" : null, ctx.apiKeyEnabled ? t("adm.overview.connectApiKey") : null].filter(Boolean);
+  const connectWarning = /^https:\/\//i.test(publicBase)
+    ? ""
+    : `<p class="help" style="margin:.5rem 0 0"><span class="st danger"><span class="dot"></span>${esc(t("adm.overview.connectNoPublicLabel"))}</span> ${esc(t("adm.overview.connectNoPublic"))}</p>`;
+  const apiKeyTemplate = JSON.stringify({ name: "obsidian", type: "streamable-http", url: endpoint, headers: { Authorization: "Bearer <API_KEY>" } }, null, 2);
+  const oauthTemplate = JSON.stringify({ name: "obsidian", type: "streamable-http", url: endpoint }, null, 2);
+  const connect = `<div class="kv">
+<div class="k">${esc(t("adm.overview.connectEndpoint"))}</div><div><span class="mono">${esc(endpoint).replaceAll("/", "/<wbr>")}</span></div>
+<div class="k">${esc(t("adm.overview.connectTransport"))}</div><div>Streamable HTTP</div>
+<div class="k">${esc(t("adm.overview.connectAuth"))}</div><div>${esc(authModes.join(" · ") || "—")}</div>
+</div>
+${connectWarning}
+${ctx.readOnly ? `<p class="help" style="margin:.5rem 0 0">${esc(t("adm.overview.connectReadOnly"))}</p>` : ""}
+<details style="margin-top:.5rem"><summary>${esc(t("adm.overview.connectApiKeyTemplate"))}</summary>
+<pre class="mono" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(apiKeyTemplate)}</pre>
+<p class="help" style="margin:0">${esc(t("adm.overview.connectApiKeyNote"))}</p></details>
+<details style="margin-top:.5rem"><summary>${esc(t("adm.overview.connectOAuthTemplate"))}</summary>
+${ctx.oauthEnabled ? `<pre class="mono" style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(oauthTemplate)}</pre>
+<p class="help" style="margin:0">${esc(t("adm.overview.connectOAuthNote"))}</p>` : `<p class="help" style="margin:.25rem 0 0">${esc(t("adm.overview.connectOAuthOff"))}</p>`}</details>
+<p class="help" style="margin:.5rem 0 0">${esc(t("adm.overview.connectSmoke"))}<br>${esc(t("adm.overview.connectSmokeEnv"))}</p>`;
 
   const content = `${pageBar({ title: t("adm.nav.overview") })}<div class="content scroll"><div class="page">
 <div class="stats">${stats.join("")}</div>
@@ -160,6 +193,7 @@ ${vaults.map((vault) => `<div class="k">${esc(vault.name || vault.id)}</div><div
   <div>
     <div class="sect"><div class="sect-h"><h2>${esc(t("adm.overview.runtimeStatus"))}</h2></div>${health}</div>
     <div class="sect"><div class="sect-h"><h2>${esc(t("adm.overview.notes"))}</h2></div><p class="help" style="margin:0">${esc(t("adm.overview.notesBody"))}</p></div>
+    <div class="sect"><div class="sect-h"><h2>${esc(t("adm.overview.connect"))}</h2></div>${connect}</div>
   </div>
 </div>
 </div></div>`;

@@ -58,7 +58,6 @@ const comparisonSource = z.discriminatedUnion("kind", [
 export function registerPlanTools(server) {
   server.registerTool("plan_restore_from_trash", {
     title: "Plan Obsidian Trash Restore",
-    description: "Preview a revision-bound Markdown note restore from Trash. Apply with apply_note_plan.",
     inputSchema: {
       backupPath: z.string().min(1), destination: z.string().optional(), overwrite: z.boolean().default(false),
       removeBackup: z.boolean().default(false), ifMatch: z.string().optional(),
@@ -77,16 +76,15 @@ export function registerPlanTools(server) {
 
   server.registerTool("plan_restore_version", {
     title: "Plan Obsidian Version Restore",
-    description: "Preview a rollback / undo of an accidental or mistaken write as a revision-bound plan with a diff. Apply with apply_note_plan.",
     inputSchema: {
-      versionId: z.string().min(1), destination: z.string().optional(), overwrite: z.boolean().default(false), ifMatch: z.string().optional(),
+      versionId: z.string().min(1).optional(), path: z.string().min(1).optional(), revision: z.string().min(1).describe("Vault Git commit (4-40 hex), HEAD or HEAD~N; use with path instead of versionId. Markdown only.").optional(), destination: z.string().optional(), overwrite: z.boolean().default(false), ifMatch: z.string().optional(),
       maxDiffChars: maxDiffCharsSchema,
       ttlSeconds: z.number().int().min(60).max(1800).default(600),
     },
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  }, async ({ versionId, destination, overwrite, ifMatch, maxDiffChars, ttlSeconds }) => {
+  }, async ({ versionId, path, revision, destination, overwrite, ifMatch, maxDiffChars, ttlSeconds }) => {
     try {
-      return ok(await createRestoreVersionPlan({ versionId, destination, overwrite, ifMatch },
+      return ok(await createRestoreVersionPlan({ versionId, path, revision, destination, overwrite, ifMatch },
         { maxDiffChars, ttlMs: ttlSeconds * 1000 }));
     } catch (error) {
       return err(error);
@@ -95,7 +93,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("plan_delete_note", {
     title: "Plan Obsidian Note Deletion",
-    description: "Preview a revision-bound note deletion and optional durable Trash backup. Apply with apply_note_plan.",
     inputSchema: {
       path: z.string().min(1), backup: z.boolean().default(true), ifMatch: z.string().optional(),
       maxDiffChars: maxDiffCharsSchema,
@@ -113,7 +110,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("plan_move_note", {
     title: "Plan Obsidian Note Move",
-    description: "Preview a revision-bound note move and affected links as one recoverable batch (max 25 files). Apply with apply_note_plan.",
     inputSchema: {
       from: z.string().min(1), to: z.string().min(1),
       overwrite: z.boolean().default(false), updateLinks: z.boolean().default(true),
@@ -133,7 +129,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("plan_note_changes", {
     title: "Plan Obsidian Note Changes",
-    description: "Create a side-effect-free, revision-bound multi-note change plan with bounded unified diffs and Obsidian-aware structural summaries.",
     inputSchema: {
       changes: z.array(changeSchema).min(1).max(25),
       maxDiffChars: maxDiffCharsSchema,
@@ -150,7 +145,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("get_note_plan", {
     title: "Get Obsidian Note Plan",
-    description: "Read an unexpired note change plan created by the same MCP author.",
     inputSchema: { planId: z.string().uuid() },
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   }, async ({ planId }) => {
@@ -163,7 +157,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("apply_note_plan", {
     title: "Apply Obsidian Note Plan",
-    description: "Apply a revision-bound multi-note plan with preflight checks, crash recovery, and durable 24-hour replay of committed results by idempotency key.",
     inputSchema: {
       planId: z.string().uuid(),
       planHash: z.string().min(1),
@@ -180,7 +173,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("get_note_version", {
     title: "Get Obsidian Note Version",
-    description: "Read one persistent pre-write version snapshot of a note to inspect it before rolling back an accidental or mistaken write. 回滚前先看旧版本内容用它。",
     inputSchema: { versionId: z.string().min(1), maxChars: z.number().int().min(1000).max(500000).default(100000) },
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   }, async ({ versionId, maxChars }) => {
@@ -193,7 +185,6 @@ export function registerPlanTools(server) {
 
   server.registerTool("compare_note_versions", {
     title: "Compare Obsidian Note Versions",
-    description: "Diff the current note against a persistent version snapshot, or any two sources, to see what a rollback / undo would change.",
     inputSchema: {
       left: comparisonSource,
       right: comparisonSource,

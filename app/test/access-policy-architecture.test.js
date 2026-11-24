@@ -3,8 +3,8 @@
 // Contract: `scratch/authz/INTERFACE.md` §10.5 and DEVELOPMENT §21. These are
 // structural assertions that lock the boundaries the time-window authorization
 // feature depends on. Every set is derived from its canonical source (TOOL_NAMES,
-// the capability catalog, the line budget in scripts/line-budget.mjs), never from
-// a hard-coded tool count, so the contract stays true as the catalog grows.
+// the capability catalog), never from a hard-coded tool count, so the contract stays
+// true as the catalog grows.
 // Source-string scans only lock architecture boundaries; behavioral coverage
 // stays in the focused access-policy tests.
 //
@@ -18,7 +18,6 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { countLines, LINE_BUDGET, normalizeRepoPath } from "../scripts/line-budget.mjs";
 import { parseBool, TOOL_NAMES } from "../src/config.js";
 import { capabilitiesForTool } from "../src/access-policy/capabilities.js";
 import { ACCESS_POLICY_CODES } from "../src/access-policy/errors.js";
@@ -218,68 +217,9 @@ test("tool discovery never imports the access-policy modules", () => {
   assert.doesNotMatch(text, /access-policy/, "discovery-runtime.js must not mention the access-policy module");
 });
 
-// ⑥ The authz wiring targets stay inside the repository's canonical line budget.
-// The budget and the registered-baseline policy are read from the same shared
-// source as `npm run check` (scripts/line-budget.mjs + scripts/line-budget-baseline.json),
-// so this assertion cannot silently drift from the architecture gate.
-test("authz wiring targets stay within the canonical architecture line budget", (t) => {
-  // Pin the frozen default: #280 moved the constant out of check-architecture.mjs
-  // into the shared module, so assert the value itself instead of a source regex.
-  assert.equal(LINE_BUDGET, 800, "the canonical default line budget is 800 lines (owner ruling 2026-10-11; not a hard limit)");
-
-  const baseline = JSON.parse(readSource(path.join(APP_ROOT, "scripts", "line-budget-baseline.json")));
-  const registered = new Map(
-    Object.entries(baseline.entries ?? {}).map(([key, entry]) => [normalizeRepoPath(key), entry]),
-  );
-
-  // Sanity: the baseline parses and normalizes to real registered entries, so the
-  // registered branch below cannot silently degrade into unreachable code.
-  assert.ok(
-    [...registered.values()].some((entry) => Number.isInteger(entry.maxLines)),
-    "the line-budget baseline must register at least one entry with an integer maxLines",
-  );
-
-  // Follow-up guard: server.js dropped its baseline entry after the MCP session
-  // lifecycle moved to src/mcp-sessions.js, and must stay under the default
-  // budget without a re-registration.
-  assert.equal(registered.has("server.js"), false, "server.js must stay out of the line-budget baseline");
-  const serverLines = countLines(readSource(path.join(APP_ROOT, "server.js")));
-  t.diagnostic(`server.js: ${serverLines} lines (default budget ${LINE_BUDGET}, unregistered)`);
-  assert.ok(
-    serverLines <= LINE_BUDGET,
-    `server.js has ${serverLines} lines, exceeding the ${LINE_BUDGET}-line architecture budget`,
-  );
-
-  for (const relative of ["src/app/routes.js", "src/admin/router.js", "src/app/live-events.js"]) {
-    const lines = countLines(readSource(path.join(APP_ROOT, relative)));
-    const entry = registered.get(relative);
-    if (!entry) {
-      // Unregistered files must fit the default budget.
-      t.diagnostic(`${relative}: ${lines} lines (default budget ${LINE_BUDGET}, unregistered)`);
-      assert.ok(
-        lines <= LINE_BUDGET,
-        `${relative} has ${lines} lines, exceeding the ${LINE_BUDGET}-line architecture budget`,
-      );
-      continue;
-    }
-    // Registered files may only shrink below their recorded maxLines, and the
-    // baseline entry must keep documenting why it is exempt.
-    assert.ok(Number.isInteger(entry.maxLines), `${relative} baseline entry must record an integer maxLines`);
-    assert.ok(
-      typeof entry.reason === "string" && entry.reason.trim() !== "",
-      `${relative} baseline entry must keep a non-empty reason`,
-    );
-    assert.ok(
-      typeof entry.plan === "string" && entry.plan.trim() !== "",
-      `${relative} baseline entry must keep a non-empty plan`,
-    );
-    t.diagnostic(`${relative}: ${lines} lines (registered maxLines ${entry.maxLines})`);
-    assert.ok(
-      lines <= entry.maxLines,
-      `${relative} has ${lines} lines, exceeding its registered maxLines ${entry.maxLines}`,
-    );
-  }
-});
+// ⑥ (retired) The authz wiring targets used to be measured against the repository's line
+// budget. The owner retired the hard code-line gate on 2026-11-13, so the assertion is gone
+// rather than re-baselined; the behavioural authz checks above and below remain the contract.
 
 // ⑪ Every Web route that performs a READ or a MUTATION carries its own temporal gate.
 //

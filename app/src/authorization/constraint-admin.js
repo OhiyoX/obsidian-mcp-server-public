@@ -164,10 +164,10 @@ export function createConstraintAdmin({
     };
   }
 
-  async function create({ expectedRevision, draft } = {}) {
+  async function create({ expectedRevision, draft, enabled } = {}) {
     const id = newId();
     const result = await commit(expectedRevision, (document) => {
-      const constraint = constraintFromDraft(draft, { id, now, vaultIds });
+      const constraint = constraintFromDraft(draft, { id, now, vaultIds, enabled });
       return {
         document: { ...document, constraints: [...document.constraints, constraint] },
         event: { action: "created", constraintId: id, before: null, after: windowOf(constraint) },
@@ -176,12 +176,12 @@ export function createConstraintAdmin({
     return result.ok ? { ...result, id } : result;
   }
 
-  async function update({ expectedRevision, id, draft } = {}) {
+  async function update({ expectedRevision, id, draft, enabled } = {}) {
     return commit(expectedRevision, (document) => {
       const before = document.constraints.find((constraint) => constraint.id === id) ?? null;
       if (before === null) throw refuse(CONSTRAINT_NOT_FOUND, "id");
       const constraint = constraintFromDraft(draft, {
-        id, now, vaultIds, enabled: before.enabled, createdAt: before.createdAt,
+        id, now, vaultIds, enabled: enabled ?? before.enabled, createdAt: before.createdAt,
       });
       return {
         document: {

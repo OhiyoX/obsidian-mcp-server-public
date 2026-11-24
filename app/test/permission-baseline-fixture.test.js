@@ -29,12 +29,13 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = path.join(here, "fixtures", "permission-architecture");
 
-const env = await (await import("./helpers/permission-baseline-env.js")).seedPermissionBaselineEnv();
+const { removeBaselineRoot, seedPermissionBaselineEnv } = await import("./helpers/permission-baseline-env.js");
+const env = await seedPermissionBaselineEnv();
 const { collectBaselineRows, RESOURCE_URIS } = await import("./helpers/permission-baseline-collect.js");
 const { comparePermissionRows, rowKey } = await import("./helpers/permission-baseline-harness.js");
 const { TOOL_NAMES } = await import("../src/config.js");
 
-test.after(async () => fs.rm(env.root, { recursive: true, force: true }));
+test.after(async () => removeBaselineRoot(env.root));
 
 const fixturePath = path.join(fixtures, "baseline.json");
 const baseline = JSON.parse(await fs.readFile(fixturePath, "utf8"));

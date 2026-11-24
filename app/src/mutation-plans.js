@@ -1,3 +1,4 @@
+import { readGitNoteVersion, assertGitRestoreHistory } from "./git-note-version.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   allTagsForNote,
@@ -394,20 +395,24 @@ export async function createDeleteFilePlan({ path: filePath, ifMatch }, options 
   return createNotePlan([{ path: vaultPath, operation: "delete", baseRevision: revision, trash: true, opaque: true }], options);
 }
 
-export async function createRestoreVersionPlan({ versionId, destination, overwrite = false, ifMatch }, options = {}) {
+export async function createRestoreVersionPlan({ versionId, path: notePath, revision, destination, overwrite = false, ifMatch }, options = {}) {
   // A planned restore must preserve the exact version bytes. Reject malformed
   // UTF-8 instead of showing a lossy preview and writing replacement glyphs.
-  const source = await readFileVersion(versionId);
-  const abs = resolveVaultPath(destination || source.path, { assumeMarkdown: true });
+  const gitSource = notePath !== undefined || revision !== undefined;
+  if (gitSource ? (versionId !== undefined || !notePath || !revision) : !versionId) throw new Error("Supply either versionId or path + revision, exclusively");
+  const source = gitSource ? await readGitNoteVersion(notePath, revision) : await readFileVersion(versionId);
+  const abs = resolveVaultPath(destination || source.path, { assumeMarkdown: !gitSource });
   const path = toVaultPath(abs);
   if (!path.toLowerCase().endsWith(".md")) throw new Error("Planned version restore supports Markdown notes only");
-  const version = await readFileVersion(versionId, { strictText: true });
+  const version = gitSource ? source : await readFileVersion(versionId, { strictText: true });
   const existed = await exists(abs);
+  if (gitSource) assertGitRestoreHistory(existed);
   if (existed && !overwrite) throw new Error("Restore destination exists. Set overwrite=true to replace it.");
   const currentRevision = existed ? await fileRevision(abs) : null;
   if (ifMatch && currentRevision !== ifMatch) throw new Error(`Revision conflict: expected ${ifMatch}, current ${currentRevision}`);
-  return createNotePlan([{ path, operation: "raw", raw: version.content,
+  const plan = await createNotePlan([{ path, operation: "raw", raw: version.content,
     ...(existed ? { baseRevision: currentRevision } : { mustNotExist: true }) }], options);
+  return { ...plan, ...(gitSource ? { sourceRevision: source.sourceRevision } : {}) };
 }
 
 export async function createRestoreTrashPlan({ backupPath, destination, overwrite = false, removeBackup = false, ifMatch }, options = {}) {

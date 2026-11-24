@@ -1,0 +1,1 @@
+Start here for durable project work: load the shared recall, note-taking, verification and privacy workflow once per conversation. Pass client and model so writes get correct mcp_author when the host cannot send _meta (especially when clientInfo.name is mcp-client). Works with any agent; never stores the conversation.

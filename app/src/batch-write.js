@@ -20,7 +20,7 @@ import {
   withMutationLock,
 } from "./vault-runtime/request-vault.js";
 
-export async function atomicWriteBatch(entries, { afterRename, afterCommit, beforeConsumedTrashUnlink, beforeConsumeQuarantineUnlink, afterRestoreQuarantineLink, afterConsumeQuarantineUnlink, afterFinish, idempotency } = {}) {
+export async function atomicWriteBatch(entries, { afterRename, afterCommit, beforeConsumedTrashUnlink, beforeConsumeQuarantineUnlink, afterRestoreQuarantineLink, afterConsumeQuarantineUnlink, afterFinish, idempotency, returnPreWriteVersionId = false } = {}) {
   return withMutationLock(async () => {
     assertWritable();
     requireRequestAuthor();
@@ -54,6 +54,9 @@ export async function atomicWriteBatch(entries, { afterRename, afterCommit, befo
         if (afterRename) await afterRename(index);
       }
       const collected = await collectResults(prepared);
+      for (const [index, item] of journal.manifest.entries.entries()) {
+        if (returnPreWriteVersionId && item.history && !item.delete) collected[index].preWriteVersionId = `${item.path}/${item.historyName}`;
+      }
       await setBatchJournalState(journal, "committed", idempotency ? {
         planId: idempotency.planId,
         planHash: idempotency.planHash,

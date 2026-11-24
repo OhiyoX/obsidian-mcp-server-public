@@ -97,7 +97,7 @@ export function moreMenu(items, { label = t("adm.ui.moreActions") } = {}) {
  * the only text a sorted header adds; without a sort context the markup is exactly the old one.
  */
 export function table(cols, rows, emptyHtml, sort = null) {
-  if (!rows.length) return `<div class="tw hide-m">${emptyHtml}</div>`;
+  if (!rows.length) return `<div class="tw">${emptyHtml}</div>`;
   const head = cols.map((col) => {
     const [label, , className, key] = col;
     const classes = className ? ` class="${esc(className)}"` : "";
@@ -108,7 +108,7 @@ export function table(cols, rows, emptyHtml, sort = null) {
     const indicator = active ? ` <span class="ind" aria-hidden="true">${sort.order === "asc" ? "▲" : "▼"}</span>` : "";
     return `<th${classes} aria-sort="${aria}"><a class="ths" href="${esc(sortHref(sort.base, key, nextOrder))}">${label}${indicator}</a></th>`;
   }).join("");
-  return `<div class="tw hide-m"><table class="tbl"><colgroup>${cols.map((col) => `<col${col[1] ? ` style="width:${esc(col[1])}"` : ""}>`).join("")}</colgroup><thead><tr>${head}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+  return `<div class="tw hide-m"><table class="tbl"><colgroup>${cols.map((col, index) => `<col style="width:var(--admin-col-${index},${esc(col[1] || "auto")})">`).join("")}</colgroup><thead><tr>${head}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
 }
 
 /** Prototype `mcards`: mobile card list (CSS shows it below 720px). */

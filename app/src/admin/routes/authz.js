@@ -36,7 +36,7 @@ import { draftOf, renderAuthzConstraintsEditor } from "../pages/authz-constraint
 import { clean, listField } from "../http.js";
 import {
   dateRangesFromFields, parseDateRangesText, parseWeeklyText, wallClockToInstant, weeklyFromFields,
-} from "./access-policy.js";
+} from "../window-form.js";
 
 /** Public default base URL. */
 export const DEFAULT_BASE = PAGE_BASE;
@@ -125,17 +125,31 @@ function scheduleFrom(body) {
  * picker stays `[]` so the schema refuses an empty branch; `surfaces` is the one field an empty
  * submission may leave unrestricted — the page derives it from the picked operations' own surfaces.
  */
+/**
+ * The operation set a submitted form asks for.
+ *
+ * `capabilitiesAll` is the editor's spelling of the stored `null` ("every operation"): the field only
+ * survives when the operator ticked no operation, so an untouched save keeps the set whole while a
+ * ticked operation narrows it to exactly what is ticked.
+ */
+function decidedCapabilities(body) {
+  const ticked = [...new Set([...listField(body, "capabilities"), ...listField(body, "addOperation")])];
+  if (ticked.length) return ticked;
+  return lastValue(body.capabilitiesAll) === "1" ? null : [];
+}
+
 export function decodeConstraintDraft(body = {}) {
   const mode = lastValue(body.mode) === "revoke" ? "revoke" : "suspend";
-  const scope = listField(body, "vaultIds");
+  const scopeMode = lastValue(body.vaultScope);
+  const scope = scopeMode === "all" ? ["all"] : listField(body, "vaultIds");
   const surfaces = listField(body, "surfaces");
   return {
     label: clean(lastValue(body.label), AUTHORIZATION_LIMITS.labelMaxLength)?.trim() ?? "",
     subjects: listField(body, "subjects"),
     mode,
-    capabilities: mode === "revoke" ? null : [...new Set([...listField(body, "capabilities"), ...listField(body, "addOperation")])],
+    capabilities: mode === "revoke" ? null : decidedCapabilities(body),
     surfaces: mode === "revoke" || surfaces.length === 0 ? null : surfaces,
-    vaultIds: mode === "revoke" || (scope.length === 1 && scope[0] === "all") ? null : scope,
+    vaultIds: mode === "revoke" || (scopeMode !== "selected" && scope.length === 1 && scope[0] === "all") ? null : scope,
     schedule: scheduleFrom(body),
   };
 }
@@ -158,7 +172,7 @@ export function editorDraftOf(draft, { enabled = true, id = null } = {}) {
     // `null` is the editor's spelling of 「每一个界面」; a refused POST must not come back with the
     // operator's surface choice blank, or the resubmit it invites would widen the window.
     surfaces: Array.isArray(draft?.surfaces) ? draft.surfaces : null,
-    capabilities: Array.isArray(draft?.capabilities) ? draft.capabilities : [],
+    capabilities: draft?.capabilities === null ? null : (Array.isArray(draft?.capabilities) ? draft.capabilities : []),
     scope: draft?.vaultIds === null ? ["all"] : (Array.isArray(draft?.vaultIds) ? draft.vaultIds : []),
     timezone: schedule.timezone || "Asia/Shanghai",
     weekly: schedule.weekly && typeof schedule.weekly === "object" ? schedule.weekly : {},
@@ -193,14 +207,11 @@ export function registerAuthorizationRoutes(router, {
   actions = {},
 } = {}) {
   const base = String(actions.base ?? `${mountPath}/authz`).replace(/\/+$/, "") || DEFAULT_BASE;
-  // The frozen legacy page (design §7 step 2). The sidebar no longer points at it; this page offers it
-  // as a plain read-only link, so history stays reachable without looking like a place to edit.
-  const legacyPolicyBase = typeof actions.legacyPolicyBase === "string" && actions.legacyPolicyBase ? actions.legacyPolicyBase : null;
   const routeBase = base.startsWith(`${mountPath}/`) ? base.slice(mountPath.length) : base;
 
   const writes = {
-    create: { withDraft: true, call: (input) => service.create({ expectedRevision: input.expectedRevision, draft: input.draft }) },
-    update: { withDraft: true, call: (input) => service.update({ expectedRevision: input.expectedRevision, id: input.id, draft: input.draft }) },
+    create: { withDraft: true, call: (input) => service.create({ expectedRevision: input.expectedRevision, draft: input.draft, enabled: input.enabled }) },
+    update: { withDraft: true, call: (input) => service.update({ expectedRevision: input.expectedRevision, id: input.id, draft: input.draft, enabled: input.enabled }) },
     toggle: { withDraft: false, call: (input) => service.toggle({ expectedRevision: input.expectedRevision, id: input.id, enabled: input.enabled }) },
     delete: { withDraft: false, call: (input) => service.remove({ expectedRevision: input.expectedRevision, id: input.id }) },
     plane: { withDraft: false, call: (input) => service.setTemporalPlane({ expectedRevision: input.expectedRevision, enabled: input.enabled }) },
@@ -295,7 +306,6 @@ export function registerAuthorizationRoutes(router, {
       now: catalog.now ?? Date.now(),
       authorizationMode,
       csrf: req.adminSession?.csrf ?? "",
-      legacyBase: legacyPolicyBase,
       failure,
     };
     let page;
@@ -339,7 +349,6 @@ export function registerAuthorizationRoutes(router, {
         now: catalog.now ?? Date.now(),
         authorizationMode,
         csrf: req.adminSession?.csrf ?? "",
-        legacyBase: legacyPolicyBase,
       };
       const wanted = typeof query.edit === "string" && query.edit.trim() ? query.edit.trim() : "";
       const editing = wanted ? model.constraints.find((constraint) => constraint.id === wanted) ?? null : null;

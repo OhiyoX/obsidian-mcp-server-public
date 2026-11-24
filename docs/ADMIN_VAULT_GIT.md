@@ -80,6 +80,28 @@ materializes per-Vault runtimes, a secondary Vault has no runtime and therefore 
 | `persisted` | persisted（Admin 已保存） | a stored record exists for this Vault; it wins over `GIT_*` and survives a restart |
 | `default-disabled` | default-disabled（默认关闭） | a **secondary** Vault with no record: every toggle is forced off; timing/remote/branch values are still displayed as suggestions |
 
+### 2.3 GitHub-backed Vault (read-only facts)
+
+The list page carries one fact card per Vault. It answers one question — is the configured remote's
+host `github.com` (or `*.github.com`, trailing FQDN dot included)? — and restates the push outcome
+the runtime already holds. The card renders `GitHub` / `非 GitHub` / `无 remote` / `Git 未启用` /
+`未提供`. It never renders the URL or any userinfo, and it makes no network request and writes no
+Git configuration.
+
+| Reading | Source |
+| --- | --- |
+| remote host class (`git.remoteKind`) | one **local** `git config --get remote.<remote>.url` through the Vault's own GitRuntime (same `-C <root>` binding as every other command), classified by the service (`remoteKindFromUrl`); the model carries the class only, never the URL |
+| last push | the runtime's own push history (`git.push.lastOutcome`) — the same fact the drawer's 状态 rows read |
+
+Two gates decide whether that read happens at all, the same two the runtime status uses: a Vault the
+admission layer refuses gets no remote fact, and a Vault whose effective `enabled` is false answers
+`Git 未启用` **without running a command** (reading it would throw `DISABLED` and log a warning on
+every page render). A config that could not be resolved, or a Vault with no runtime in this process
+(every secondary), answers `未提供`; the card never guesses a host.
+
+`git config --get` exit 1 means this remote configures no URL: the card says `无 remote`. The runtime
+records pushes only, so the card states `最近 fetch：未记录` instead of inventing a fetch history.
+
 ## 3. Configurable fields and bounds
 
 The form is validated by the Git-config schema; the page additionally carries the same bounds as

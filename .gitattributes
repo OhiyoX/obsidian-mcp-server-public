@@ -9,3 +9,10 @@
 # Marking the tree as -text (binary-ish: no EOL conversion, no clean filter)
 # keeps working-tree bytes == repository bytes == esbuild output.
 app/src/app/assets/** -text linguist-generated=true
+
+# Hashed fixtures. `app/test/fixtures/search-v2/*` declares its own sha256 in `qrels.json`, and the
+# gate refuses to run when the bytes on disk differ. On a `core.autocrlf=true` checkout (any
+# Windows clone) Git rewrote those blobs to CRLF, so the qrels gate failed for a reason that has
+# nothing to do with relevance. The byte-identity of these files is part of the contract.
+app/test/fixtures/search-v2/** -text
+app/test/fixtures/search-v2-golden.json -text

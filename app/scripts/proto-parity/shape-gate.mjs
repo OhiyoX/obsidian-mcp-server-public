@@ -114,7 +114,6 @@ export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
   "原型有、实现没有：span.muted :: T",
   "原型有、实现没有：span.sub :: T",
   "原型有、实现没有：span.tag :: T",
-  "原型有、实现没有：↻ div :: T { div.muted :: T span.mono :: N }",
   "原型有、实现没有：↻ div.futonly.k :: T { }",
   "原型有、实现没有：↻ div.mono :: T { div.help :: T }",
   "原型有、实现没有：↻ tr.row.cur :: - { div.nm :: - rowmenu :: - span.muted :: T span.ok.st :: T td :: - td.act :: - td.cellt :: T td.cellt.mono :: T }",
@@ -137,7 +136,6 @@ export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
   "实现有、原型没有：span.ell.sub :: T",
   "实现有、原型没有：span.help :: T",
   "实现有、原型没有：span.muted :: T",
-  "实现有、原型没有：↻ div :: T { div.muted :: - span.mono :: N }",
   "实现有、原型没有：↻ div :: T { }",
   "结构位置的文案只在原型里：.bar h# = <v>",
   "结构位置的文案只在实现里：.bar h# = <v>",
@@ -157,8 +155,10 @@ export const SHAPE_DRAWER_SIGNATURE_BASELINE = Object.freeze([
   // drift stays red, these exact lines are named, and each one must still occur or the gate fails.
   // 2026-11-09: the two `span.mono` signatures of the same section are gone with the legacy attach
   // control (`subject-authz.js` renders stored rules only, no picker), so the ratchet drops them here.
-  "实现有、原型没有：a [href=route:authz:detail] :: T",
-  "实现有、原型没有：b :: -",
+  // 2026-11-12 (owner ruling: the Admin speaks the per-Vault constraint model only): the four
+  // signatures this section produced when the gate fixture still seeded legacy policies are pruned —
+  // the fixture plants no legacy policy any more, so no constraint row is linked from the drawer and
+  // the `b`/`span.mono` lines those rows produced no longer occur (fewer differences, not new ones).
   "实现有、原型没有：↻ div :: - { idc :: T span.muted :: T }",
   "实现有、原型没有：↻ div :: N { span.muted :: T }",
   // 2026-10-31: the list tables sort by clicking a header, so each list's first row is now the
@@ -669,17 +669,9 @@ export async function registerProtoShapeChecks(ctx) {
       link.removeAttribute('href');
       return 1;
     })()`, /无 href/);
-    // Q3: a switch that LOOKS pressable must be able to act without script (the prototype's own
-    // spelling is a scripted `<button class="switch">`). Anchored on the 定时授权 master switch: the
-    // plane renders it as an inert, explicitly non-interactive indicator (`role="img"`), so dropping
-    // that marking must turn the dead-control contract red. (The frozen legacy page that used to carry
-    // the `<label class="switch">` + checkbox spelling has no form at all any more.)
-    await expectRed(problems, '把只读指示开关的 role 去掉（看起来可点了）', 'authz', `(() => {
-      const indicator = document.querySelector('.main span.switch[role="img"]');
-      if (!indicator) return 0;
-      indicator.removeAttribute('role');
-      return 1;
-    })()`, /无脚本时不会生效的开关/);
+    // Q3's switch control retired with its page: the only state that rendered a `span.switch` was the
+    // legacy 定时授权 list, which is gone (the per-Vault constraint page states the plane switch as a
+    // real form POST and is measured by its own scene, `admin-layout-constraints.mjs`).
     assert.deepEqual(problems, [], problems.join('\n'));
   });
 

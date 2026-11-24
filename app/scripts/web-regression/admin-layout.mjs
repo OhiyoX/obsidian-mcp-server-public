@@ -26,26 +26,25 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { startAdminLayoutFixture } from './admin-layout-fixture.mjs';
-import { seedParityPolicies } from '../proto-parity/seed.mjs';
 import { protoUrl as protoFileUrl, registerProtoParityChecks } from '../proto-parity/gate.mjs';
 import { PARITY_PAGES } from '../proto-parity/spec.mjs';
 import { registerMidwordChecks } from './admin-layout-midword.mjs';
 import { registerPendingAuthorCheck } from './admin-layout-author.mjs';
 import { registerInteractionChecks } from './admin-layout-interaction.mjs';
-import { registerProtoShapeChecks } from '../proto-parity/shape-gate.mjs';
 import { registerSecurityChecks } from './admin-layout-security.mjs';
 import { registerNoScriptChecks } from './admin-layout-noscript.mjs';
 import { registerDesignChecks } from './admin-layout-design.mjs';
 import { registerConstraintPageChecks } from './admin-layout-constraints.mjs';
 import { registerDocumentScrollChecks } from './admin-layout-scroll.mjs';
+import { selectScenes, shardOwners } from './admin-layout-shard.mjs';
 
 const VAULTS_URL = '/admin/auth/vault-git';
 
 export async function registerAdminLayoutChecks(ctx) {
-  const { check, sleep, browser, root, appRoot, serverErrors, outputRoot } = ctx;
-  // The access policies are planted in the store file before the process starts: every legacy write
-  // route is frozen (409), so a policy cannot be created over HTTP any more.
-  const fixture = await startAdminLayoutFixture({ root, appRoot, serverErrors, prepareData: seedParityPolicies });
+  const { check, sleep, browser, root, appRoot, serverErrors, outputRoot, shard = null } = ctx;
+  // No pre-boot seeding: the pages the gate compares are filled by `seedParityFixture` through the real
+  // routes, and 定时授权 is compared by its own scene (`admin-layout-constraints.mjs`).
+  const fixture = await startAdminLayoutFixture({ root, appRoot, serverErrors });
   const trace = { startedAt: new Date().toISOString(), fixture: { gitRepo: fixture.gitRepo, gitReason: fixture.gitReason }, phases: [] };
   const tracePhase = (name, data) => { trace.phases.push({ name, at: new Date().toISOString(), ...data }); };
 
@@ -67,6 +66,85 @@ export async function registerAdminLayoutChecks(ctx) {
     await page.evaluate('document.fonts ? document.fonts.ready : true');
     await sleep(80);
   };
+
+  // The whole scene as a table, because a shard (`--shard=<i>/<n>`, issue #378) takes the entries at
+  // positions i-1 modulo n and the sharded runner proves the slices tile this table. The table is a
+  // strict transcription of the former straight-line sequence: same calls, same arguments, same
+  // order, so an unsharded run registers exactly the same checks as before.
+  const tablePages = PARITY_PAGES.filter((entry) => entry.table).map((entry) => ({ id: entry.id, live: entry.live, proto: entry.proto }));
+  const scenes = [
+    {
+      // The rows `prototype-parity` seeds are what `midword` measures (a table with no records is a
+      // scan surface that is too small, not a pass), so both carry the `seeded-pages` group and a
+      // shard never separates them.
+      id: 'prototype-parity',
+      group: 'seeded-pages',
+      run: async () => {
+        // 1. prototype parity: structure / paint / negative controls / no-JS / shell.
+        const parity = await registerProtoParityChecks({ check, browser, appRoot, root, outputRoot, fixture });
+        trace.parity = parity.comparison.failures.length;
+      },
+    },
+    // The full-DOM prototype shape ratchet is retired (owner ruling, 2026-11-14: the prototype is
+    // outdated; it must not block a UI fix). Implementation-only checks below still run.
+    // 2. the migrated defect criteria (prototype vocabulary, same judgments). The mid-word scene
+    // measures BOTH trees: a criterion that only ever runs on one side cannot tell a real break
+    // from a measurement artefact (lane w5-gates-fix).
+    // 2b. the full-DOM **shape** gate (Wave P): the same normalized skeleton on both trees for every
+    // page state, plus its own negative controls. `gate.mjs` compares chosen criteria (selectors,
+    // columns, geometry) and was blind to "a whole region is extra" / "the control kind changed";
+    // this is the补强 that sees them.
+    { id: 'midword', group: 'seeded-pages', run: () => registerMidwordChecks(ctx, { page, goto, gotoProto, tracePhase, tablePages }) },
+    {
+      id: 'pending-author',
+      run: () => registerPendingAuthorCheck(ctx, {
+        page, goto, sleep, tracePhase, base, apiKey: fixture.apiKey,
+        gitRepo: fixture.gitRepo, gitReason: fixture.gitReason, vaultsUrl: VAULTS_URL,
+      }),
+    },
+    // 3. D0 interaction gate (lane l4-gates): JS-on behaviour parity against the running prototype,
+    // the CSP/script policy, the fragment fetch path and the injection surface. The scene owns its
+    // own contexts, so the shared `page` above is left exactly as the migrated criteria expect it.
+    { id: 'interaction', run: () => registerInteractionChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot, tracePhase }) },
+    // Wave R: the two items that are USER DECISIONS rather than prototype parity (the self-drawn
+    // select and the narrow-screen menu) plus the preview-card height fix. Kept in their own scene so
+    // the parity criteria are not asked to judge something the prototype deliberately does not have.
+    { id: 'design', run: () => registerDesignChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot, tracePhase }) },
+    // Ruling R9's payback: the two criteria Task 3 retired with the frozen legacy editor, measured
+    // again on the per-Vault constraint editor (its own module: the scene file's line budget).
+    { id: 'constraint-page', run: () => registerConstraintPageChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot }) },
+    // 2026-10-31 production defect: the shell is 100vh and only `.content` scrolls, so any control laid
+    // out outside that container (an absolutely positioned clipped select) pushed the document open.
+    { id: 'document-scroll', run: () => registerDocumentScrollChecks({ ...ctx, page, goto, tracePhase, fixture }) },
+    { id: 'security', run: () => registerSecurityChecks(ctx, { browser, fixture, outputRoot, tracePhase, root, appRoot }) },
+    { id: 'no-script', run: () => registerNoScriptChecks(ctx, { browser, fixture, root, appRoot, serverErrors, outputRoot, tracePhase }) },
+    {
+      // 4. teardown is itself a criterion (a leaked child, port or scratch dir is cross-scene noise).
+      // It asserts the fixture THIS process owns, so it belongs to exactly one shard like any other
+      // scene; the `finally` below still stops the fixture in every shard.
+      id: 'teardown',
+      run: async () => {
+        await context.close().catch(() => {});
+        const shutdown = await fixture.stop();
+        tracePhase('fixture-stop', shutdown);
+        await check('admin-layout: no page error, no server error, and the fixture releases its process, port and scratch directory', async () => {
+          assert.deepEqual(pageErrors, []);
+          const fatal = serverErrors.filter((line) => /unhandled|UnhandledPromiseRejection|TypeError|ReferenceError/.test(line));
+          assert.deepEqual(fatal, []);
+          assert.equal(shutdown.childExited, true, `the fixture child must be reaped: ${JSON.stringify(shutdown)}`);
+          assert.equal(shutdown.portReleased, true, `the fixture port must be free after the run: ${JSON.stringify(shutdown)}`);
+          assert.equal(shutdown.fixtureRootRemoved, true, `the fixture scratch directory must be gone: ${JSON.stringify(shutdown)}`);
+        });
+      },
+    },
+  ];
+  // The census is what the sharded runner (`run-admin-layout-shards.mjs`) reads back: every scene id
+  // with the one shard that owns it, so a gap or a double-run cannot pass unnoticed.
+  trace.shard = shard ? `${shard.index}/${shard.count}` : null;
+  const owners = shardOwners(scenes, shard?.count ?? 1);
+  trace.census = scenes.map((scene) => ({ id: scene.id, owner: owners.get(scene.id) }));
+  const selected = selectScenes(scenes, shard);
+  trace.executed = selected.map((scene) => scene.id);
   try {
     // The fixture boots `node server.js` from this checkout, which can live on a slow network mount: a
     // concurrent `npm run check` (or a parallel suite) starves the boot past 20 s and the verdict then
@@ -82,56 +160,7 @@ export async function registerAdminLayoutChecks(ctx) {
     const login = await page.request.post(`${base}/admin/auth/login`, { form: { password: fixture.password }, maxRedirects: 0 });
     assert.equal(login.status(), 303, 'the Admin layout fixture login must succeed');
 
-    // 1. prototype parity: structure / paint / negative controls / no-JS / shell.
-    const parity = await registerProtoParityChecks({ check, browser, appRoot, root, outputRoot, fixture });
-    trace.parity = parity.comparison.failures.length;
-
-    // 2. the migrated defect criteria (prototype vocabulary, same judgments). The mid-word scene
-    // measures BOTH trees: a criterion that only ever runs on one side cannot tell a real break
-    // from a measurement artefact (lane w5-gates-fix).
-    // 2b. the full-DOM **shape** gate (Wave P): the same normalized skeleton on both trees for every
-    // page state, plus its own negative controls. `gate.mjs` compares chosen criteria (selectors,
-    // columns, geometry) and was blind to "a whole region is extra" / "the control kind changed";
-    // this is the补强 that sees them.
-    await registerProtoShapeChecks({ ...ctx, fixture });
-    await registerMidwordChecks(ctx, {
-      page, goto, gotoProto, tracePhase,
-      tablePages: PARITY_PAGES.filter((entry) => entry.table).map((entry) => ({ id: entry.id, live: entry.live, proto: entry.proto })),
-    });
-    await registerPendingAuthorCheck(ctx, {
-      page, goto, sleep, tracePhase, base, apiKey: fixture.apiKey,
-      gitRepo: fixture.gitRepo, gitReason: fixture.gitReason, vaultsUrl: VAULTS_URL,
-    });
-
-    // 3. D0 interaction gate (lane l4-gates): JS-on behaviour parity against the running prototype,
-    // the CSP/script policy, the fragment fetch path and the injection surface. The scene owns its
-    // own contexts, so the shared `page` above is left exactly as the migrated criteria expect it.
-    await registerInteractionChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot, tracePhase });
-    // Wave R: the two items that are USER DECISIONS rather than prototype parity (the self-drawn
-    // select and the narrow-screen menu) plus the preview-card height fix. Kept in their own scene so
-    // the parity criteria are not asked to judge something the prototype deliberately does not have.
-    await registerDesignChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot, tracePhase });
-    // Ruling R9's payback: the two criteria Task 3 retired with the frozen legacy editor, measured
-    // again on the per-Vault constraint editor (its own module: the scene file's line budget).
-    await registerConstraintPageChecks(ctx, { browser, fixture, repoRoot, protoUrl: protoFileUrl, outputRoot });
-    // 2026-10-31 production defect: the shell is 100vh and only `.content` scrolls, so any control laid
-    // out outside that container (an absolutely positioned clipped select) pushed the document open.
-    await registerDocumentScrollChecks({ ...ctx, page, goto, tracePhase });
-    await registerSecurityChecks(ctx, { browser, fixture, outputRoot, tracePhase, root, appRoot });
-    await registerNoScriptChecks(ctx, { browser, fixture, root, appRoot, serverErrors, outputRoot, tracePhase });
-
-    // 4. teardown is itself a criterion (a leaked child, port or scratch dir is cross-scene noise).
-    await context.close().catch(() => {});
-    const shutdown = await fixture.stop();
-    tracePhase('fixture-stop', shutdown);
-    await check('admin-layout: no page error, no server error, and the fixture releases its process, port and scratch directory', async () => {
-      assert.deepEqual(pageErrors, []);
-      const fatal = serverErrors.filter((line) => /unhandled|UnhandledPromiseRejection|TypeError|ReferenceError/.test(line));
-      assert.deepEqual(fatal, []);
-      assert.equal(shutdown.childExited, true, `the fixture child must be reaped: ${JSON.stringify(shutdown)}`);
-      assert.equal(shutdown.portReleased, true, `the fixture port must be free after the run: ${JSON.stringify(shutdown)}`);
-      assert.equal(shutdown.fixtureRootRemoved, true, `the fixture scratch directory must be gone: ${JSON.stringify(shutdown)}`);
-    });
+    for (const scene of selected) await scene.run();
   } finally {
     await fs.writeFile(path.join(outputRoot, 'admin-layout-trace.json'), JSON.stringify(trace, null, 2)).catch(() => {});
     await context.close().catch(() => {});

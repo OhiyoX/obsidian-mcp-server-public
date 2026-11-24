@@ -23,7 +23,7 @@
 import { esc, ic } from "./ui.js";
 import { presentAccessPolicyWindow } from "./access-policy-window-presentation.js";
 import { decidingBanner, windowOf } from "./pages/authz-constraints.js";
-import { policyNowState } from "./pages/authz.js";
+import { policyNowState } from "./pages/authz-window.js";
 import { t } from "../i18n/context.js";
 
 /** One applied-rule row: label (+ link to its editor), window, and the honest now verdict. */
@@ -69,7 +69,7 @@ export function renderSubjectAuthzSection(ctx, { subject }) {
   return `<div class="dsec" id="authz"><h3>${esc(t("adm.subjectAuthz.title"))}</h3>
   <span class="help">${esc(t("adm.subjectAuthz.help"))}</span>
   ${decidingBanner(ctx.authorizationMode)}
-  ${ready ? `<div style="margin-top:8px">${appliedHtml}</div>` : ""}
+  ${ready ? `<div class="subject-authz-list">${appliedHtml}</div>` : ""}
   ${notice}
 </div>`;
 }

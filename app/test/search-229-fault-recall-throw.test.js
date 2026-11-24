@@ -1,14 +1,16 @@
 // Issue #229 follow-up / D1 RETURN — §15.3 executable "recall throws" evidence.
 //
 // The corrupt-JSON case (search-229-fault-corrupt-index.test.js) is a *degrade*
-// case: loadState() catches the JSON.parse error and substitutes emptyState(),
-// so recall() resolves normally. This file covers the distinct *rejection* case:
-// a JSON-valid, `version: 1` index whose runtime shape is broken. loadState()
-// does no shape validation, so `rankRecall()` reaches
-// `notes.flatMap((note) => note.chunks.map(...))` with `chunks: null` and throws
-// a TypeError. `recall()` does not catch `rankRecall()`, so the exception
-// propagates into `augmentWithRetrieval()`'s catch, which degrades to the exact
-// results and reports the real message with `hybridUsed === false`.
+// case: the runtime substitutes emptyState(), so recall() resolves normally.
+// This file covers the distinct *rejection* case: an index that cannot be read.
+//
+// M2 note (2026-11-22): the runtime stores the index as a v2 generation
+// (retrieval-index-v2/), so a JSON-valid v1 with broken internal shape is no
+// longer parsed at all — it reports `retrieval_index_migration_required`. The
+// rejection is now produced by a *published v2 generation whose object is
+// missing*, which loadState() must treat as unreadable rather than as an empty
+// index. recall() throws that message, `augmentWithRetrieval()` degrades to the
+// exact results and reports the message verbatim with `hybridUsed === false`.
 //
 // The expected message is captured dynamically from a direct `recall()` call
 // (the same exception the tool path propagates) and is never hardcoded.
@@ -41,29 +43,31 @@ await fs.mkdir(vault, { recursive: true });
 await fs.mkdir(path.join(data, "index"), { recursive: true });
 await fs.writeFile(path.join(vault, "Keep.md"), "# Keep\n\nexact-needle lives here.\n", "utf8");
 
-// JSON-valid, version 1, but the runtime shape is broken: `chunks` is null.
-// `metadata` stays filter-compatible so the failure happens at the chunk map,
-// not in matchesFilters().
-const badShapeIndex = {
-  version: 1,
+const [{ registerSearchTools }, { recall, drainRetrievalIndex, syncRetrievalIndex }] = await Promise.all([
+  import("../src/tools/search.js"),
+  import("../src/retrieval.js"),
+]);
+
+// Publish a v2 generation directly through the store (no runtime load happens
+// yet), then corrupt its pointer. The first recall() in this process must then
+// reject instead of reading the generation as an empty index.
+const { openIndexStore } = await import("../src/vault-runtime/retrieval-index-store.js");
+const store = openIndexStore({ legacyIndexPath: process.env.RETRIEVAL_INDEX_PATH });
+await store.commit({
+  version: 2,
   updatedAt: new Date().toISOString(),
   embeddingModel: null,
   notes: {
     "Keep.md": {
       path: "Keep.md",
-      revision: "no-match",
-      stat: {},
-      metadata: { title: "Keep", description: "", tags: [], entities: [] },
-      chunks: null,
+      revision: "r1",
+      stat: { mtimeMs: 1 },
+      metadata: { title: "Keep", description: "", type: "", status: "", memoryKind: "", tags: [], aliases: [], entities: [], projects: [], created: null, updated: null },
+      chunks: [{ id: "Keep.md#0", ordinal: 0, heading: "Keep", text: "exact-needle lives here.", hash: "h0" }],
     },
   },
-};
-await fs.writeFile(process.env.RETRIEVAL_INDEX_PATH, JSON.stringify(badShapeIndex), "utf8");
-
-const [{ registerSearchTools }, { recall, drainRetrievalIndex }] = await Promise.all([
-  import("../src/tools/search.js"),
-  import("../src/retrieval.js"),
-]);
+}, ["Keep.md"]);
+await fs.writeFile(store.currentPath, "{ not json", "utf8");
 
 after(async () => {
   await drainRetrievalIndex();
@@ -101,8 +105,8 @@ test("§15.3 recall rejection: a shape-broken version-1 index rejects recall() a
   } catch (error) {
     expectedMessage = error.message;
   }
-  assert.ok(expectedMessage, "the shape-broken index must make recall() reject");
-  assert.match(expectedMessage, /map|null|chunks/i);
+  assert.ok(expectedMessage, "the unreadable generation must make recall() reject");
+  assert.match(expectedMessage, /unreadable/u);
 
   await withClient(async (client) => {
     // auto + exact=0 + positive text: the rejected recall degrades to exact

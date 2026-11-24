@@ -30,10 +30,10 @@ export { TOOL_NAMES };
 // P2: `authorizationShadow` is the observation-only seam. P3: `authorization` is the one
 // runtime every MCP boundary decides through. Both default to null, so the registration
 // graph is byte-for-byte the legacy one when nothing is injected.
-export function registerObsidianCapabilities(server, { accessRuntime, authorization = null, vaultScope, authorizationShadow = null } = {}) {
+export function registerObsidianCapabilities(server, { accessRuntime, authorization = null, vaultScope, authorizationShadow = null, promptRegistry = null } = {}) {
   if (accessRuntime || authorization) server = createAccessPolicyRegistrar(server, { runtime: accessRuntime, authorization, authorizationShadow });
   server = createVaultScopeRegistrar(server, { ...vaultScope, authorization, accessRuntime, authorizationShadow });
-  server = createMemoryGuidanceRegistrar(server);
+  server = createMemoryGuidanceRegistrar(server, { registry: promptRegistry });
   registerInfoTools(server);
   registerNoteTools(server);
   registerSearchTools(server);

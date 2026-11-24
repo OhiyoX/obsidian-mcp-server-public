@@ -59,7 +59,8 @@ test("F3 legacy control: explicit unmanaged bootstrap keeps real primary Git and
     assert.equal((await timers.filter(timer => !timer.cleared).at(-1).fn()).committed, true);
     assert.notEqual(await git(["rev-parse", "HEAD"]), head);
     assert.ok((await retrieval.syncRetrievalIndex({ embeddings: false, force: true })).notes > 0);
-    await fs.access(indexFile);
+    // M2: the published generation lives beside the legacy path.
+    await fs.access(path.join(path.dirname(indexFile), "retrieval-index-v2", "current.json"));
   } finally {
     worker?.stop();
     if (retrieval) await retrieval.drainRetrievalIndex();

@@ -1,0 +1,1 @@
+Preview a rollback / undo of an accidental or mistaken write as a revision-bound plan with a diff. Apply with apply_note_plan. 恢复版本、恢复到上一个版本、回滚误写先预览方案用它。 Accepts versionId, or path + revision for a Markdown snapshot from this Vault Git.

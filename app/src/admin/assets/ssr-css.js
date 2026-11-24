@@ -6,6 +6,139 @@
 // menu, a confirm page renders the modal, and a result renders a banner. This file only adds the
 // mechanics those need — it never restyles a prototype class.
 export const ADMIN_SSR_CSS = `
+/* ---------- timed authorization editor ---------- */
+.constraint-editor{--authz-row:34px} /* one row height for the timeline and the weekly text rows */
+.constraint-editor [hidden]{display:none!important}
+.constraint-editor .ped{grid-template-columns:minmax(0,1fr) clamp(290px,28vw,400px)}
+.constraint-editor .ped-form{width:100%;max-width:none;min-width:0;padding:var(--s4)}
+.constraint-editor .fs{min-width:0;margin:0 0 var(--s4);padding:0 0 var(--s3);border-bottom:1px solid var(--line)}
+.constraint-editor .fs:last-child{margin-bottom:0;border-bottom:0}
+.constraint-editor .fs>legend{display:block}
+.constraint-editor .fs>legend .muted{display:inline-block;font-size:13px;margin-inline-start:var(--s2)}
+.constraint-editor .help{color:var(--tx3);margin:var(--s2) 0 0}
+.constraint-editor .chk{align-items:center;overflow-wrap:anywhere}
+.constraint-editor .chk:has(:checked){background:var(--accent-bg)}
+.constraint-editor .chk:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
+.constraint-editor .constraint-basic{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s4);margin-bottom:var(--s3)}
+.constraint-editor .constraint-basic .chk{min-height:32px}
+.constraint-editor .constraint-scope,.constraint-editor .schedule-shortcut-actions{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.constraint-editor .constraint-choices{display:grid;gap:var(--s2);min-width:0}
+.constraint-editor .constraint-choices:has(.pick-list>.chk),.constraint-editor [data-vault-choices]{border:1px solid var(--line2);border-radius:var(--r2);padding:var(--s2)}
+.constraint-editor [data-subject-picker]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:4px;max-height:220px;scrollbar-gutter:stable}
+/* The box sits on the name line (owner 2026-11-23): centering it put it between the name and
+   the id line on a two-line subject cell. */
+.constraint-editor [data-subject-picker] .chk{min-width:0;padding:4px 8px;align-items:flex-start}
+/* Center the box on the NAME line regardless of the font's line box: half the leftover line
+   height. A fixed pixel offset drifted at other zooms and fonts (owner 2026-11-23: the box
+   stuck out above the name). */
+.constraint-editor [data-subject-picker] .chk input{width:16px;height:16px;margin-top:calc((1lh - 16px) / 2)}
+.constraint-editor [data-subject-picker] .chk>span{min-width:0}
+.constraint-editor [data-surface-scope]{display:flex;flex-wrap:wrap;gap:var(--s3)}
+.constraint-editor [data-subject-picker] .chk+.chk{margin-top:2px}
+.constraint-editor .constraint-subjects>.constraint-choices{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+.constraint-editor .constraint-subjects :is([data-subject-picker],[data-no-matches]){grid-column:1/-1}
+.constraint-subject-tabs{display:flex;gap:var(--s1);flex-wrap:wrap}
+.constraint-subject-tabs .btn[aria-pressed=true]{background:var(--accent-bg);color:var(--accent-tx)}
+@media(pointer:coarse){.constraint-subject-tabs .btn{min-height:44px}}
+.constraint-editor .constraint-operation-picker{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2)}
+.constraint-editor .constraint-operation-picker>*{min-width:0}
+.constraint-editor [data-operation-feedback]:empty{display:none}
+.operation-groups{display:grid;gap:var(--s2);margin-top:var(--s2)}
+.operation-group{border:1px solid var(--line);border-radius:var(--r2);padding:var(--s2)}
+.operation-group>summary{cursor:pointer;font-size:13px;font-weight:600;padding:var(--s1)}
+.operation-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr));gap:4px;max-height:260px;overflow:auto;scrollbar-gutter:stable}
+.operation-grid .chk{min-width:0;margin:0;overflow-wrap:anywhere}
+.constraint-editor .schedule-heading{margin-top:var(--s4)}
+.constraint-editor .schedule-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s2) var(--s4);margin-top:var(--s2)}
+.constraint-editor .schedule-header>.schedule-heading{flex:1 1 300px;margin:0;min-width:0}
+.constraint-editor .schedule-header>.fld{display:flex;flex-direction:row;align-items:center;gap:var(--s2);flex:0 1 260px;margin:0;min-width:0}
+.constraint-editor .schedule-header>.fld>label{flex:none;margin:0}
+.constraint-editor .schedule-header>.fld>.sel{flex:1;min-width:0;width:100%}
+.constraint-editor #constraint-schedule{scroll-margin-top:var(--s4)}
+.constraint-editor :is(.schedule-heading h2,.draft-timeline h3){font-size:14px;margin:0}
+.constraint-editor .schedule-shortcuts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin-top:var(--s2);padding:var(--s2);background:var(--bg);border:1px solid var(--line);border-radius:var(--r2)}
+.constraint-editor .schedule-shortcuts .help{flex-basis:100%;margin:0}
+.constraint-editor .schedule-shortcuts .schedule-shortcut-times{margin:0}
+.constraint-editor .schedule-shortcut-times{display:grid;grid-template-columns:100px max-content 100px;justify-content:start;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+.constraint-editor .draft-timeline{margin:var(--s4) 0;padding:var(--s3);border:1px solid var(--line);border-radius:var(--r2)}
+.constraint-editor .draft-timeline .help{margin:var(--s1) 0 var(--s2)}
+.constraint-editor .timeline-touch-hint{display:none}
+.constraint-editor .draft-timeline .tl{column-gap:0;row-gap:0}
+.constraint-editor .draft-timeline .tl a{grid-column:1/-1;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;min-height:var(--authz-row);border-radius:var(--r);color:var(--tx2)}
+.constraint-editor .draft-timeline .tl a:hover{background:var(--hover);text-decoration:none}
+.constraint-editor .draft-timeline .tl .tr{height:calc(var(--authz-row) - 6px);cursor:crosshair;user-select:none}
+.constraint-editor .draft-timeline .tl .tr .w{min-width:1px}
+.constraint-editor .draft-timeline .tl .tr .w.drawing{background:var(--ok);outline:1px solid var(--ok);color:var(--pane);font-size:11px;line-height:16px;white-space:nowrap;pointer-events:none}
+.constraint-editor .weekly-schedule,.constraint-editor .schedule-dates{margin-top:var(--s3);border:1px solid var(--line);border-radius:var(--r2)}
+.constraint-editor .schedule-workspace{display:block}
+.constraint-editor .weekly-schedule [data-schedule-rows]{display:flex;flex-wrap:wrap;gap:var(--s2);min-width:0}
+.constraint-editor .weekly-schedule .schedule-group{padding-block:0}
+.constraint-editor .weekly-schedule .schedule-row{flex:0 0 196px;width:196px;max-width:100%;height:calc(var(--authz-row) - 4px);gap:2px;border:1px solid var(--line2);border-radius:var(--r);background:var(--field,var(--bg));padding-left:2px}
+.constraint-editor .weekly-schedule .schedule-row+.schedule-row{margin:0}
+.constraint-editor .weekly-schedule .schedule-row .inp{border:0;box-shadow:none;background:transparent;text-align:center;padding:0 2px;height:calc(var(--authz-row) - 6px);font-size:13px;min-width:0}
+.constraint-editor .weekly-schedule .schedule-row:focus-within{outline:2px solid var(--accent);outline-offset:-1px}
+.constraint-editor .weekly-schedule [data-remove-row]{border-left:1px solid var(--line2);border-radius:0;min-height:calc(var(--authz-row) - 6px);height:calc(var(--authz-row) - 6px);width:28px}
+.constraint-editor .weekly-schedule [data-add-row]{min-height:26px;height:26px;padding:0 8px;font-size:12px}
+.constraint-editor .schedule-dates{padding:var(--s3)}
+.constraint-editor .schedule-dates summary{cursor:pointer;font-size:14px;font-weight:600}
+.constraint-editor .schedule-dates[open] summary{margin-bottom:var(--s3)}
+.constraint-editor .schedule-group{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:var(--s2);min-height:var(--authz-row);padding:0 var(--s3)}
+/* The divider is drawn inside the row, so a row keeps exactly --authz-row and lines up with the
+   timeline above it (a border would add a pixel per row). */
+.constraint-editor .weekly-schedule .schedule-group+.schedule-group{box-shadow:inset 0 1px 0 var(--line)}
+.constraint-editor .schedule-group>b{align-self:center;padding-top:0;line-height:var(--authz-row);white-space:nowrap}
+.constraint-editor .schedule-group:focus-within{background:var(--accent-bg)}
+.constraint-editor .schedule-group:not([data-day]){grid-template-columns:minmax(0,1fr) auto;padding-inline:0}
+.constraint-editor .schedule-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:center;gap:var(--s2);max-width:380px}
+.constraint-editor .schedule-row+.schedule-row{margin-top:var(--s1)}
+.constraint-editor :is(.schedule-row input,.schedule-dates input,.grid2>*),.constraint-editor .ped-side{min-width:0}
+.constraint-editor .schedule-row input[type=text]{font-family:var(--mono)}
+.constraint-editor [data-remove-row]{width:32px;padding:0}
+.constraint-editor .ped-side .stick{max-height:100%;overflow-wrap:anywhere}
+.constraint-editor .sumbox .tags{margin:var(--s1) 0}
+.constraint-editor .verdict small{display:block;color:var(--tx3);margin-top:var(--s1)}
+.constraint-editor .constraint-preview-dirty{margin:0 0 var(--s3);color:var(--amber);background:var(--amber-bg);padding:var(--s2);border-radius:var(--r)}
+.constraint-editor+.ped-foot{position:relative;flex:none}
+.constraint-delete{position:relative}
+.constraint-delete summary{list-style:none;cursor:pointer}
+.constraint-delete summary::-webkit-details-marker{display:none}
+.constraint-delete>div{position:absolute;bottom:calc(100% + 8px);right:0;width:min(240px,80vw);padding:var(--s3);background:var(--pane);border:1px solid var(--line2);border-radius:var(--r2);box-shadow:var(--shadow)}
+.constraint-delete p{margin:0 0 var(--s2)}
+@media(pointer:coarse){
+  .constraint-editor .chk,.constraint-editor [data-add-row],.constraint-editor [data-remove-row],.constraint-editor .schedule-shortcut-actions .btn,.constraint-editor+.ped-foot .btn,.constraint-editor .draft-timeline .tl a{min-height:44px}
+  .constraint-editor [data-remove-row]{width:44px}
+  .constraint-editor .timeline-pointer-hint{display:none}
+  .constraint-editor .timeline-touch-hint{display:block}
+}
+@media(max-width:1160px){
+  .constraint-editor .ped{grid-template-columns:minmax(0,1fr)}
+  .constraint-editor .ped-side{border-left:0;border-top:1px solid var(--line)}
+}
+@media(max-width:720px){
+  .constraint-editor{--authz-row:36px}
+  .constraint-editor .constraint-subjects>.constraint-choices{grid-template-columns:minmax(0,1fr)}
+  .bar:has(+.constraint-editor) .idc{display:none}
+  /* Phone: one day is one compact line — label, its ranges, the add control — instead of a
+     bordered card under a full-width heading (owner 2026-11-23: the rows were still too large). */
+  /* One label column for both lists, so the day names line up vertically. */
+  .constraint-editor .draft-timeline{padding:8px 10px;margin:var(--s2) 0}
+  .constraint-editor .draft-timeline .tl{row-gap:0}
+  .constraint-editor .draft-timeline .tl a{min-height:var(--authz-row);font-size:12px;grid-template-columns:34px minmax(0,1fr)}
+  .constraint-editor .draft-timeline .tl .tr{height:calc(var(--authz-row) - 6px)}
+  .constraint-editor .schedule-group,.constraint-editor .schedule-group:not([data-day]){display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;min-height:var(--authz-row);padding:0 10px}
+  .constraint-editor .schedule-group>b{flex:0 0 34px;padding-top:0;font-size:12px;font-weight:600;color:var(--tx2);line-height:var(--authz-row)}
+  .constraint-editor [data-schedule-rows]{flex:0 1 auto;display:flex;flex-wrap:wrap;gap:4px}
+  .constraint-editor .weekly-schedule .schedule-row{display:grid;grid-template-columns:56px auto 56px auto;flex:none;width:auto;max-width:none;border:0;background:transparent;padding-left:0;gap:2px}
+  /* A phone needs to see where to tap: the two times read as fields, centered, 40px tall; the
+     remove control keeps a 40px box; the add control collapses to its plus sign (text kept for
+     assistive tech, no room for it on the row). */
+  .constraint-editor .weekly-schedule .schedule-row .inp{height:calc(var(--authz-row) - 6px);min-height:calc(var(--authz-row) - 6px);padding:0 2px;text-align:center;font-size:13px;background:var(--field,var(--bg));border:1px solid var(--line2);border-radius:var(--r)}
+  .constraint-editor .weekly-schedule .schedule-row>span{color:var(--tx3);font-size:11px;margin:0 3px}
+  .constraint-editor .weekly-schedule [data-remove-row]{min-height:calc(var(--authz-row) - 6px);height:calc(var(--authz-row) - 6px);width:34px;border-left:0;display:grid;place-items:center}
+  .constraint-editor .weekly-schedule [data-add-row]{margin-left:auto;min-height:calc(var(--authz-row) - 6px);height:calc(var(--authz-row) - 6px);width:34px;padding:0;font-size:0;justify-content:center;border:1px solid var(--line2);border-radius:var(--r)}
+  .constraint-editor [data-add-row]{grid-column:2}
+  .constraint-editor .schedule-row{max-width:none}
+}
 /* ---------- no-JS row menu (<details>) ---------- */
 /* The slash hint is the prototype's own kbd element; the plane wraps it in the submit button the
    prototype never needed (a pointer operator must be able to submit a script-free GET filter). The
@@ -100,11 +233,49 @@ tr:has(details.ua[open]) + tr.detail-row{display:table-row}
 .result.err .i{color:var(--danger)}
 
 /* ---------- audit expandable detail (prototype: JS row expand) ---------- */
-tr.detail-row td{background:var(--bg);padding:0}
+tr.detail-row td{background:var(--bg);padding:var(--s2) var(--s3) var(--s3);white-space:normal}
+tr.detail-row .uax{padding:var(--s2) 0;color:var(--tx2);overflow-wrap:anywhere;word-break:normal}
+.authz-operation-detail>[data-imported-atoms]{margin-top:var(--s2)}
+.tbl td>[data-imported-atoms],.mc [data-imported-atoms]{margin-top:var(--s1)}
+.tbl tbody tr.dim td.act > *{opacity:1}
+/* The row's pause/resume control carries its label only where the table has room: at ~1024px two
+   labelled buttons squeezed the status and window columns into wrapping (measured in a screenshot).
+   Below 1180px the icon keeps its title and aria-label. PROTO_CSS stays untouched: it is the
+   prototype's verbatim copy and the paint gate compares it byte for byte. */
+@media(max-width:1180px){.tbl td.act .hide-md{display:none}}
+.ov2 .kv > *{min-width:0;overflow-wrap:anywhere}
+.tw>.empty{padding-block:var(--s6)}
+.drawer #authz{display:grid;gap:var(--s2)}
+.drawer #authz :is(h3,.banner,.verdict){margin:0}
+.drawer .subject-authz-list{display:grid;gap:var(--s2)}
+.drawer #authz .verdict span,.drawer [data-key-access-form] .chk>span{min-width:0;overflow-wrap:anywhere}
+.drawer .key-access-scopes{gap:var(--s2)}
+.drawer :is(.key-access-vaults,.account-access-vaults){min-width:0;margin:var(--s4) 0;padding:var(--s2);border:1px solid var(--line);border-radius:var(--r2)}
+.drawer :is(.key-access-vaults,.account-access-vaults) legend{padding:0 var(--s1);color:var(--tx2)}
+.drawer form.dsec[action$="/default-vault"]{border-top:1px solid var(--line);padding-top:var(--s4);margin-top:var(--s4)}
+.drawer:has([name=defaultVaultId]) .dsec:not(:first-child){margin-top:var(--s4)}
+.drawer :is(.key-access-vaults,.account-access-vaults){display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:var(--s2);margin-block:var(--s3)}
+.drawer :is(.key-access-vaults,.account-access-vaults) .chk{margin:0;min-width:0}
+.drawer form.dsec[action$="/default-vault"]{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s2);align-items:start}
+.drawer form.dsec[action$="/default-vault"]>h3{grid-column:1/-1;margin:0}
+.drawer form.dsec[action$="/default-vault"]>.fld{display:contents}
+.drawer form.dsec[action$="/default-vault"] .sel{grid-column:1;grid-row:2}
+.drawer form.dsec[action$="/default-vault"] .help{grid-column:1/-1;grid-row:3}
+.drawer .default-vault-actions{grid-column:2;grid-row:2}
+@media(max-width:420px){
+  .drawer form.dsec[action$="/default-vault"]{grid-template-columns:minmax(0,1fr)}
+  .drawer .default-vault-actions{grid-column:1;grid-row:4}
+}
+.tbl th:not(.act)::after{right:0;width:10px;background:linear-gradient(var(--line2),var(--line2)) center/1px 45% no-repeat}
+.tbl th:has(+th.act)::after{display:none}
+.tbl th:not(.act):hover::after,.tbl.rz-active th:not(.act)::after{background-image:linear-gradient(var(--accent),var(--accent))}
+.authz-operation-detail>.help{margin:var(--s3) 0 0}
 tr.detail-row .dt{padding:10px var(--s3) 12px;font-size:13px;color:var(--tx2);display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px var(--s3)}
 tr.detail-row .dt .k{color:var(--tx3)}
 tr.detail-row .dt .mono{word-break:break-all}
-details.ua>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--tx3)}
+details.ua>summary{list-style:none;cursor:pointer;display:inline-grid;place-items:center;width:32px;height:32px;border-radius:var(--r);color:var(--tx3)}
+details.ua>summary:hover,details.ua[open]>summary{background:var(--hover)}
+details.ua[open]>summary .i{transform:rotate(90deg)}
 details.ua>summary::-webkit-details-marker{display:none}
 details.ua[open]>summary{color:var(--tx)}
 

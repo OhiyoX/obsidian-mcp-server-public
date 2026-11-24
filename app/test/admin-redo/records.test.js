@@ -48,8 +48,8 @@ const TOKENS = [
   { id: "tok-refresh-revoked", type: "refresh", clientId: "c-cursor", userId: "u-bob", scopes: ["obsidian.read"], allowedVaults: ["research"], createdAt: "2026-10-09T00:00:00.000Z", lastUsedAt: null, status: "revoked" },
 ];
 const PUBLICATIONS = [
-  { id: "pZ8kq2Lm4Rt7", vaultId: "vault", path: "Projects/Alpha.md", lifecycle: "active", createdAt: "2026-10-07T00:00:00.000Z", updatedAt: "2026-10-07T00:00:00.000Z", createdBy: "mcp:Claude Desktop/gpt-5.6" },
-  { id: "tQ6yd0Fe2Jk8", vaultId: "vault", path: "Drafts/Old idea.md", lifecycle: "orphaned", createdAt: "2026-09-20T00:00:00.000Z", updatedAt: "2026-09-20T00:00:00.000Z", createdBy: "web:alice" },
+  { id: "pZ8kq2Lm4Rt7", vaultId: "vault", path: "Projects/Alpha.md", lifecycle: "active", createdAt: "2026-10-07T00:00:00.000Z", updatedAt: "2026-10-07T00:00:00.000Z", createdBy: "mcp:Claude Desktop/gpt-5.6", views: 4, lastViewedAt: "2026-10-09T08:00:00.000Z" },
+  { id: "tQ6yd0Fe2Jk8", vaultId: "vault", path: "Drafts/Old idea.md", lifecycle: "orphaned", createdAt: "2026-09-20T00:00:00.000Z", updatedAt: "2026-09-20T00:00:00.000Z", createdBy: "web:alice", views: 0, lastViewedAt: null },
 ];
 const AUDIT = [
   {
@@ -126,7 +126,7 @@ const PUBLISH_CHECKS = [
   ["retired banner", (s) => s.includes('<div class="banner amber">') && s.includes("1 条记录已失效")],
   ["public link only for active records", (s) => s.includes("https://obsidian.example.com/publish/pZ8kq2Lm4Rt7") && !/publish\/tQ6yd0Fe2Jk8/.test(s)],
   ["publisher cell resolves the actor", (s) => s.includes("Claude Desktop") && s.includes("gpt-5.6") && s.includes("Web 用户")],
-  ["published time + planned views marker", (s) => s.includes("访问统计") && s.includes('class="fut"')],
+  ["published time + the real view count", (s) => s.includes("4 次访问") && !s.includes('class="fut"') && !/规划中/.test(s)],
   ["row menu", (s) => s.includes('<details class="mn">') && s.includes("撤销公开链接…")],
   ["mobile cards", (s) => s.includes('class="mcards"')],
   ["no script", (s) => !/<script|onclick=|javascript:/i.test(s)],
@@ -269,12 +269,18 @@ test("审计 page: the row-detail panel never claims the `.tbl .mono` keep contr
   // (`.uax{word-break:break-all}`), so its monospaced values must not carry `.mono`: the layout
   // gate reads every `.tbl .mono` as an unbreakable token whose computed `white-space` must be
   // `nowrap`, and a wrapped `.mono` inside `td.act` is a real violation of that contract.
+  const page = html(renderAuditPage(auditCtx()));
   const panel = /<details class="ua">[\s\S]*?<\/details>/g;
-  const panels = html(renderAuditPage(auditCtx())).match(panel) || [];
+  const panels = page.match(panel) || [];
   assert.ok(panels.length >= 3, "every audit row carries a detail panel");
   const PANEL_CHECKS = [["panel keeps its mono face inline instead of the contract class", (s) => !/<span class="mono"/.test(s)]];
   for (const markup of panels) assert.deepEqual(violations(markup, PANEL_CHECKS), []);
-  assert.match(panels[1], /失败原因：管理密码错误/);
+  // The reasons live in the `.uax` block on the row after the chevron's `<details>`; this probe
+  // used to read them out of the `<details>` itself, which stopped carrying them when the detail
+  // row was split from the summary cell.
+  const panelsWithDetail = [...page.matchAll(/<details class="ua">[\s\S]*?<div class="uax">([\s\S]*?)<\/div>/g)].map((m) => m[1]);
+  assert.ok(panelsWithDetail.length >= 3, "every audit row carries its detail block");
+  assert.match(panelsWithDetail[1], /失败原因：管理密码错误/);
   // negative control: the same probe must go red against the contract-claiming markup.
   assert.ok(violations('<div class="uax">动作键 <span class="mono">admin.login</span></div>', PANEL_CHECKS).includes("panel keeps its mono face inline instead of the contract class"));
 });

@@ -1,5 +1,6 @@
 // Phase 4A: persistent, privacy-safe route counters.
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -10,7 +11,6 @@ import {
   ROUTE_METRIC_NAMES,
   deprecationWindow,
   createRouteMetrics,
-  routeMetricsFile,
   utcDayKey,
 } from "../src/app/route-metrics.js";
 
@@ -117,12 +117,27 @@ test("day buckets are bounded so the evidence file cannot grow without limit", a
   await fs.rm(root, { recursive: true, force: true });
 });
 
-test("the default file lives under the data directory, not the Vault", () => {
+test("the default file lives under the data directory, not the Vault", async () => {
+  // config.js resolves DATA_PATH at import time, so this test used to read whatever DATA_PATH
+  // the runner exported (and failed when one was set). Give the module its own data directory
+  // in a child process instead: the default file must follow it, not the environment.
   const previous = process.env.WEB_ROUTE_METRICS_FILE;
   delete process.env.WEB_ROUTE_METRICS_FILE;
-  const file = routeMetricsFile();
-  assert.match(file.replaceAll("\\", "/"), /\/data\/route-metrics\.json$/);
-  if (previous !== undefined) process.env.WEB_ROUTE_METRICS_FILE = previous;
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "route-metrics-data-"));
+  try {
+    const moduleUrl = new URL("../src/app/route-metrics.js", import.meta.url).href;
+    const file = execFileSync(process.execPath, [
+      "--input-type=module",
+      "-e",
+      `const { routeMetricsFile } = await import(${JSON.stringify(moduleUrl)}); process.stdout.write(routeMetricsFile());`,
+    ], { env: { ...process.env, DATA_PATH: root, WEB_ROUTE_METRICS_FILE: "" }, encoding: "utf8" });
+    assert.equal(path.basename(file), "route-metrics.json");
+    assert.equal(fsSync.realpathSync(path.dirname(file)), fsSync.realpathSync(root), "the default file lives in DATA_PATH");
+    assert.doesNotMatch(file.replaceAll("\\", "/"), /vault/i, "the default file must never live inside a Vault");
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+    if (previous !== undefined) process.env.WEB_ROUTE_METRICS_FILE = previous;
+  }
 });
 
 // Phase 4A review: evidence durability + continuity.

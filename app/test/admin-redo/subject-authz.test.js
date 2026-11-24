@@ -281,7 +281,7 @@ test("the section says which backend decides, and follows the mode", async (t) =
 
 // ------------------------------------------------------------------ behaviour
 
-test("the legacy attach endpoint stays frozen and writes nothing", async (t) => {
+test("the legacy attach endpoint is gone: it answers 404 and writes nothing", async (t) => {
   const { origin, cookie, store } = await startFixture(t);
   const revision = store.snapshot().revision;
   const csrf = csrfOf((await get(origin, cookie, "/admin/auth?tab=clients&id=client-1")).body);
@@ -289,9 +289,8 @@ test("the legacy attach endpoint stays frozen and writes nothing", async (t) => 
   const legacy = await post(origin, cookie, "/admin/auth/access-policy/subjects", {
     csrf, id: CLIENT_CONSTRAINT, subject: USER_SUBJECT, tab: "clients", subjectId: "client-1", expectedRevision: revision,
   });
-  // No legacy store is wired into this router, so the frozen route answers its own "not configured"
-  // shape; either way it must not write the per-Vault document.
-  assert.notEqual(legacy.status, 303, "the frozen endpoint never attaches");
+  // The route module went with the legacy Admin surface, so the request cannot reach any handler.
+  assert.equal(legacy.status, 404, "the retired endpoint is not routed at all");
   assert.equal(store.snapshot().revision, revision);
   assert.deepEqual((await storedConstraint(store, CLIENT_CONSTRAINT)).subjects, [CLIENT_SUBJECT]);
 });

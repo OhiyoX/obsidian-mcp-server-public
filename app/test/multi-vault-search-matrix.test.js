@@ -228,8 +228,9 @@ test("§11/§12: the two Vaults own distinct A7 index paths and per-Vault index_
   });
   assert.equal(await readFileOr(PRIMARY_INDEX), primaryIndexBefore, "reindexing the secondary must not touch the primary retrieval index");
 
-  // The secondary index file really exists under this Vault's data root and lists only its corpus.
-  const stored = JSON.parse(await fs.readFile(SECONDARY_INDEX, "utf8"));
+  // The secondary generation really exists under this Vault's data root and lists only its corpus.
+  const { openIndexStore } = await import("../src/vault-runtime/retrieval-index-store.js");
+  const stored = await openIndexStore({ legacyIndexPath: SECONDARY_INDEX }).load();
   assert.deepEqual(Object.keys(stored.notes).sort(), [SHARED_NOTE, "secondary-only.md"].sort());
   assert.match(JSON.stringify(stored.notes[SHARED_NOTE]), /secondary-only-marker/);
 

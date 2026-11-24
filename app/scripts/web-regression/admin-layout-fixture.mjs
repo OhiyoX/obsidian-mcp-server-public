@@ -32,16 +32,6 @@ export const VIEWPORT = { width: 1600, height: 1000 };
 export const GATE_AUTHOR = Object.freeze({ agent: 'admin-layout-gate', model: 'gate' });
 
 /**
- * The policy seed used by the window-presentation scene (`admin-window-presentation.mjs`) and by
- * the standalone policy fixtures: one uuid subject and one capability.
- */
-export const POLICY_SEED = Object.freeze({
-  mode: 'suspend', enabled: 'true', timezone: 'Asia/Shanghai', startsAt: '', expiresAt: '',
-  subjects: ['api-key:configured-env', 'api-key:c74f039e-cda6-4b63-b9ab-cfca1babd021'],
-  capabilities: 'scope:obsidian.read', weekly: 'mon 00:00-24:00', dateRanges: '',
-});
-
-/**
  * A loopback port this harness can actually `fetch()`. `listen(0)` alone is not enough on this host:
  * Windows draws from 1024-15000, so an OS-assigned port can land below undici's "bad port" ceiling
  * and every readiness probe fails with `bad port` (issue #344). The gate used to red as

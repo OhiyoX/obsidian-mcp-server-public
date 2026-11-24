@@ -7,7 +7,7 @@ export const CSP_HEADER = "default-src 'none'; script-src 'self'; connect-src 's
 
 /** Where the enhancement modules are served from, and which names may be requested. */
 export const CLIENT_SCRIPT_BASE = "/admin/auth/assets/";
-export const ADMIN_CLIENT_MODULES = Object.freeze(["admin-client.js", "admin-feature-registry.js", "admin-feature-overlays.js", "admin-feature-keys.js", "admin-feature-lists.js", "admin-feature-select.js", "admin-feature-nav.js"]);
+export const ADMIN_CLIENT_MODULES = Object.freeze(["admin-client.js", "admin-column-widths.js", "admin-feature-registry.js", "admin-feature-overlays.js", "admin-feature-keys.js", "admin-feature-lists.js", "admin-feature-select.js", "admin-feature-nav.js", "admin-feature-authz.js"]);
 /** The one module an authenticated page is expected to load (feature modules arrive via import). */
 export const CLIENT_ENTRY_MODULE = "admin-client.js";
 
@@ -68,8 +68,8 @@ export function fragmentFetchPermitted(header) {
 
 /**
  * The served HTML's script policy. `inventory` is `probeDocumentPolicy()`'s shape.
- *   * every `<script>` must be an external same-origin `type="module"` from the whitelist;
- *   * authenticated pages load exactly one tag — the entry module (features arrive by import);
+ *   * scripts are external, same-origin, and allowlisted;
+ *   * authenticated pages load the entry module and may preload saved column widths synchronously;
  *   * login/error pages load none;
  *   * no `on*=` attribute and no `javascript:` URL anywhere in the markup.
  */
@@ -80,15 +80,16 @@ export function scriptInventoryFailures(inventory, { authenticated, modules = AD
   if (inline.length) failures.push(`出现 ${inline.length} 个 inline <script>（${inline.map((script) => `${script.textLength} 字节`).join(", ")}）；CSP script-src 'self' 下 inline 一律不允许`);
   const external = scripts.filter((script) => !script.inline);
   for (const script of external) {
-    if (script.type !== "module") failures.push(`<script src="${script.src}"> 不是 type="module"`);
     if (!script.sameOrigin) failures.push(`<script src="${script.src}"> 不是同源`);
     let name = null;
     try { const url = new URL(script.src, "https://admin.invalid"); name = url.pathname.startsWith(CLIENT_SCRIPT_BASE) ? url.pathname.slice(CLIENT_SCRIPT_BASE.length) : null; } catch { name = null; }
-    if (!name || !modules.includes(name)) failures.push(`<script src="${script.src}"> 不在白名单 ${CLIENT_SCRIPT_BASE}<${modules.join("|")}>`);
+    const columnBootstrap = name === "admin-column-widths.js";
+    if (script.type !== (columnBootstrap ? "" : "module")) failures.push(`<script src="${script.src}"> 类型不符合白名单`);
+    if (!columnBootstrap && (!name || !modules.includes(name))) failures.push(`<script src="${script.src}"> 不在白名单 ${CLIENT_SCRIPT_BASE}<${modules.join("|")}>`);
   }
   if (authenticated) {
     if (external.length === 0) failures.push(`已认证页面没有加载同源增强脚本（期望 1 个 ${CLIENT_SCRIPT_BASE}${entry}）`);
-    const others = external.map((script) => String(script.src).slice(String(script.src).lastIndexOf("/") + 1)).filter((name) => name !== entry);
+    const others = external.map((script) => String(script.src).slice(String(script.src).lastIndexOf("/") + 1)).filter((name) => name !== entry && name !== "admin-column-widths.js");
     if (others.length) failures.push(`已认证页面除入口模块外还声明了 script 标签：${others.join(", ")}（feature 模块应由 import 引入，而不是多一个标签）`);
   } else if (scripts.length) {
     failures.push(`未认证页面（登录 / 错误页）不得加载任何 <script>，实际 ${scripts.length} 个`);

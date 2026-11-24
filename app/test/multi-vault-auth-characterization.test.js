@@ -64,8 +64,8 @@ const VAULT_DENIED_BODY = { error: "access_denied", error_description: "Vault ac
 // contract §18.1 additive Vault face (`defaultVaultId` + `vaults`).
 const SERVER_INFO_KEYS = [
   "commit", "dataPath", "defaultVaultId", "defaultVaultSource", "deployedAt", "deployedAtFormatted", "discovery", "effectiveDefaultVaultId", "historyPath", "index",
-  "maxReadBytes", "maxVersionsPerFile", "ok", "onboarding", "readOnly", "tools", "trashPath", "vaultPath", "vaults",
-  "version", "versionHistoryEnabled",
+  "maxReadBytes", "maxVersionsPerFile", "ok", "onboarding", "promptRegistry", "readOnly", "tools", "trashPath", "vaultPath", "vaults",
+  "version", "versionHistoryEnabled", "writes",
 ];
 const SAFE_VAULT_KEYS = ["capabilities", "id", "name", "primary", "writable"];
 

@@ -173,7 +173,8 @@
       "allowedVaults": [
         "vault"
       ],
-      "defaultVaultId": "vault"
+      "defaultVaultId": "vault",
+      "agentLabel": null
     },
     "key-legacy-no-default": {
       "id": "bb22bb22-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
@@ -191,7 +192,8 @@
       "allowedVaults": [
         "vault",
         "alpha"
-      ]
+      ],
+      "agentLabel": null
     }
   },
   "oauthUsers": {

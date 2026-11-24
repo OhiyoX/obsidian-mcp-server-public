@@ -11,15 +11,14 @@
 // Route pairing (prototype hash ⇄ live URL) is the one hand-written fact: the prototype is a
 // hash-routed single file, the Admin plane is server-rendered under `/admin/auth`.
 
-/** The nine Admin pages the lane brief names. `id` is the name used in reports. */
+/** The eight Admin pages that share a model with the prototype. `id` is the name used in reports. */
 //
-// The prototype's policy EDITOR (`#/authz/new`) is deliberately NOT paired: Task 3 froze the legacy
-// write surface, so the plane has no editor form, no draft round trip and no save — `?new=1` renders
-// the frozen list. Comparing the prototype's form against a page that can never hold one would force
-// the gate to waive every control of that page (`.chk`, `.chip`, `.fld`, `fieldset.fs`, `.btn.primary`,
-// `.ped-foot`), which is exactly what a parity gate must not do. The surviving surfaces of the same
-// data are still paired: `authz` (the list, the `?id=` drawer vocabulary) and the read-only `?edit=`
-// view, which the no-JS and design scenes assert.
+// 定时授权 is NOT paired (owner ruling 2026-11-12): the legacy `#/authz` page and its policy EDITOR
+// describe the retired legacy document, and the plane's live page is now the per-Vault constraint
+// console (`/admin/auth/authz`), whose model the prototype does not have — a scope column, the
+// operation catalogue and the plane switch. Comparing the two would force the gate to waive the whole
+// page, which is exactly what a parity gate must not do, so the constraint page carries its own scenes
+// instead (`scripts/web-regression/admin-layout-constraints.mjs`, ruling R9's payback).
 export const PARITY_PAGES = Object.freeze([
   Object.freeze({
     id: "overview",
@@ -78,46 +77,6 @@ export const PARITY_PAGES = Object.freeze([
     drawer: null,
   }),
   Object.freeze({
-    id: "authz",
-    title: "定时授权",
-    proto: "#/authz",
-    live: "/admin/auth/access-policy",
-    table: true,
-    drawer: null,
-    /**
-     * Prototype elements this page deliberately does not render, each with the reason (printed as a
-     * note on every run, never dropped silently).
-     *
-     * Task 3 froze the legacy write surface (design §7 step 2 + step 5): the 当前状态预览 card was a
-     * POST form to the frozen `/preview` route — with the script running it fetched the verdict for a
-     * chosen subject and adopted it in place — and 新建策略 created a policy in the frozen document.
-     * Rendering either would be a promise the route refuses with 409. Everything else on the page
-     * (the table, its columns, the window cells, the `?id=` drawer vocabulary, the banners) is still
-     * compared verbatim, and the same verdicts/revision are still readable on the `?edit=` view
-     * (`.ped-side`: 现在（…）判定, the 7-day timeline and the summary).
-     */
-    omitted: Object.freeze([
-      Object.freeze({
-        selector: ".main .sect",
-        reason: "「当前状态预览」区域的容器：它是一张 POST 到已冻结 /preview 路由的表单（Task 3 冻结了全部旧写入端点）。"
-          + "只读视图（?edit=）里的 .ped-side 仍显示同一份现在判定与 7 天时间轴。",
-      }),
-      Object.freeze({
-        selector: ".main .sect-h",
-        reason: "同一区域的分区标题：「当前状态预览」的 h2 行随那张已冻结的 POST 表单一起移除，单独保留一个空标题只会是死链接。",
-      }),
-      Object.freeze({
-        selector: ".main .card",
-        reason: "同一区域的内容卡片：卡片里的主体 select 与「查看」提交按钮就是那张已冻结的 POST 表单，卡片本身没有别的用途。",
-      }),
-      Object.freeze({
-        selector: ".main .btn.primary",
-        reason: "「新建策略」是创建入口：旧策略文档已冻结（409 access_policy_frozen），只读页面不能提供它；"
-          + "按 Vault 的定时约束在新的定时授权页面（/admin/auth/authz）创建。",
-      }),
-    ]),
-  }),
-  Object.freeze({
     id: "vaults",
     title: "Vault 与 Git",
     proto: "#/vaults",
@@ -136,11 +95,10 @@ export const PARITY_PAGES = Object.freeze([
 export const RECORDED_PROTO_COLUMNS = Object.freeze({
   accounts: Object.freeze(["账户", "状态", "权限上限 · Vault", "已授权客户端", "最后登录", "创建", ""]),
   keys: Object.freeze(["名称 / 前缀", "权限 · Vault", "最后调用", "来源", "创建", ""]),
-  clients: Object.freeze(["客户端", "已授权账户", "连接域名", "最后调用", "回调地址", ""]),
+  clients: Object.freeze(["客户端", "已授权账户", "连接域名", "创建", "最后调用", "回调地址", ""]),
   tokens: Object.freeze(["客户端 · 账户", "Token（短 ID）", "权限 · Vault", "最后使用 · 签发", "状态", ""]),
   publishes: Object.freeze(["文档", "状态", "公开链接", "发布者", "发布时间", ""]),
   audit: Object.freeze(["时间", "结果", "动作", "凭据", "Agent", "来源", ""]),
-  authz: Object.freeze(["策略", "状态 · 模式", "主体", "限制的能力", "允许时间窗口", ""]),
   vaults: Object.freeze(["Vault", "Git 状态", "同步方式", "远端 / 分支", "能力", ""]),
 });
 

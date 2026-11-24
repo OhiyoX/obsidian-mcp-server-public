@@ -36,6 +36,16 @@
  * them moves the button off its anchor, and pinning them would forbid legitimate
  * typography work.
  *
+ * No `@media` exemption (#590 F3) — settled by measurement, not by taste: Obsidian
+ * DESKTOP 1.13.7 ships 176 `@media` blocks in `app.css` and **not one** of them
+ * selects `pre`; narrow layouts are handled by the `.is-phone` / `.is-mobile`
+ * classes on `<body>` instead (extracted from `resources/obsidian.asar`, sha256
+ * f612f1e8f364…). A media-scoped change to a `pre` box therefore has no desktop
+ * precedent to follow, so the scan keeps flagging it, `padding` included. If the
+ * web build ever wants narrower padding on phones, that is a deliberate product
+ * divergence: land it with the reason recorded here and the injection below
+ * relaxed in the same commit, never by a silent allowlist.
+ *
  * The `@layer` case is deliberately strict: a layered override of `width` is a
  * cascade no-op while the matching unlayered rule stays where it is, but the
  * layer boundary is one `@layer` reorder away from taking effect, so the nail
@@ -301,7 +311,10 @@ const NEUTRAL_VALUE = new Set(["auto", "none", "initial", "unset", "inherit", "r
 const SCROLL_RANGE_DECLARATIONS = [
   {
     properties: ["width", "max-width", "min-width", "inline-size", "max-inline-size", "min-inline-size"],
-    neutral: NEUTRAL_VALUE,
+    // #590 F2: a constraint whose value still fills the parent leaves no scroll range on
+    // the `<pre>` (real Chromium: `pre.scrollLeftMax=0`, the `<code>` still owns the
+    // scroll). Only shrink-to-fit values break the invariant.
+    neutral: new Set([...NEUTRAL_VALUE, "100%", "stretch", "fill-available", "-webkit-fill-available"]),
     why:
       "an inline-size constraint makes the box stop filling its parent (shrink-to-fit), so the `<pre>` gets " +
       "the block's horizontal scroll range back and carries the absolutely positioned button with the content",

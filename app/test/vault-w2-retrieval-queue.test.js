@@ -22,7 +22,7 @@ test("F4: queued sync/job rechecks generation at execution; entered work drains 
   allowed = false; token = {};
   release();
   await active;
-  await fs.rm(indexPath); // distinguish a fresh queued write from the entered operation's write
+  await fs.rm(indexPath, { force: true }); // M1: an empty no-change sync writes nothing, so the file may not exist
   const refused = await queued;
   await runtime.drainRetrievalIndex();
   assert.equal(refused.unavailable, true);

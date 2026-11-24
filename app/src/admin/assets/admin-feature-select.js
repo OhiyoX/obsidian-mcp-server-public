@@ -5,7 +5,7 @@
 // be styled, so the owner asked for the expanded list to be drawn by the plane. The comparison with
 // the prototype therefore stops at the CLOSED control: the visible box must stay the prototype's
 // `.sel` vocabulary (height 32 / `.sm` 28, `--field` surface, `1px --line2`, radius `--r`, the same
-// chevron), while the opened list is ours. `docs/QUALITY_AUDIT.md` and `docs/admin/README.md` record
+// chevron), while the opened list is ours. `docs/admin/README.md` records
 // the decision; the gate asserts "the popup exists and paints the selected row" plus "the closed
 // state is still the prototype's `.sel`", and never "identical to the prototype".
 //
@@ -23,8 +23,7 @@
 // back), Tab (close and let the browser move on), first-letter type-ahead; `role="combobox"` +
 // `aria-expanded` + `aria-controls` on the control, `role="listbox"`/`role="option"` +
 // `aria-activedescendant` on the popup. The popup lives on `<body>` with `position: fixed`, so no
-// table card, drawer or scroll container can clip it; scroll/resize close it instead of leaving it
-// detached from its control.
+// table card, drawer or scroll container can clip it. The popup tracks its control on scroll.
 import { registerFeature } from "./admin-client.js";
 
 /** Type-ahead buffer lifetime, roughly the platform's own (about a second). */
@@ -92,7 +91,8 @@ registerFeature("select", (ctx) => {
 
   function place(popup, proxy) {
     const rect = proxy.getBoundingClientRect();
-    const width = Math.max(80, Math.round(rect.width));
+    const minimum = Number(proxy.previousElementSibling?.dataset.popupMinWidth) || 80;
+    const width = Math.min(window.innerWidth - 16, Math.max(minimum, Math.round(rect.width)));
     const left = Math.max(8, Math.min(Math.round(rect.left), window.innerWidth - width - 8));
     popup.style.width = `${width}px`;
     popup.style.maxWidth = `${Math.min(Math.round(window.innerWidth - left - 8), Math.max(width, 480))}px`;
@@ -119,7 +119,12 @@ registerFeature("select", (ctx) => {
     const item = open.items[clamped];
     if (item) {
       open.proxy.setAttribute("aria-activedescendant", item.id);
-      if (scroll) item.scrollIntoView({ block: "nearest" });
+      if (scroll) {
+        const view = open.popup.getBoundingClientRect();
+        const row = item.getBoundingClientRect();
+        if (row.top < view.top) open.popup.scrollTop -= view.top - row.top;
+        else if (row.bottom > view.bottom) open.popup.scrollTop += row.bottom - view.bottom;
+      }
     }
   }
 
@@ -153,7 +158,7 @@ registerFeature("select", (ctx) => {
     current.proxy.removeAttribute("aria-activedescendant");
     current.popup.remove();
     if (restoreFocus && document.contains(current.proxy)) {
-      try { current.proxy.focus({ preventScroll: false }); } catch { /* ignore */ }
+      try { current.proxy.focus({ preventScroll: true }); } catch { /* ignore */ }
     }
   }
 
@@ -274,14 +279,26 @@ registerFeature("select", (ctx) => {
     if (form) form.dataset.enhanced = "1";
   }
 
-  for (const select of document.querySelectorAll("select.sel")) {
-    try {
-      enhance(select);
-    } catch (error) {
-      // One broken control must not cost the operator the other ones (or the fallback button).
-      console.error("[admin] select enhancement failed", error);
+  function enhanceWithin(root) {
+    const selects = root.matches?.("select.sel") ? [root] : root.querySelectorAll("select.sel");
+    for (const select of selects) {
+      try {
+        enhance(select);
+      } catch (error) {
+        // One broken control must not cost the operator the other ones (or the fallback button).
+        console.error("[admin] select enhancement failed", error);
+      }
     }
   }
+  enhanceWithin(document);
+  // Drawers arrive after boot through partial navigation; keep their controls on
+  // the same component as a direct page load, without registering features twice.
+  new MutationObserver((records) => {
+    if (open && !open.select.isConnected) closeOpen({ restoreFocus: false });
+    for (const record of records) for (const node of record.addedNodes) {
+      if (node instanceof Element) enhanceWithin(node);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
 
   // Outside click closes (the proxy's own click toggles, so it is excluded).
   document.addEventListener("pointerdown", (event) => {
@@ -291,12 +308,19 @@ registerFeature("select", (ctx) => {
     closeOpen({ restoreFocus: false });
   }, true);
 
-  // A popup pinned to the viewport is only honest while its control is where it was left.
-  const closeOnMove = (event) => {
-    if (!open) return;
-    if (open.popup.contains(event.target)) return;
-    closeOpen({ restoreFocus: false });
-  };
-  window.addEventListener("scroll", closeOnMove, true);
-  window.addEventListener("resize", closeOnMove);
+  window.addEventListener("scroll", (event) => {
+    if (!open || open.popup.contains(event.target)) return;
+    const rect = open.proxy.getBoundingClientRect();
+    const scroller = event.target instanceof Element ? event.target : document.documentElement;
+    if (!scroller.contains(open.proxy)) return;
+    const viewport = scroller.getBoundingClientRect();
+    if (rect.bottom <= Math.max(0, viewport.top) || rect.top >= Math.min(window.innerHeight, viewport.bottom)) {
+      closeOpen({ restoreFocus: false });
+    } else {
+      place(open.popup, open.proxy);
+    }
+  }, true);
+  window.addEventListener("resize", () => {
+    if (open) closeOpen({ restoreFocus: false });
+  });
 });

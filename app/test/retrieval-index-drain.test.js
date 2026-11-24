@@ -28,6 +28,12 @@ await fs.mkdir(data, { recursive: true });
 await fs.writeFile(path.join(vault, "Note.md"), "# Note\n\ndrain-barrier-needle\n", "utf8");
 
 const { drainRetrievalIndex, scheduleRetrievalRefresh, syncRetrievalIndex } = await import("../src/retrieval.js");
+const { openIndexStore } = await import("../src/vault-runtime/retrieval-index-store.js");
+
+async function persistedNotes() {
+  const state = await openIndexStore({ legacyIndexPath: indexPath }).load();
+  return state === null ? {} : state.notes;
+}
 
 after(async () => {
   await drainRetrievalIndex();
@@ -45,8 +51,11 @@ function deferred() {
 }
 
 async function assertNoTempFiles() {
-  const entries = await fs.readdir(path.dirname(indexPath));
-  assert.deepEqual(entries.filter((entry) => entry.endsWith(".tmp")), [], "drained index must leave no partial temp file");
+  const storeRoot = path.join(path.dirname(indexPath), "retrieval-index-v2");
+  for (const directory of [storeRoot, path.join(storeRoot, "objects"), path.join(storeRoot, "manifests")]) {
+    const entries = await fs.readdir(directory).catch(() => []);
+    assert.deepEqual(entries.filter((entry) => entry.endsWith(".tmp")), [], `drained index must leave no partial temp file in ${directory}`);
+  }
 }
 
 test("drainRetrievalIndex waits for an in-flight retrieval write", { timeout: 15000 }, async () => {
@@ -59,7 +68,7 @@ test("drainRetrievalIndex waits for an in-flight retrieval write", { timeout: 15
   let drainSettled = false;
 
   fs.writeFile = async (candidate, ...rest) => {
-    if (!intercepted && String(candidate).startsWith(`${indexPath}.`) && String(candidate).endsWith(".tmp")) {
+    if (!intercepted && String(candidate).includes("retrieval-index-v2") && String(candidate).endsWith(".tmp")) {
       intercepted = true;
       writeEntered.resolve();
       await releaseWrite.promise;
@@ -86,8 +95,7 @@ test("drainRetrievalIndex waits for an in-flight retrieval write", { timeout: 15
 
     assert.equal(drainSettled, true);
     await assertNoTempFiles();
-    const persisted = JSON.parse(await fs.readFile(indexPath, "utf8"));
-    assert.ok(persisted.notes["Note.md"], "the drained write must persist the note");
+    assert.ok((await persistedNotes())["Note.md"], "the drained write must persist the note");
   } finally {
     releaseWrite.resolve();
     fs.writeFile = originalWriteFile;
@@ -105,7 +113,7 @@ test("drainRetrievalIndex promotes a pending debounced refresh into a drained wr
   let drainSettled = false;
 
   fs.writeFile = async (candidate, ...rest) => {
-    if (!intercepted && String(candidate).startsWith(`${indexPath}.`) && String(candidate).endsWith(".tmp")) {
+    if (!intercepted && String(candidate).includes("retrieval-index-v2") && String(candidate).endsWith(".tmp")) {
       intercepted = true;
       writeEntered.resolve();
       await releaseWrite.promise;
@@ -114,6 +122,8 @@ test("drainRetrievalIndex promotes a pending debounced refresh into a drained wr
   };
 
   try {
+    // M1: an unchanged vault is a no-op refresh, so give the promoted debounce real work.
+    await fs.writeFile(path.join(vault, "Note.md"), "# Note\n\ndrain-barrier-needle\n\npromoted-refresh\n", "utf8");
     scheduleRetrievalRefresh();
     const draining = drainRetrievalIndex().then(() => {
       drainSettled = true;
@@ -130,8 +140,7 @@ test("drainRetrievalIndex promotes a pending debounced refresh into a drained wr
     await draining;
 
     await assertNoTempFiles();
-    const persisted = JSON.parse(await fs.readFile(indexPath, "utf8"));
-    assert.ok(persisted.notes["Note.md"], "the promoted refresh must persist the note");
+    assert.ok((await persistedNotes())["Note.md"], "the promoted refresh must persist the note");
   } finally {
     releaseWrite.resolve();
     fs.writeFile = originalWriteFile;

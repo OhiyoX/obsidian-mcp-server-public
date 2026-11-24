@@ -12,6 +12,8 @@
 // No module-level mutable state, no `config.js` import, no `process.env`, no global path
 // constant.
 
+import { hasValidEmbedding } from "./retrieval-index-delta.js";
+
 /**
  * One `retrievalIndexStatus()` payload. `current` is this runtime's committed index state
  * (or `null` for the capability-disabled form, which then carries `reason` instead of an
@@ -28,7 +30,7 @@ export function retrievalStatusPayload({ indexPath, indexVersion, current, seman
     updatedAt: current ? current.updatedAt : null,
     notes: notes.length,
     chunks: chunks.length,
-    embeddedChunks: chunks.filter((chunk) => Array.isArray(chunk.embedding)).length,
+    embeddedChunks: chunks.filter((chunk) => hasValidEmbedding(chunk)).length,
     embeddingModel: current ? current.embeddingModel : null,
     semantic,
     capability,

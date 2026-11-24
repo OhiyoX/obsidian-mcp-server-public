@@ -152,6 +152,10 @@ export function createLocalFs(input = {}) {
   if (typeof requireRequestAuthor !== "function") throw new Error("vault-runtime/local-fs: deps.requireRequestAuthor must be a function");
   const trackGitMutation = deps.trackGitMutation === undefined ? () => {} : deps.trackGitMutation;
   if (typeof trackGitMutation !== "function") throw new Error("vault-runtime/local-fs: deps.trackGitMutation must be a function");
+  // Issue #632: a deterministic seam for the rename that publishes a note. Not a policy: the mapping
+  // below decides the answer, the seam only lets a test force the Windows race on any platform.
+  const renameFile = deps.renameFile === undefined ? fs.rename : deps.renameFile;
+  if (typeof renameFile !== "function") throw new Error("vault-runtime/local-fs: deps.renameFile must be a function");
 
   function assertInsideVault(absPath) {
     assertInsideRoot(root, absPath);
@@ -258,7 +262,21 @@ export function createLocalFs(input = {}) {
     const tempPath = path.join(path.dirname(absPath), `.${path.basename(absPath)}.obsidian-mcp-${randomUUID()}.tmp`);
     try {
       await fs.writeFile(tempPath, data, options.encoding);
-      await fs.rename(tempPath, absPath);
+      await renameFile(tempPath, absPath);
+    } catch (error) {
+      // #632: Windows answers EPERM/EACCES/EBUSY when the rename target is open by a concurrent
+      // reader (indexer, editor, AV scanner), and the same race can answer EEXIST. None of those is a
+      // server fault and none is fixable by retrying the same bytes: the caller must re-read and
+      // decide. They therefore share the conflict vocabulary the routes already map to 409, and the
+      // original errno stays in the message so a log still says what the filesystem said.
+      if (["EPERM", "EACCES", "EBUSY", "EEXIST"].includes(error?.code)) {
+        const current = await fileRevision(absPath).catch(() => null);
+        throw Object.assign(
+          new Error(`Revision conflict: the write to ${toVaultPath(absPath)} was refused by the filesystem (${error.code}); expected ${options.ifMatch ?? "the current revision"}, current ${current ?? "unreadable"}`),
+          { code: "REVISION_CONFLICT", cause: error },
+        );
+      }
+      throw error;
     } finally {
       await fs.rm(tempPath, { force: true }).catch(() => {});
     }

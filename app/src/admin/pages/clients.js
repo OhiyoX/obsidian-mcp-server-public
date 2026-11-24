@@ -124,6 +124,12 @@ function row(ctx, client, selectedId) {
   const domainCell = domains.length
     ? domains.map((domain) => `<span title="${esc(t("adm.clients.domainSource", { labels: domain.labels.join(t("adm.ui.listSeparator")) || t("adm.clients.unrecorded") }))}">${esc(domain.host)}</span>`).join("")
     : `<span class="muted">—</span>`;
+  // Creation time answers "when did this client first appear", which 最后调用 cannot: a
+  // client that never called still has a registration time, and a client that called
+  // minutes ago may be months old.
+  const createdCell = client.createdAt
+    ? relTitle(client.createdAt)
+    : `<span class="muted">—</span>`;
   const lastCell = client.lastUsedAt
     ? `${relTitle(client.lastUsedAt)} <span class="muted mono">${esc(client.lastSource || "—")}</span>`
     : `<span class="muted">${esc(t("adm.clients.neverUsed"))}</span>`;
@@ -135,6 +141,7 @@ function row(ctx, client, selectedId) {
     <td>${nameCell(model, client)}</td>
     <td class="cellt">${linkedCell}${pendingCell(ctx, client.clientId)}</td>
     <td class="cellt">${domainCell}</td>
+    <td class="cellt">${createdCell}</td>
     <td class="cellt">${lastCell}</td>
     <td class="cellt mono muted">${redirectCell}</td>
     <td class="act">${menu(ctx, client)}</td></tr>`;
@@ -229,11 +236,11 @@ function clientDrawer(ctx, client) {
     <h3>${esc(t("adm.keys.defaultVault"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="clientId" value="${esc(client.clientId)}">
-    ${renderDefaultVaultPicker(ctx, {
+    ${renderDefaultVaultPicker(ctx, { showLabel: false,
       current: client.defaultVaultId,
       allowedVaults: (ctx.snapshot?.tokens || []).filter((token) => token.clientId === client.clientId && token.status === "active").flatMap((token) => token.allowedVaults || []),
     })}
-    <div style="margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.keys.saveDefaultVault"))}</button></div>
+    <div class="default-vault-actions"><button class="btn primary" type="submit">${esc(t("adm.keys.saveDefaultVault"))}</button></div>
   </form>
   ${transferForm(ctx, client)}
   <div class="dsec"><h3>${esc(t("adm.accounts.dangerTitle"))}</h3><div class="danger-zone">
@@ -260,18 +267,19 @@ export function renderClientsPage(ctx) {
     ? clients.filter((client) => `${client.clientName || ""} ${(Array.isArray(client.redirectUris) ? client.redirectUris : []).join(" ")}`.toLowerCase().includes(q))
     : clients;
   // Sorting is server state (`table-sort.js`): the header link carries it, this page decides on it.
-  const sort = readSort(query, ["client", "accounts", "domains", "lastUsed", "callbacks"], "client");
+  const sort = readSort(query, ["client", "accounts", "domains", "created", "lastUsed", "callbacks"], "client");
   const list = sortRows(filtered, sort, {
     client: (client) => model.clientName(client),
     accounts: (client) => model.linkedAccounts(client.clientId).length,
     domains: (client) => (Array.isArray(client.connectionOrigins) ? client.connectionOrigins.length : 0),
+    created: (client) => client.createdAt ?? null,
     lastUsed: (client) => client.lastUsedAt ?? null,
     callbacks: (client) => (Array.isArray(client.redirectUris) ? client.redirectUris.length : 0),
   });
   const target = clients.find((client) => String(client.clientId) === selectedId) || null;
 
   const tableHtml = table(
-    [[t("adm.clients.column.client"), "24%", "", "client"], [t("adm.clients.column.accounts"), "22%", "", "accounts"], [t("adm.clients.column.domains"), "18%", "", "domains"], [t("adm.clients.column.lastUsed"), "16%", "", "lastUsed"], [t("adm.clients.column.callbacks"), "20%", "", "callbacks"], ["", "", "act"]],
+    [[t("adm.clients.column.client"), "22%", "", "client"], [t("adm.clients.column.accounts"), "20%", "", "accounts"], [t("adm.clients.column.domains"), "16%", "", "domains"], [t("adm.clients.column.createdAt"), "14%", "", "created"], [t("adm.clients.column.lastUsed"), "14%", "", "lastUsed"], [t("adm.clients.column.callbacks"), "14%", "", "callbacks"], ["", "", "act"]],
     list.map((client) => row(ctx, client, selectedId)),
     emptyState("app", t("adm.clients.emptyNoMatch"), t("adm.accounts.emptyNoMatchHint")),
     { ...sort, base: tabHref({ q: query.q }) },

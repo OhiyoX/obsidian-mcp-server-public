@@ -15,11 +15,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { armInteractionObservers } from '../proto-parity/interaction.mjs';
 import { startAdminLayoutFixture } from './admin-layout-fixture.mjs';
-import { seedHostileLabelPolicy } from '../proto-parity/seed.mjs';
+import { seedHostileLabelConstraint } from '../proto-parity/seed.mjs';
 import { clientSinkFailures, probeInjectionSurface, XSS_PAYLOADS } from '../proto-parity/injection.mjs';
 import { ADMIN_CLIENT_MODULES, CLIENT_SCRIPT_BASE } from '../proto-parity/policy.mjs';
 import { runProbe } from '../proto-parity/probe.mjs';
-import { PARITY_PAGES } from '../proto-parity/spec.mjs';
 
 const VIEWPORT = { width: 1440, height: 900 };
 
@@ -119,7 +118,7 @@ export async function registerSecurityChecks(ctx, deps) {
       for (const [label, url] of [
         ['accounts', `${base}/admin/auth?tab=accounts`],
         ['keys', `${base}/admin/auth?tab=keys`],
-        ['authz', `${base}${PARITY_PAGES.find((entry) => entry.id === 'authz').live}`],
+        ['authz 定时授权', `${base}/admin/auth/authz`],
         ['audit', `${base}/admin/auth?tab=audit`],
       ]) {
         await page.goto(url, { waitUntil: 'load' });
@@ -152,7 +151,7 @@ export async function registerSecurityChecks(ctx, deps) {
       const visited = [
         ['accounts 列表', '/admin/auth?tab=accounts'],
         ['keys 列表', '/admin/auth?tab=keys'],
-        ['authz 列表', PARITY_PAGES.find((entry) => entry.id === 'authz').live],
+        ['authz 列表', '/admin/auth/authz'],
         ['audit 列表', '/admin/auth?tab=audit'],
       ];
       for (const [label, url] of visited) {
@@ -241,26 +240,29 @@ export async function registerSecurityChecks(ctx, deps) {
   tracePhase?.('admin-security', { seedingFailures: seeded.errors.length, surfaces: trace.surfaces.length });
 
   /**
-   * The hostile POLICY LABEL — the one payload no route can store any more.
+   * The hostile CONSTRAINT LABEL — a value the plane still stores and still renders.
    *
-   * Task 3 froze every legacy policy write (all seven refuse with 409), so the positive control cannot
-   * land this payload through the shared fixture. It gets its own fixture instead, seeded the way an
-   * operator's legacy save would have left it: in the store file, before the process starts
-   * (`seedHostileLabelPolicy`). The claim is then checked where the value is really rendered — the list
-   * row, the `?id=` drawer and the `?edit=` read-only view — and it must arrive as TEXT: the payload is
-   * present, escaped, with no executable node and no `on*` attribute.
+   * The legacy policy page and its seven writes are retired, so the payload cannot ride a policy any
+   * more. A constraint label is the value an operator writes today, and the plane renders it in three
+   * places, so it gets its own fixture: the document is planted in `data/authorization.json` before
+   * the process starts (`seedHostileLabelConstraint`). The claim is then checked where the value is
+   * really rendered — the list row, the `?id=` drawer and the `?edit=` editor — and it must arrive as
+   * TEXT: the payload is present, escaped, with no executable node and no `on*` attribute.
    */
-  await check('admin-security: 注入落地（正控）— 存进策略标签的恶意串在三处都渲染为文本，且不生成可执行节点', async () => {
+  await check('admin-security: 注入落地（正控）— 存进约束标签的恶意串在三处都渲染为文本，且不生成可执行节点', async () => {
     const hostileRoot = path.join(root, 'admin-layout-hostile-label');
     await fs.mkdir(hostileRoot, { recursive: true });
     const hostileErrors = [];
-    const hostile = await startAdminLayoutFixture({ root: hostileRoot, appRoot, serverErrors: hostileErrors, prepareData: seedHostileLabelPolicy });
+    const hostile = await startAdminLayoutFixture({ root: hostileRoot, appRoot, serverErrors: hostileErrors, prepareData: seedHostileLabelConstraint });
     const payload = XSS_PAYLOADS.policyLabel;
     const context = await browser.newContext({ viewport: VIEWPORT });
     const failures = [];
     try {
       let ready = false;
-      for (let attempt = 0; attempt < 300; attempt += 1) {
+      // 60 s, the same patience as the scene's main fixture: `node server.js` from this checkout needs
+      // ~29 s to listen on a slow network mount (measured 2026-11-08), so a 30 s window red the gate
+      // on the machine rather than on the tree.
+      for (let attempt = 0; attempt < 600; attempt += 1) {
         try { if ((await fetch(`${hostile.base}/healthz`)).ok) { ready = true; break; } } catch { /* keep waiting */ }
         if (hostile.child.exitCode !== null) break;
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -269,14 +271,14 @@ export async function registerSecurityChecks(ctx, deps) {
       const login = await context.request.post(`${hostile.base}/admin/auth/login`, { form: { password: hostile.password }, maxRedirects: 0 });
       assert.equal(login.status(), 303, 'the hostile-label fixture must log in');
       const page = await context.newPage();
-      const list = await (await context.request.get(`${hostile.base}/admin/auth/access-policy`)).text();
-      const id = /access-policy\?id=([0-9a-fA-F-]{8,})/.exec(list)?.[1] ?? null;
-      if (!id) failures.push('播种的策略没有出现在列表页（没有 ?id= 入口）');
+      const list = await (await context.request.get(`${hostile.base}/admin/auth/authz`)).text();
+      const id = /authz\?id=([0-9a-fA-F-]{8,})/.exec(list)?.[1] ?? null;
+      if (!id) failures.push('播种的约束没有出现在列表页（没有 ?id= 入口）');
       for (const [label, url] of [
-        ['列表', `${hostile.base}/admin/auth/access-policy`],
+        ['列表', `${hostile.base}/admin/auth/authz`],
         ...(id ? [
-          ['?id= 抽屉', `${hostile.base}/admin/auth/access-policy?id=${id}`],
-          ['?edit= 只读视图', `${hostile.base}/admin/auth/access-policy?edit=${id}`],
+          ['?id= 抽屉', `${hostile.base}/admin/auth/authz?id=${id}`],
+          ['?edit= 编辑器', `${hostile.base}/admin/auth/authz?edit=${id}`],
         ] : []),
       ]) {
         await page.goto(url, { waitUntil: 'load' });

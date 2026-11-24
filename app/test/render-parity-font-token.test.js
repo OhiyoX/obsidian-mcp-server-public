@@ -147,8 +147,10 @@ test("the gate pins both document hosts and requires them to consume the token",
 });
 
 test("the Chromium job wires the font gate and uploads its artifacts", () => {
+  // 2026-11-19: the font gate used to be wired into the Chromium job the owner retired on
+  // 2026-11-14. The runner keeps its output contract; the workflow must not claim to run it.
+  const runner = fs.readFileSync(path.resolve(appRoot, "scripts/render-parity-phase1-font.mjs"), "utf8");
+  assert.match(runner, /RENDER_PARITY_OUTPUT/);
   const ci = fs.readFileSync(path.resolve(appRoot, "..", ".github/workflows/ci.yml"), "utf8");
-  assert.match(ci, /node scripts\/render-parity-phase1-font\.mjs/);
-  assert.match(ci, /name: render-parity-phase1-font/);
-  assert.match(ci, /RENDER_PARITY_OUTPUT: \$\{\{ runner\.temp \}\}\/render-parity-font/);
+  assert.doesNotMatch(ci, /render-parity-phase1-font\.mjs/, "the retired font step must not come back quietly");
 });

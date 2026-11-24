@@ -832,6 +832,18 @@ async function waitForFirstRow(ctx, expected) {
 
 // Deterministic start for every parity scenario: desktop viewport, the primary
 // fixture Vault, the Base document opened from the Explorer at a clean URL.
+/** The 40-row Base, opened the same way `openParityBase` opens the seven-row one. */
+async function openBulkBase(ctx) {
+  await ctx.page.setViewportSize({ width: 1440, height: 1000 });
+  await gotoApp(ctx);
+  await waitForCatalog(ctx);
+  const row = ctx.page.locator(PARITY.baseRow(ctx.fixtures.files.bulkBase)).first();
+  await row.waitFor({ state: 'visible', timeout: 10000 });
+  await row.click({ timeout: 5000 });
+  await ctx.page.locator(selectors.baseSurface).first().waitFor({ state: 'visible', timeout: 10000 });
+  await waitForRows(ctx);
+}
+
 async function openParityBase(ctx) {
   await ctx.page.setViewportSize({ width: 1440, height: 1000 });
   await gotoApp(ctx);
@@ -1097,6 +1109,17 @@ const PARITY_ITEMS = [
       await waitForRows(ctx);
       const reloaded = await ctx.page.locator(PARITY.col('file.name')).first().evaluate((col) => col.style.width);
       assert.equal(reloaded, after, 'the width must survive a reload');
+
+      // Leave the fixture as it was found: the override is in localStorage, shared by every later
+      // scene in this run, and a wider column makes the parity Base overflow at 1440 (bases/parity/28
+      // measures exactly that and would have nothing left to prove).
+      await ctx.page.evaluate(() => {
+        for (const key of Object.keys(localStorage)) if (key.startsWith('obsidian-web.base-view-config:v1')) localStorage.removeItem(key);
+      });
+      await ctx.page.reload();
+      await waitForRows(ctx);
+      const restored = await ctx.page.locator(PARITY.col('file.name')).first().evaluate((col) => col.style.width);
+      assert.equal(restored, before, 'dropping the override must restore the default width');
     },
   },
   {
@@ -1104,7 +1127,9 @@ const PARITY_ITEMS = [
     title: 'the table box scrolls vertically while the header stays pinned',
     description: 'scrollHeight > clientHeight, the sticky header stays put and the page does not scroll',
     async run(ctx) {
-      await openParityBase(ctx);
+      // A forty-row Base: the seven-row parity Base fills a 420px viewport exactly and therefore
+      // has no scroll range, so the contract could never hold on it (issue #747).
+      await openBulkBase(ctx);
       await ctx.page.setViewportSize({ width: 1440, height: 420 });
       await sleep(ctx, 200);
       const metrics = await ctx.page.evaluate(() => {
@@ -1170,6 +1195,86 @@ const PARITY_ITEMS = [
       }));
       assert.equal(outline.items, 0, `the note headings must not survive into the Base, saw ${outline.items}`);
       assert.ok(typeof outline.empty === 'string' && outline.empty.length > 0, 'the outline must show its empty state text');
+    },
+  },
+  {
+    item: 28,
+    title: 'the wheel scrolls a wide table sideways, and only when it overflows',
+    description: 'deltaX and Shift+deltaY move .base-table-wrap without moving the page; a plain deltaY and a non-overflowing table keep native behaviour',
+    async run(ctx) {
+      // Same gesture the Live editor routes (document/table-wheel-scroll.js).
+      await openParityBase(ctx);
+      const geometry = () => ctx.page.evaluate(() => {
+        const wrap = document.querySelector('.base-table-wrap');
+        return { scrollWidth: wrap.scrollWidth, clientWidth: wrap.clientWidth, scrollLeft: wrap.scrollLeft };
+      });
+
+      // Negative control first: at 1440 the parity Base fits, so the same event must stay native.
+      const fitted = await geometry();
+      assert.ok(fitted.scrollWidth <= fitted.clientWidth + 1, `the parity Base must fit at 1440: ${JSON.stringify(fitted)}`);
+      const unconsumed = await ctx.page.evaluate(() => {
+        const wrap = document.querySelector('.base-table-wrap');
+        const cell = wrap.querySelector('tbody td');
+        const event = new WheelEvent('wheel', { deltaX: 60, deltaY: 0, bubbles: true, cancelable: true });
+        const consumed = cell.dispatchEvent(event) === false;
+        return { consumed, scrollLeft: wrap.scrollLeft };
+      });
+      assert.equal(unconsumed.consumed, false, 'a table without horizontal overflow must not consume the wheel');
+      assert.equal(unconsumed.scrollLeft, 0);
+
+      // Narrow pane: the table now overflows sideways, like the Live table viewport.
+      await ctx.page.setViewportSize({ width: 480, height: 800 });
+      await sleep(ctx, 200);
+      const wide = await geometry();
+      assert.ok(wide.scrollWidth > wide.clientWidth + 1, `the table must overflow sideways: ${JSON.stringify(wide)}`);
+
+      const dispatch = (init) => ctx.page.evaluate((options) => {
+        const wrap = document.querySelector('.base-table-wrap');
+        wrap.scrollLeft = 0;
+        const cell = wrap.querySelector('tbody td');
+        const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, ...options });
+        const consumed = cell.dispatchEvent(event) === false;
+        return { consumed, scrollLeft: wrap.scrollLeft, pageScrollLeft: (document.scrollingElement || document.documentElement).scrollLeft };
+      }, init);
+
+      const tilt = await dispatch({ deltaX: 60, deltaY: 0 });
+      assert.equal(tilt.consumed, true, 'a tilt/trackpad deltaX must be consumed');
+      assert.equal(tilt.scrollLeft, 60, 'deltaX must move the table sideways');
+      assert.equal(tilt.pageScrollLeft, 0, 'the page itself must not scroll');
+
+      const shifted = await dispatch({ deltaX: 0, deltaY: 60, shiftKey: true });
+      assert.equal(shifted.consumed, true, 'Shift+deltaY must be consumed');
+      assert.equal(shifted.scrollLeft, 60, 'Shift+deltaY must move the table sideways');
+
+      const lineMode = await dispatch({ deltaX: 0, deltaY: 3, shiftKey: true, deltaMode: 1 });
+      assert.equal(lineMode.scrollLeft, 48, 'a line-mode delta is 16px per line');
+
+      const vertical = await dispatch({ deltaX: 0, deltaY: 60 });
+      assert.equal(vertical.consumed, false, 'a plain vertical wheel must stay with the browser');
+      assert.equal(vertical.scrollLeft, 0, 'a plain vertical wheel must not move the table sideways');
+
+      // Real trusted input over the table: the box moves, the page does not.
+      await ctx.page.evaluate(() => { document.querySelector('.base-table-wrap').scrollLeft = 0; });
+      const box = await ctx.page.locator('.base-table-wrap').boundingBox();
+      await ctx.page.mouse.move(box.x + box.width / 2, box.y + Math.min(60, box.height / 2));
+      await ctx.page.mouse.wheel(120, 0);
+      await sleep(ctx, 200);
+      const wheeled = await ctx.page.evaluate(() => {
+        const wrap = document.querySelector('.base-table-wrap');
+        return { scrollLeft: wrap.scrollLeft, windowX: window.scrollX, windowY: window.scrollY };
+      });
+      assert.ok(wheeled.scrollLeft > 0, `a real horizontal wheel must scroll the table: ${JSON.stringify(wheeled)}`);
+      assert.equal(wheeled.windowX, 0);
+      assert.equal(wheeled.windowY, 0);
+
+      await ctx.page.keyboard.down('Shift');
+      await ctx.page.mouse.wheel(0, 120);
+      await ctx.page.keyboard.up('Shift');
+      await sleep(ctx, 200);
+      const shiftedWheel = await ctx.page.evaluate(() => document.querySelector('.base-table-wrap').scrollLeft);
+      assert.ok(shiftedWheel > wheeled.scrollLeft, `a real Shift+wheel must keep moving the table: ${shiftedWheel} <= ${wheeled.scrollLeft}`);
+
+      await ctx.page.setViewportSize({ width: 1440, height: 1000 });
     },
   },
 ];

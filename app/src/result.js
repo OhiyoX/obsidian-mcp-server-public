@@ -1,6 +1,16 @@
-export function ok(data) {
+// O2 — opt-in compact text channel. Default stays the historical pretty JSON,
+// byte for byte; `structuredContent` always carries the same object, so only
+// the duplicate pretty copy on the wire is affected.
+const TEXT_ENCODINGS = {
+  "pretty-json": (data) => JSON.stringify(data, null, 2),
+  "compact-json": (data) => JSON.stringify(data),
+};
+
+export function ok(data, { textEncoding = "pretty-json" } = {}) {
+  const encode = TEXT_ENCODINGS[textEncoding];
+  if (!encode) throw new RangeError(`unknown textEncoding: ${textEncoding}`);
   return {
-    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+    content: [{ type: "text", text: encode(data) }],
     structuredContent: data,
   };
 }

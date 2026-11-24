@@ -47,6 +47,7 @@ git("add", "-A");
 git("commit", "-q", "-m", "seed");
 
 const { trackGitMutation } = await import("../src/git.js");
+const { recoverPendingBatches } = await import("../src/batch-journal.js");
 
 test("#736: recovery finishes a committed journal with Git auto-commit on and no request context", async () => {
   const target = path.join(vault, "recovered.md");
@@ -80,6 +81,38 @@ test("#736: recovery finishes a committed journal with Git auto-commit on and no
   assert.equal(recovered.status, 0, recovered.stderr);
   assert.doesNotMatch(recovered.stderr, /require _meta/, "recovery must not ask for a request author");
   assert.deepEqual(await fs.readdir(journalRoot), [], "the finished journal is cleaned up");
+});
+
+test("#736: a refused startup names the journal it refused on", async () => {
+  const target = path.join(vault, "conflicted.md");
+  const script = `
+    import { withRequestContext } from './src/request-context.js';
+    import { atomicWriteBatch } from './src/batch-write.js';
+    import path from 'node:path';
+    await withRequestContext({ author: { agent: 'recovery-author', model: 'journal-test' } }, () =>
+      atomicWriteBatch([{ absPath: path.join(process.env.VAULT_PATH, 'conflicted.md'),
+        data: 'committed body', mustNotExist: true }],
+        { afterCommit: () => process.exit(84) }));
+  `;
+  const crashed = spawnNodeSync(["--input-type=module", "-e", script], {
+    cwd: path.resolve("."), env: { ...process.env }, encoding: "utf-8",
+  });
+  assert.equal(crashed.status, 84, crashed.stderr);
+  assert.equal(await fs.readFile(target, "utf-8"), "committed body");
+
+  const journalRoot = path.join(data, "mutation-journal");
+  const [id] = await fs.readdir(journalRoot);
+  // An external writer wins the race after the crash, so the committed revision no longer matches.
+  await fs.writeFile(target, "external edit");
+
+  await assert.rejects(recoverPendingBatches(), (error) => {
+    assert.match(error.message, new RegExp(`Mutation journal recovery failed for ${id}:`),
+      "the operator must not have to guess which journal refused the start");
+    assert.match(error.message, /Committed mutation changed externally: conflicted\.md/);
+    assert.doesNotMatch(error.message, new RegExp(vault), "no absolute Vault path in the startup log");
+    return true;
+  });
+  assert.deepEqual(await fs.readdir(journalRoot), [id], "the conflicted journal is preserved for the operator");
 });
 
 test("#736: the journal author reaches Git without a request context, and the guard still holds", () => {

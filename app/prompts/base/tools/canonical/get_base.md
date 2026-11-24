@@ -1,0 +1,1 @@
+Read, parse, and validate an Obsidian .base YAML document. Returns `revision` — the sha256 of the document's bytes, the same token this server's write faces use as their precondition — so it can be passed straight into `patch_base`'s `ifMatch` or `write_base`'s `ifMatch`.

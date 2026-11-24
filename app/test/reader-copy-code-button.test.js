@@ -533,9 +533,19 @@ test("the stylesheet-wide scan sees every rule that targets the code-block boxes
   const code = rules.filter((rule) => rule.target.startsWith("pre > code"));
   assert.ok(pre.length >= 4, `the scan must find the \`<pre>\` rules, not zero (found ${pre.length})`);
   assert.ok(code.length >= 1, `the scan must find the \`pre > code\` rule (found ${code.length})`);
-  for (const selector of [".preview pre", ".preview pre code", ".markdown-rendered pre"]) {
+  // #590 F1: the vacuity guard asks the SCANNER, never a literal selector. Pinning the
+  // three spellings above made a semantically equal rename (`.preview pre code` ->
+  // `.markdown-rendered pre code`) report a broken scan while the scan was right. A
+  // synthetic sheet carries the spellings the scanner claims to support instead.
+  const spellings = codeBlockRules([
+    ".preview pre { padding: 0; }",
+    ".markdown-rendered pre { padding: 0; }",
+    ".preview :is(pre) { padding: 0; }",
+    ".preview pre code { display: block; }",
+  ].join("\n"));
+  for (const selector of [".preview pre", ".markdown-rendered pre", ".preview :is(pre)", ".preview pre code"]) {
     assert.ok(
-      rules.some((rule) => rule.selector === selector),
+      spellings.some((rule) => rule.selector === selector),
       `the scan must see \`${selector}\` (a scanner that matches nothing makes every nail below vacuous)`,
     );
   }
@@ -591,6 +601,11 @@ test("the scan is not vacuous: each way of writing the regression trips it (#586
     ["a second rule appended at the end of the file", `${CANONICAL}\n.preview pre code { width: max-content; }`],
     ["a `pre` box declaration that changes the block height", `${CANONICAL}\npre { padding: 26px 15px; }`],
     ["a declaration inside a media query", `${CANONICAL}\n@media (min-width: 10px) { .preview pre code { inline-size: max-content; } }`],
+    // #590 F3: the shape review proposed waiving. Desktop 1.13.7 has no `pre` rule inside
+    // any `@media` block (helpers/code-block-css.mjs records the measurement), so there is
+    // no parity argument for the waiver — a narrow-screen box change is a deliberate
+    // divergence and must be argued in review, not slipped past the nail.
+    ["a media-scoped `pre` box change", `${CANONICAL}\n@media (max-width: 720px) { .preview pre { padding: 8px 10px; } }`],
     ["an `!important` variant", `${CANONICAL}\n.preview pre code { max-width: max-content !important; }`],
     ["a declaration inside an `@layer`", `${CANONICAL}\n@layer later { .preview pre { padding: 26px 15px; } }`],
     ["an `:is()`-spelled selector", `${CANONICAL}\n.preview :is(pre) code { float: left; }`],
@@ -608,5 +623,25 @@ test("the scan is not vacuous: each way of writing the regression trips it (#586
     codeBlockGeometryViolations(`${CANONICAL}\n:not(pre) > code { padding: 2px 4px; }`),
     [],
     "inline code is outside the code-block geometry",
+  );
+
+  // #590 F2: declaring a fill does not shrink-to-fit, so it keeps no scroll range on the
+  // `<pre>`. Real Chromium measured `pre.scrollLeftMax=0` for both spellings below while
+  // the button did not move; the scan must not call them regressions.
+  for (const fills of ["width: 100%", "inline-size: stretch", "width: -webkit-fill-available"]) {
+    assert.deepEqual(
+      codeBlockGeometryViolations(`${CANONICAL}\n.preview pre code { ${fills}; }`),
+      [],
+      `\`${fills}\` still fills the parent, so it is not a shrink-to-fit regression`,
+    );
+  }
+
+  // #590 F1: an equivalent rename must be scanned under its new name, not reported as a
+  // missing selector. The vacuity guard below asks the scanner, so this stays green.
+  const RENAMED = CANONICAL.replace(/\.preview pre code/g, ".markdown-rendered pre code");
+  assert.deepEqual(codeBlockGeometryViolations(RENAMED), [], "an equivalent selector rename must stay green");
+  assert.ok(
+    codeBlockGeometryViolations(`${RENAMED}\n.markdown-rendered pre code { width: max-content; }`).length > 0,
+    "the renamed rule must still be policed, or the rename would smuggle the regression past the scan",
   );
 });

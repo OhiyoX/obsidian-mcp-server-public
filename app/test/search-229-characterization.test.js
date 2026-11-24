@@ -157,7 +157,7 @@ test("S229-05 quoted phrases stay contiguous", async () => {
 });
 
 // Exact result shape: score formula, reasons prefix, snippet structure.
-test("hybridSearch exact results keep their public shape and score formula", async () => {
+test("hybridSearch exact results keep their public shape and the exact-hit score band", async () => {
   const result = await hybrid(chineseRecords, "禁止自动合并", { semantic: false });
   assert.equal(result.hybridUsed, false);
   assert.equal(result.semanticUsed, false);
@@ -171,8 +171,11 @@ test("hybridSearch exact results keep their public shape and score formula", asy
   );
   assert.equal(hit.path, "Notes/合并策略.md");
   assert.equal(hit.matchCount, 1);
-  assert.equal(hit.score, 1 + Math.min(1, 20) / 20);
-  assert.deepEqual(hit.reasons, ["exact", "query:禁止自动合并"]);
+  // The score formula changed in S3 (field-weighted BM25F squashed into (1, 2)); the public
+  // shape, matchCount and the exact-hit band stay part of the contract.
+  assert.ok(hit.score > 1 && hit.score < 2);
+  // S3 appends one `field:<name>` reason per matched field, after the existing ones.
+  assert.deepEqual(hit.reasons, ["exact", "query:禁止自动合并", "field:body"]);
   assert.ok(Array.isArray(hit.snippets) && hit.snippets.length >= 1);
   assert.ok(hit.snippets[0].includes("禁止自动合并"));
   assert.equal(hit.stat.modified, "2026-10-04T00:00:00.000Z");

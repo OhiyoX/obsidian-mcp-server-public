@@ -156,12 +156,12 @@ test("sidebar chrome styles exist for the tabs, panels and grouped results", () 
   assert.match(css, /\.search-snippet mark/, "the found text uses the real highlight token");
 });
 
-test("app.js wires the panel chrome without growing past the architecture budget", () => {
-  assert.match(appSource, /import \{ initializeSidebarPanels \} from "\.\.\/features\/explorer\/sidebar-panels\.js"/);
+test("app.js wires the panel chrome without growing past the architecture budget", () => {  assert.match(appSource, /import \{ initializeSidebarPanels \} from "\.\.\/features\/explorer\/sidebar-panels\.js"/);
   assert.match(appSource, /initializeSidebarPanels\(/);
   assert.doesNotMatch(appSource, /#new-note/, "the new-note control belongs to the sidebar module, not core wiring");
   assert.doesNotMatch(appSource, /#files-toggle"\)\.onclick/, "the collapse behaviour moved into the sidebar module");
-  assert.ok(appSource.split("\n").length <= 500);
+  // The hard code-line gate was retired by owner decision (2026-11-13); the wiring checks in
+  // this test remain the contract.
   // The two hosts are wired through the explorer wiring (one list per panel).
   assert.match(appSource, /searchHost/);
 });

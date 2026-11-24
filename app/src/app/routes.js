@@ -240,6 +240,9 @@ export function createWebAppRouter({ provider, secureCookie = true, publishServi
       const title = path.posix.basename(published.record.path, ".md") || "Published note";
       applyPublishHeaders(res);
       res.send(publishPage({ title, content: publicPublishMarkdown(published.note.content), publishedAt: published.record.createdAt, locale: localeInfo(req).locale }));
+      // Counted only after the page was served: every refusal above answered 404. An injected
+      // minimal service (a test stub) has no counter and simply does not count.
+      publishService.recordView?.(published.record.id);
     } catch (error) {
       next(error);
     }
@@ -275,6 +278,7 @@ export function createWebAppRouter({ provider, secureCookie = true, publishServi
         notes: notes.map((note) => ({ title: note.title, href: `/publish/d/${folder.record.id}/n/${note.token}` })),
         locale: localeInfo(req).locale,
       }));
+      publishService.recordView?.(folder.record.id);
     } catch (error) {
       next(error);
     }
@@ -302,6 +306,7 @@ export function createWebAppRouter({ provider, secureCookie = true, publishServi
       }
       applyPublishHeaders(res);
       res.send(publishPage({ title: entry.title, content: publicPublishMarkdown(note.content), publishedAt: folder.record.createdAt, locale: localeInfo(req).locale }));
+      publishService.recordView?.(folder.record.id);
     } catch (error) {
       next(error);
     }

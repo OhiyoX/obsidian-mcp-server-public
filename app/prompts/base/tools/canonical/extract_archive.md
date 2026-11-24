@@ -1,0 +1,1 @@
+Validate and extract a ZIP into a Vault directory. Defaults to dryRun=true; path traversal, symlinks, encrypted/ZIP64 files, duplicates, protected internals, excessive expansion, and unintended overwrite are rejected.

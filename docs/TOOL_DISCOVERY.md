@@ -88,6 +88,20 @@ Profiles:
 - `module` — the union of the selected source-registration toolsets.
 - `custom` — an explicit canonical tool allowlist.
 
+### Keep at least one write tool reachable (#276)
+
+`core` is six read tools. A host that exposes this server as `deferred` and keeps only `core`
+direct leaves every mutating tool behind search, and an agent that never searched can conclude the
+server cannot write at all (measured in #276: 33 write tools, none direct, zero Chinese hits in the
+host's BM25). Two rules follow:
+
+- Give every capability class at least one `direct` representative. For this server that means one
+  read entry (`get_note`), the memory contract (`agent_bootstrap`) and at least one write entry
+  (`write_note`, or `obsidian_edit_write_nonidempotent` on the v2 domain surface).
+- `agent_bootstrap` names the write tools it advertises: `writes.tools` lists every tool whose
+  scope table requires `obsidian.write`, derived from `capability-catalog.js` so it cannot drift
+  from what ships. On a read-only deployment the list is empty and `writes.enabled` is `false`.
+
 If the configuration is absent, unknown, or internally inconsistent (for
 example, a `full` profile with an allowlist, an unknown toolset, or an unknown
 tool name), the server logs one bounded, secret-free warning and falls back to
@@ -159,6 +173,18 @@ The tool remains registered in the SDK; the policy never calls
 `hiddenByScope` counts catalog tools the request lacks scopes for.
 `hiddenByPolicy` counts authorized tools removed by the profile or `denyTools`.
 No hidden tool names are included.
+
+A second block states the write capability, because `server_info` is direct in every host while the
+write tools usually are not (#276):
+
+```json
+{ "enabled": true, "count": 37, "examples": ["write_note", "append_to_note", "patch_note", "move_note"], "fullList": "agent_bootstrap" }
+```
+
+`count` and `examples` come from the scope table in `capability-catalog.js`, so a new mutating tool
+cannot leave a stale number behind. A read-only deployment (`OBSIDIAN_READ_ONLY=true`) reports
+`enabled: false`, `count: 0` and no examples: naming a tool it cannot serve would be a lie. The
+complete list stays in `agent_bootstrap.writes.tools`.
 
 ## What this does not do
 
@@ -387,3 +413,15 @@ tree the same 5-branch enum is reachable **from the server side** with
 alone does not clear the transport/policy layer; the discriminator is the
 caller's own `hiddenByScope` / `hiddenByPolicy` / `canonicalVisibleToolCount`
 reading, which is `0 / 0 / 88` on production.
+
+## Prompt text revisions (issue #825)
+
+Tool descriptions, compact group intents and MCP prompt copy come from the Base Prompt pack (`app/prompts/base/`), so their text can change without a rebuild or restart.
+
+Three states are reported separately, and only the first two are the server's to claim:
+
+- **PERSISTED** — a published revision is durable in `<DATA_PATH>/agent-prompts.json` and its pack under `<DATA_PATH>/prompt-registry/packs/`. A failed write leaves the previous revision serving.
+- **SERVER-VISIBLE** — the next `tools/list`, `agent_bootstrap`, `prompts/list` or `prompts/get` of an already open session returns the new text, because each request pins one snapshot of the registry. `server_info.promptRegistry` reports `status`, `revision`, `baseDigest`, `bundledBaseDigest`, `effectiveDigest`, `overrideCount` and `drift`.
+- **HOST-ADOPTED** — whether a client refetched its lists and handed the new text to its model. The server sends `notifications/tools/list_changed` and `notifications/prompts/list_changed` after a publish and counts attempts and failures; it cannot observe adoption. A host that shows old text must refetch the list or start a new conversation; nothing here disconnects sessions to force it.
+
+What a text revision cannot change: tool names, `inputSchema`/`outputSchema`, annotations, Scope, Vault allowlists, authorization decisions, compact routing and action lists, prompt names, argument schemas and message roles. Those stay code-owned, so editing copy never widens what a client may do.

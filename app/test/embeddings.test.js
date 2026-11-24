@@ -158,3 +158,51 @@ test("normal embedding uses only a healthy edge and does not fall back to center
     await new Promise((resolve) => edgeServer.close(resolve));
   }
 });
+
+test("a background index batch retries a retryable 503 and keeps its vectors", async () => {
+  let calls = 0;
+  const flakyServer = http.createServer(async (request, response) => {
+    if (request.url === "/v1/models") { response.end(JSON.stringify({ data: [{ id: "test-model" }] })); return; }
+    if (request.url === "/v1/embeddings") {
+      calls += 1;
+      if (calls === 1) {
+        response.writeHead(503, { "Content-Type": "application/json", "Retry-After": "1" });
+        response.end(JSON.stringify({ error: { message: "Edge embedding request failed and local fallback is disabled", code: "edge_unavailable" } }));
+        return;
+      }
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({ data: body.input.map((text, index) => ({ index, embedding: [text.length, 1] })) }));
+      return;
+    }
+    response.writeHead(404).end();
+  });
+  const flakyUrl = await listenFetchSafeOrigin(flakyServer);
+  try {
+    const client = createEmbeddingClient({ provider: "openai-compatible", baseUrl: flakyUrl, model: "test-model", apiKey: "test-key", timeoutMs: 2000, edgeBaseUrl: "", edgeRegistryUrl: "" });
+    assert.deepEqual(await client.embed(["hi", "hello"], { priority: "background" }), [[2, 1], [5, 1]]);
+    assert.equal(calls, 2, "one retry must follow the 503");
+  } finally { await new Promise((resolve) => flakyServer.close(resolve)); }
+});
+
+test("an interactive embedding request does not retry a 503", async () => {
+  let calls = 0;
+  const busyServer = http.createServer((request, response) => {
+    if (request.url === "/v1/models") { response.end(JSON.stringify({ data: [{ id: "test-model" }] })); return; }
+    if (request.url === "/v1/embeddings") {
+      calls += 1;
+      response.writeHead(503, { "Content-Type": "application/json", "Retry-After": "1" });
+      response.end(JSON.stringify({ error: { message: "Edge embedding request failed and local fallback is disabled", code: "edge_unavailable" } }));
+      return;
+    }
+    response.writeHead(404).end();
+  });
+  const busyUrl = await listenFetchSafeOrigin(busyServer);
+  try {
+    const client = createEmbeddingClient({ provider: "openai-compatible", baseUrl: busyUrl, model: "test-model", apiKey: "test-key", timeoutMs: 2000, edgeBaseUrl: "", edgeRegistryUrl: "" });
+    await assert.rejects(() => client.embed("hi", { priority: "interactive" }), /HTTP 503/);
+    assert.equal(calls, 1, "an interactive request must fail fast");
+  } finally { await new Promise((resolve) => busyServer.close(resolve)); }
+});

@@ -136,7 +136,6 @@ export async function collectAdminBoundaryRows(ctx) {
     { urlPath: `/admin/auth${capability.replace(/^ADMIN GET /, "")}${query}`, headers: { ...headers, ...extra } },
     "instance",
   );
-  const policies = () => import("./permission-access-policy.js").then((module) => module.readPolicyDocument(dataPath));
 
   // --- reads ----------------------------------------------------------------------------------
   await get("ADMIN GET /language", "?lang=en");
@@ -155,47 +154,14 @@ export async function collectAdminBoundaryRows(ctx) {
   await post("ADMIN POST /vault-git/save", { vaultId: "vault", expectedRevision: gitRevision });
   await post("ADMIN POST /vault-git/repair", { confirm: "wrong-repair-token" }, "instance", ZH);
 
-  // --- the permission editor: its five remaining writes on a policy that no actor matches ------
-  // Task 3 froze the legacy write routes, so the policy the earlier `ADMIN POST …/create` row used to
-  // store is seeded through the Admin *service* instead (same store, same CAS, same file). It matches
-  // no actor of this run, so neither the seed nor the refusals below can gate a later row.
-  const accessPolicy = plane.accessPolicy?.admin ?? null;
-  if (accessPolicy) {
-    const seeded = await accessPolicy.createPolicy({
-      label: "baseline window",
-      mode: "suspend",
-      enabled: true,
-      subjects: ["oauth-user:00000000-0000-4000-8000-000000000000"],
-      capabilities: ["scope:obsidian.read"],
-      timezone: "UTC",
-      weekly: { mon: [["09:00", "18:00"]] },
-    });
-    if (!seeded?.ok) throw new Error(`the baseline policy could not be seeded: ${JSON.stringify(seeded).slice(0, 200)}`);
-  }
-  const stored = await policies();
-  const created = stored.policies.find((policy) => policy.label === "baseline window");
-  // Each write bumps the store revision; read it fresh instead of counting.
-  const currentRevision = async () => (await policies()).revision;
-  let revision = stored.revision;
-  if (created) {
-    await post("ADMIN POST /access-policy/update", { id: created.id, expectedRevision: revision, label: "baseline window renamed", subjects: ["oauth-user:00000000-0000-4000-8000-000000000000"], capabilities: ["scope:obsidian.read"], timezone: "UTC", w_mon_from_0: "09:00", w_mon_to_0: "18:00" });
-    // A second subject that no actor of this run has: a policy must never gate a later row.
-    revision = await currentRevision();
-    await post("ADMIN POST /access-policy/subjects", { id: created.id, subject: "oauth-user:00000000-0000-4000-8000-00000000000a", tab: "keys", expectedRevision: revision });
-    revision = await currentRevision();
-    await post("ADMIN POST /access-policy/toggle", { id: created.id, enabled: "false", confirmed: "1", expectedRevision: revision });
-    await post("ADMIN POST /access-policy/preview", { subject: `oauth-user:${ctx.userId}`, view: "list" });
-    await post("ADMIN POST /access-policy/repair", { document: "{}", confirm: "wrong-repair-token" });
-    revision = await currentRevision();
-    await post("ADMIN POST /access-policy/delete", { id: created.id, expectedRevision: revision, confirm: "baseline window renamed" });
-  }
-
   // --- API keys: create, widen, delete a throwaway key ----------------------------------------
   await post("ADMIN POST /api-key/create", { label: "boundary key", allowedScope: ["obsidian.read"], allowedVault: ["vault"] });
   const keys = await plane.provider.authorizationSnapshot();
   const boundaryKey = keys.apiKeys.find((key) => key.label === "boundary key");
   if (boundaryKey) {
     await post("ADMIN POST /api-key/scopes", { id: boundaryKey.id, allowedScope: ["obsidian.read", "obsidian.write"], allowedVault: ["vault"] });
+    // #782: the Agent label is display-only, but its write is a boundary like any other.
+    await post("ADMIN POST /api-key/agent", { id: boundaryKey.id, agent: "Boundary Agent" });
     await post("ADMIN POST /api-key/delete", { id: boundaryKey.id, confirm: "boundary key" });
   }
 

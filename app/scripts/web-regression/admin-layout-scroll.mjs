@@ -18,7 +18,7 @@ const PAGES = Object.freeze([
   ["tokens", "?tab=tokens"],
   ["publishes", "?tab=publishes"],
   ["audit", "?tab=audit"],
-  ["authz", "access-policy"],
+  ["authz", "authz?new=1"],
   ["vaults", "vault-git"],
 ]);
 
@@ -38,21 +38,12 @@ const measure = (page) => page.evaluate(`(() => {
 })()`);
 
 export async function registerDocumentScrollChecks(ctx) {
-  const { check, page, goto, tracePhase } = ctx;
+  const { check, page, goto, tracePhase, fixture } = ctx;
 
   await check("admin-layout: 页面本身不滚动（100vh 外壳），只有 .content 内部滚动", async () => {
     const pages = [...PAGES];
-    // The legacy editor is a read-only `?edit=` view now (`?new=1` renders the frozen list: there is no
-    // form to open), and a policy id is generated, so the first stored row names it. Its `.ped` grid is
-    // the second surface the 2026-10-31 defect came from, so it is scanned instead of dropped.
-    await goto("/admin/auth/access-policy");
-    const editRoute = await page.evaluate(`(() => {
-      const link = [...document.querySelectorAll('.main a[href*="?id="]')].find((node) => /\\?id=/.test(node.getAttribute('href') || ''));
-      if (!link) return null;
-      const url = new URL(link.getAttribute('href'), location.origin);
-      return url.pathname.replace('/admin/auth/', '') + url.search.replace('?id=', '?edit=');
-    })()`);
-    if (editRoute) pages.push(["authz-view", editRoute]);
+    // The constraint editor's `.ped` grid is the second surface the 2026-10-31 defect came from; the
+    // 定时授权 entry above already scans it through `?new=1`, so no second route is derived here.
     const report = [];
     for (const [id, route] of pages) {
       await goto(`/admin/auth/${route}`);
@@ -70,8 +61,20 @@ export async function registerDocumentScrollChecks(ctx) {
         assert.equal(position, "fixed", `${row.id}: a clipped real select must be position:fixed, not ${position}`);
       }
     }
-    // The audit page is the one that reproduces the defect (long list + pager select).
+    // The audit page is the one that reproduces the defect (long list + pager select), so it must
+    // really be long. The audit ring lives in the server process, so in the unsharded gate earlier
+    // scenes filled it — and a shard that runs this scene alone measured a four-row list, where the
+    // precondition could only fail. Seed the rows here instead of inheriting them: the list length
+    // is the gate's own input, not another scene's residue.
     const audit = report.find((row) => row.id === "audit");
+    if (!audit.contentScrolls) {
+      for (let round = 0; round < 3 && !audit.contentScrolls; round += 1) {
+        await page.request.post(`${fixture.base}/admin/auth/login`, { form: { password: fixture.password }, maxRedirects: 0 });
+      }
+      await goto("/admin/auth?tab=audit");
+      Object.assign(audit, await measure(page));
+      tracePhase?.("document-scroll-audit-seeded", audit);
+    }
     assert.ok(audit.contentScrolls, "the audit fixture must be long enough to overflow .content, or this guard proves nothing");
   });
 

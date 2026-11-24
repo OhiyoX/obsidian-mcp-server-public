@@ -230,10 +230,12 @@ test("#694: a secondary delete never touches the primary Vault's file or Trash (
   assert.equal(await exists(path.join(vaultFile("attachments", "same-name.pdf"))), true);
 });
 
-test("#694: the tool face is registered once with the contract's schema and hints", () => {
+test("#694: the tool face is registered once with the contract's schema and hints", async () => {
   const { config } = TOOLS.get("delete_file");
   assert.equal(config.title, "Delete Obsidian Attachment");
   assert.equal(config.annotations.destructiveHint, true);
   assert.deepEqual(Object.keys(config.inputSchema).sort(), ["ifMatch", "path"], "no `backup` switch exists (decision 5)");
-  assert.match(config.description, /no hard-delete option/i);
+  // The copy lives in the Base pack now; the descriptor is filled at tools/list time.
+  const { bundledBasePack } = await import("../src/prompt-registry/bundled.js");
+  assert.match(bundledBasePack().values["tools.canonical.delete_file.description"], /no hard-delete option/i);
 });

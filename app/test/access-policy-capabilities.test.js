@@ -230,8 +230,8 @@ test("expansion results are fresh, deterministic arrays", () => {
 
 test("capabilities.js restates no tool/scope/resource list and stays pure", async () => {
   const text = await readFile(MODULE_URL, "utf8");
-  const lines = text.split(/\r?\n/);
-  assert.ok(lines.length <= 500, `capabilities.js is ${lines.length} lines`);
+  // The hard code-line gate was retired by owner decision (2026-11-13); only the shape bans
+  // below remain.
   // The anti-duplication guard: no second copy of a canonical table.
   assert.doesNotMatch(text, /TOOLSET_TOOLS\s*=\s*\{/);
   assert.doesNotMatch(text, /MCP_TOOL_SCOPE_REQUIREMENTS\s*=\s*\{/);

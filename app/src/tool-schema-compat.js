@@ -92,6 +92,65 @@ export const WAVE1_INPUT_SCHEMA_WIDENINGS = Object.freeze(Object.fromEntries(
  * canonical evaluator, and a second JSON-Schema copy of them would be a second rule set to drift.
  */
 export const WAVE1_INPUT_SCHEMA_ADDITIONS = Object.freeze({
+  // B (#834, 2026-11-24): a rollback no longer needs a snapshot only — the same two tools take a
+  // Markdown note's committed bytes at a Vault Git revision. Both properties are optional and the
+  // versionId form is unchanged, so a Wave 1 caller sends the same request as before.
+  restore_version: Object.freeze([
+    Object.freeze({
+      property: "path",
+      spec: Object.freeze({ type: "string", minLength: 1 }),
+      reason: "B (#834): the note a Git-revision restore writes; alternates with versionId.",
+    }),
+    Object.freeze({
+      property: "revision",
+      spec: Object.freeze({ type: "string", minLength: 1, description: "Vault Git commit (4-40 hex), HEAD or HEAD~N; use with path instead of versionId. Markdown only." }),
+      reason: "B (#834): the commit to read the note from; alternates with versionId.",
+    }),
+  ]),
+  plan_restore_version: Object.freeze([
+    Object.freeze({
+      property: "path",
+      spec: Object.freeze({ type: "string", minLength: 1 }),
+      reason: "B (#834): preview target of a Git-revision restore; alternates with versionId.",
+    }),
+    Object.freeze({
+      property: "revision",
+      spec: Object.freeze({ type: "string", minLength: 1, description: "Vault Git commit (4-40 hex), HEAD or HEAD~N; use with path instead of versionId. Markdown only." }),
+      reason: "B (#834): preview source commit; alternates with versionId.",
+    }),
+  ]),
+  // S6 (#666): source provenance is real evidence, not free (about 220 bytes per item).
+  get_note_context: Object.freeze([
+    Object.freeze({
+      property: "includeProvenance",
+      spec: Object.freeze({ default: false, description: "Attach per-item source provenance and index freshness (about 220 bytes per item). Off by default.", type: "boolean" }),
+      reason: "S6 (#666): opt-in source provenance on the context bundle.",
+    }),
+  ]),
+
+  // S7 (2026-11-13, #667): `get_file` can return page-cited PDF text. Both inputs are optional and
+  // `encoding: "auto"` keeps its historical base64 answer, so an old caller is unaffected.
+  get_file: Object.freeze([
+    Object.freeze({
+      property: "pdfText",
+      spec: Object.freeze({ default: false, description: "Return page-cited text extracted from a PDF instead of base64.", type: "boolean" }),
+      reason: "S7 (#667): opt-in page-cited PDF text; absent, a PDF still reads as base64.",
+    }),
+    Object.freeze({
+      property: "maxChars",
+      spec: Object.freeze({ default: 20000, description: "pdfText only: total excerpt budget across pages.", type: "integer", minimum: 1, maximum: 200000 }),
+      reason: "S7: excerpt budget for pdfText; ignored by every other read.",
+    }),
+  ]),
+  // C4 (#668, 2026-11-14): `graph_health` can return reviewable link-repair proposals. Opt-in, and
+  // absent it changes nothing, so the historical audit payload stays byte-identical.
+  graph_health: Object.freeze([
+    Object.freeze({
+      property: "includeProposals",
+      spec: Object.freeze({ default: false, description: "Return `proposals` for reviewable link repairs: ambiguous targets as candidates only (never a chosen one) and single-candidate spelling fixes, each with the expectedRevision plan_note_changes takes. Executes nothing.", type: "boolean" }),
+      reason: "C4 (#668): opt-in proposals for the reviewed plan/apply path; the default answer is unchanged.",
+    }),
+  ]),
   // Task 8 (2026-11-08 folder publish): `manage_publish` publishes a directory when it is told
   // `kind: "folder"`. Optional, so the historical "one Markdown note" call is byte-identical.
   manage_publish: Object.freeze([
@@ -123,6 +182,49 @@ export const WAVE1_INPUT_SCHEMA_ADDITIONS = Object.freeze({
       reason: "#628: optional ad-hoc substring predicate, AND-combined with the filters.",
     }),
   ]),
+  // O5 (2026-11-13, token optimization): `get_note` gained the optional `ifRevision` so an agent
+  // can ask "has this changed?" without re-reading the body. Absent, the answer is today's note.
+  get_note: Object.freeze([
+    Object.freeze({
+      property: "ifRevision",
+      spec: Object.freeze({
+        description: "Optional revision returned by get_note; when it still matches, the answer is {path, revision, notModified: true} with no body.",
+        type: "string",
+        minLength: 1,
+      }),
+      reason: "O5: optional revision-aware conditional read; without it the full note is returned.",
+    }),
+  ]),
+  // O3 (2026-11-13) + S6 (#666): the three search-shaped tools gained the optional `view`
+  // projection and opt-in source provenance. Default `full` without provenance is today's payload
+  // byte for byte, so the historical inventory stays the baseline.
+  ...Object.fromEntries(Object.freeze([
+    ["search_notes", "about 225 bytes per hit"],
+    ["recall", "about 120 bytes per hit"],
+    ["find_related", "about 120 bytes per hit"],
+  ]).map(([name, cost]) => [name, Object.freeze([
+    Object.freeze({
+      property: "view",
+      spec: Object.freeze({
+        default: "full",
+        description: "Result detail: full (default, unchanged) keeps every field; standard drops excerpt text; brief keeps only path, revision, the totals/truncation state and the semantic status.",
+        type: "string",
+        enum: Object.freeze(["full", "standard", "brief"]),
+      }),
+      reason: "O3: optional result-detail projection; the default reproduces the historical payload.",
+    }),
+    Object.freeze({
+      property: "includeProvenance",
+      spec: Object.freeze({
+        default: false,
+        description: name === "search_notes"
+          ? `Attach per-hit source provenance and index freshness (${cost}). Off by default: it is evidence you ask for, not a tax on every search.`
+          : `Attach per-hit source provenance and index freshness (${cost}). Off by default.`,
+        type: "boolean",
+      }),
+      reason: "S6 (#666): opt-in source provenance; absent, the hit shape is unchanged.",
+    }),
+  ])])),
 });
 
 /**
@@ -152,6 +254,21 @@ export const WAVE1_OUTPUT_SCHEMA_ADDITIONS = Object.freeze({
   // nullable union rather than the default `string`, which would advertise a value that does not
   // exist before completion. Declared here (not by rewriting the inventory) so the frozen Wave 1
   // output contract stays byte-identical while any OTHER output drift still fails.
+  // B (#834, 2026-11-24): a restore now says where its bytes came from, and — when the note
+  // already existed — which snapshot of the previous bytes it wrote, so one call undoes it. Both
+  // are optional: the versionId form keeps the historical four fields only.
+  restore_version: Object.freeze([
+    Object.freeze({
+      property: "sourceRevision",
+      spec: Object.freeze({ type: "string", description: "sourceRevision value returned by the tool." }),
+      reason: "B (#834): names the Git commit a path + revision restore read, so the answer is auditable.",
+    }),
+    Object.freeze({
+      property: "preWriteVersionId",
+      spec: Object.freeze({ type: Object.freeze(["string", "null"]), description: "preWriteVersionId value returned by the tool." }),
+      reason: "B (#834): the snapshot of the bytes the restore replaced, so the restore itself can be undone.",
+    }),
+  ]),
   file_upload_status: Object.freeze({
     property: "receiptId",
     spec: Object.freeze({ type: Object.freeze(["string", "null"]), description: "receiptId value returned by the tool." }),
@@ -160,8 +277,17 @@ export const WAVE1_OUTPUT_SCHEMA_ADDITIONS = Object.freeze({
 });
 
 function projectAddedOutputProperty(name, schema) {
-  const rule = WAVE1_OUTPUT_SCHEMA_ADDITIONS[name];
-  if (!rule) return schema;
+  const declared = WAVE1_OUTPUT_SCHEMA_ADDITIONS[name];
+  if (!declared) return schema;
+  // A tool may declare more than one additive property (B: `sourceRevision` and
+  // `preWriteVersionId`); a single rule keeps its historical object shape.
+  const rules = Array.isArray(declared) ? declared : [declared];
+  let comparable = schema;
+  for (const rule of rules) comparable = projectOneOutputProperty(name, comparable, rule);
+  return comparable;
+}
+
+function projectOneOutputProperty(name, schema, rule) {
   const property = schema?.properties?.[rule.property];
   // Absent: leave the schema untouched so the historical byte comparison reports
   // the removal as drift (the projection must never invent or hide a property).
@@ -180,7 +306,7 @@ function projectAddedOutputProperty(name, schema) {
       `${JSON.stringify(rule.spec)} (${rule.reason}), got ${JSON.stringify(property)}`,
     );
   }
-  const comparable = cloneJson(schema);
+  const comparable = schema === undefined ? schema : cloneJson(schema);
   delete comparable.properties[rule.property];
   // A REQUIRED additive property (`file_upload_status.receiptId`) also leaves its name in
   // `required`; the historical shape had neither, so the projection must drop both or the byte
@@ -197,8 +323,58 @@ function projectAddedOutputProperty(name, schema) {
  * An undeclared output change (or a spec that drifted from the frozen one) still fails the byte
  * comparison.
  */
+// The output twin of the input relaxation above: a Git-revision restore has no `versionId` to
+// report, so that one field became optional. Restoring the historical `required` keeps the frozen
+// contract comparable while every other output change still drifts.
+const WAVE1_OUTPUT_SCHEMA_RELAXATIONS = Object.freeze({
+  restore_version: Object.freeze({
+    property: "versionId",
+    // The historical `required` array, in the order the baseline recorded (arrays are compared
+    // byte for byte; a re-sorted array hashes differently). Set equality is still checked, so this
+    // cannot hide any other `required` change.
+    required: Object.freeze(["restoredPath", "versionId", "revision", "size"]),
+  }),
+});
+
 export function wave1ComparableOutputSchema(name, schema) {
-  return projectAddedOutputProperty(name, schema);
+  const projected = projectAddedOutputProperty(name, schema);
+  const rule = WAVE1_OUTPUT_SCHEMA_RELAXATIONS[name];
+  if (!rule || !projected?.properties || !(rule.property in projected.properties)) return projected;
+  const required = Array.isArray(projected.required) ? projected.required : [];
+  if (required.includes(rule.property)) return projected;
+  const historical = rule.required ?? [...required, rule.property].sort();
+  const today = [...required, rule.property].sort();
+  if (historical.length !== today.length || historical.slice().sort().some((key, index) => key !== today[index])) {
+    throw new Error(`${name} relaxation rule expects the historical required set ${JSON.stringify(historical)}, got ${JSON.stringify(required)}`);
+  }
+  const comparable = cloneJson(projected);
+  comparable.required = [...historical];
+  return comparable;
+}
+
+/**
+ * B (#834, 2026-11-24): `restore_version` and `plan_restore_version` used to REQUIRE `versionId`.
+ * A Markdown restore from a Vault Git revision passes `path` + `revision` instead, so `versionId`
+ * became optional — a relaxation, never a break: every Wave 1 call still carries `versionId` and is
+ * accepted byte for byte as before. The projection restores the historical requirement for the
+ * baseline comparison only; any other `required` change still drifts.
+ */
+const WAVE1_INPUT_SCHEMA_RELAXATIONS = Object.freeze({
+  restore_version: Object.freeze({ property: "versionId", reason: "B (#834): path + revision can replace versionId." }),
+  plan_restore_version: Object.freeze({ property: "versionId", reason: "B (#834): path + revision can replace versionId." }),
+});
+
+function projectRelaxedRequirement(name, schema) {
+  const rule = WAVE1_INPUT_SCHEMA_RELAXATIONS[name];
+  if (!rule) return schema;
+  if (!schema?.properties || !(rule.property in schema.properties)) {
+    throw new Error(`${name} relaxation rule expects inputSchema.properties.${rule.property}`);
+  }
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  if (required.includes(rule.property)) return schema;
+  const comparable = cloneJson(schema);
+  comparable.required = [rule.property, ...required];
+  return comparable;
 }
 
 function projectAddedProperty(name, schema) {
@@ -225,6 +401,9 @@ function projectAddedProperty(name, schema) {
     }
     if (comparable === schema) comparable = cloneJson(schema);
     delete comparable.properties[rule.property];
+    // A property that carries a `default` is REQUIRED in the rendered schema, so its name also sits
+    // in `required`; the historical shape had neither and only the declared property is touched.
+    if (Array.isArray(comparable.required)) comparable.required = comparable.required.filter((key) => key !== rule.property);
   }
   return comparable;
 }
@@ -234,7 +413,7 @@ function cloneJson(value) {
 }
 
 export function wave1ComparableInputSchema(name, schema) {
-  const projected = projectAddedProperty(name, vaultScopeComparableInputSchema(name, schema));
+  const projected = projectRelaxedRequirement(name, projectAddedProperty(name, vaultScopeComparableInputSchema(name, schema)));
   const rule = WAVE1_INPUT_SCHEMA_WIDENINGS[name];
   if (!rule) return projected;
 

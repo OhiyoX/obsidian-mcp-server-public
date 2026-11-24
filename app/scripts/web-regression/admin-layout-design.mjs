@@ -30,11 +30,12 @@ import { renderAuditPage } from '../../src/admin/pages/audit.js';
 import { ADMIN_SSR_CSS } from '../../src/admin/assets/ssr-css.js';
 import { PROTO_CSS } from '../../src/admin/assets/proto-css.js';
 
-const AUTHZ = '/admin/auth/access-policy';
+const AUTHZ = '/admin/auth/authz';
 /**
  * R9's two payback scenes live in their own module (`admin-layout-constraints.mjs`): they measure the
  * per-Vault constraint editor, this module measures the shell-level design decisions, and the
- * line-budget rule keeps one scene file under 800 lines. Both are registered from `admin-layout.mjs`,
+ * split keeps one scene file focused on one subject (the line-count rule that motivated it was
+ * retired on 2026-11-13). Both are registered from `admin-layout.mjs`,
  * so a red run still names which criterion broke.
  */
 /**
@@ -557,27 +558,17 @@ export async function registerDesignChecks(ctx, { browser, fixture, repoRoot, pr
     }
 
     // A2) 每一页都不许有内部横向滚动（业主 2026-10-20：「所有有表格的页都有问题」）。
-    // 这一条覆盖 access-policy 的 .fut 芯片与只读策略视图的 fieldset，两处都曾让 .content 横向
-    // 可滚 → scrollIntoView 把左边缘推出视口，正是实机截图里「左侧裁切」的机制。
+    // 这一条覆盖 定时授权 的约束表与其编辑器里的 fieldset，两处都曾让 .content 横向可滚 →
+    // scrollIntoView 把左边缘推出视口，正是实机截图里「左侧裁切」的机制。
     //
-    // The legacy editor is a read-only `?edit=` view now (`?new=1` renders the frozen list: there is no
-    // editor form to open), and a policy id is generated, so it is read from the list page's own rows.
-    let policyViewPath = null;
-    const probeContext = await browser.newContext();
-    try {
-      await login(probeContext, fixture.base, fixture.password);
-      const listHtml = await (await probeContext.request.get(`${fixture.base}/admin/auth/access-policy`)).text();
-      const policyId = /access-policy\?id=([0-9a-fA-F-]{8,})/.exec(listHtml)?.[1] ?? null;
-      if (policyId) policyViewPath = `/admin/auth/access-policy?edit=${policyId}`;
-    } finally {
-      await probeContext.close().catch(() => {});
-    }
+    // The editor is scanned through `?new=1`: it carries the same `.ped` grid and fieldsets a stored
+    // constraint renders, and it needs no fixture data.
     const PAGES_TO_SCAN = [
       ['overview', '/admin/auth?tab=overview'], ['accounts', '/admin/auth?tab=accounts'],
       ['keys', '/admin/auth?tab=keys'], ['clients', '/admin/auth?tab=clients'],
       ['tokens', '/admin/auth?tab=tokens'], ['publishes', '/admin/auth?tab=publishes'],
-      ['audit', '/admin/auth?tab=audit'], ['access-policy', '/admin/auth/access-policy'],
-      ...(policyViewPath ? [['access-policy-view', policyViewPath]] : []), ['vault-git', '/admin/auth/vault-git'],
+      ['audit', '/admin/auth?tab=audit'], ['authz', '/admin/auth/authz'], ['authz-editor', '/admin/auth/authz?new=1'],
+      ['vault-git', '/admin/auth/vault-git'],
     ];
     for (const width of [320, 390, 412]) {
       const context = await browser.newContext({ viewport: { width, height: 800 }, colorScheme: 'dark' });

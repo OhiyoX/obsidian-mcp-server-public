@@ -1,0 +1,1 @@
+Validate one Agent Skills package and create a portable ZIP containing SKILL.md plus all attached scripts, references, assets, agents metadata, and other regular files. This does not execute the skill.

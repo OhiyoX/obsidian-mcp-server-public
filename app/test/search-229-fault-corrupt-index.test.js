@@ -43,7 +43,9 @@ await fs.mkdir(vault, { recursive: true });
 await fs.mkdir(path.join(data, "index"), { recursive: true });
 await fs.writeFile(path.join(vault, "Keep.md"), "# Keep\n\nexact-needle lives here.\n", "utf8");
 await fs.writeFile(path.join(vault, "Other.md"), "# Other\n\nunrelated body.\n", "utf8");
-// The fault: a retrieval index that cannot be parsed.
+// The fault: a legacy retrieval index that cannot be parsed. M2 no longer parses it
+// (an un-migrated v1 means "migration required"), so recall() rejects with that
+// reason and the tool degrades with it — same degrade contract, new cause.
 await fs.writeFile(process.env.RETRIEVAL_INDEX_PATH, "{ this is not valid json", "utf8");
 
 const [{ registerSearchTools }, { drainRetrievalIndex }] = await Promise.all([
@@ -88,17 +90,17 @@ test("§15.3 corrupt retrieval index: the tool degrades without crashing and kee
     const degraded = await search(client, { query: "absent-token-xyz" });
     assert.equal(degraded.semanticMode, "auto");
     assert.equal(degraded.fallbackUsed, true);
-    assert.equal(degraded.hybridUsed, true);
+    assert.equal(degraded.hybridUsed, false, "a rejected recall must not claim hybridUsed");
     assert.equal(degraded.semanticUsed, false);
     assert.equal(degraded.results.length, 0);
-    assert.ok(degraded.semanticError, "a degradation reason must be reported");
+    assert.match(String(degraded.semanticError), /migration_required/u, "the degradation reason must name the real cause");
 
     // semantic=true + exact>0 on the same corrupt index: exact results survive
     // the failed embedding/retrieval path.
     const exact = await search(client, { query: "exact-needle", semantic: true });
     assert.equal(exact.semanticMode, "on");
     assert.equal(exact.fallbackUsed, false);
-    assert.equal(exact.hybridUsed, true);
+    assert.equal(exact.hybridUsed, false);
     assert.deepEqual(exact.results.map((item) => item.path), ["Keep.md"], "exact results must not be lost");
 
     // auto + exact>0 never touches retrieval, so it is fully independent of the

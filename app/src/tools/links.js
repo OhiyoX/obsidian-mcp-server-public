@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { z } from "zod/v4";
 import { err, ok } from "../result.js";
@@ -18,7 +19,6 @@ export function registerLinkTools(server) {
     "move_note",
     {
       title: "Move Obsidian Note",
-      description: "Move or rename a note, optionally updating wikilinks and Markdown links in other notes.",
       inputSchema: {
         from: z.string().min(1),
         to: z.string().min(1),
@@ -47,7 +47,6 @@ export function registerLinkTools(server) {
     "delete_note",
     {
       title: "Delete Obsidian Note",
-      description: "Delete a note through a recoverable plan. By default a persistent Trash backup is finalized after commit.",
       inputSchema: { path: z.string().min(1), backup: z.boolean().default(true), ifMatch: z.string().optional() },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -68,7 +67,6 @@ export function registerLinkTools(server) {
     "get_backlinks",
     {
       title: "Get Obsidian Backlinks",
-      description: "Find all notes that link to a given note by wikilink, Markdown link, or embed.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -92,7 +90,6 @@ export function registerLinkTools(server) {
     "list_trash",
     {
       title: "List Obsidian MCP Trash",
-      description: "List durable Trash backups of deleted notes, the starting point to recover or undo an accidental deletion. 误删恢复先列这里。",
       inputSchema: {
         pathPrefix: z.string().optional(),
         limit: z.number().int().min(1).max(5000).default(200),
@@ -113,7 +110,6 @@ export function registerLinkTools(server) {
     "restore_from_trash",
     {
       title: "Restore Obsidian MCP Trash Entry",
-      description: "Recover a note deleted by mistake from its durable Trash backup (undo an accidental deletion) to its original path or a new vault-relative destination. 误删恢复用它。",
       inputSchema: {
         backupPath: z.string().min(1),
         destination: z.string().optional(),
@@ -146,7 +142,6 @@ export function registerLinkTools(server) {
     "list_versions",
     {
       title: "List Obsidian MCP File Versions",
-      description: "List a note's persistent pre-write version snapshots (newest first) so you can roll back, undo or revert an accidental or mistaken write; every write response returns the preWriteVersionId of its own snapshot. 查看历史快照、准备回滚误写时用它。",
       inputSchema: { path: z.string().min(1), limit: z.number().int().min(1).max(500).default(50) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -163,7 +158,6 @@ export function registerLinkTools(server) {
     "delete_trash_entry",
     {
       title: "Delete Obsidian MCP Trash Entry",
-      description: "Permanently delete one explicitly identified backup from the MCP trash.",
       inputSchema: { backupPath: z.string().min(1) },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -180,16 +174,17 @@ export function registerLinkTools(server) {
     "restore_version",
     {
       title: "Restore Obsidian MCP File Version",
-      description: "Roll back (undo / revert) an accidental or mistaken write: restore a pre-write version snapshot. Pass overwrite: true when the note still exists; IDs come from list_versions or a write response preWriteVersionId. 误写回滚、撤销上一次写入用它。",
-      inputSchema: { versionId: z.string().min(1), destination: z.string().optional(), overwrite: z.boolean().default(false), ifMatch: z.string().optional() },
+      inputSchema: { versionId: z.string().min(1).optional(), path: z.string().min(1).optional(), revision: z.string().min(1).describe("Vault Git commit (4-40 hex), HEAD or HEAD~N; use with path instead of versionId. Markdown only.").optional(), destination: z.string().optional(), overwrite: z.boolean().default(false), ifMatch: z.string().optional() },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
-    async ({ versionId, destination, overwrite, ifMatch }) => {
+    async ({ versionId, path, revision, destination, overwrite, ifMatch }) => {
       try {
         assertWritable();
-        const source = await readFileVersion(versionId);
-        const destinationPath = toVaultPath(resolveVaultPath(destination || source.path));
-        if (!destinationPath.toLowerCase().endsWith(".md")) {
+        const gitSource = path !== undefined || revision !== undefined;
+        if (gitSource ? (versionId !== undefined || !path || !revision) : !versionId) throw new Error("Supply either versionId or path + revision, exclusively");
+        const source = gitSource ? null : await readFileVersion(versionId);
+        const destinationPath = toVaultPath(resolveVaultPath(destination || path || source.path));
+        if (!gitSource && !destinationPath.toLowerCase().endsWith(".md")) {
           const restoredFile = await restoreFileVersion(versionId, { destination, overwrite, ifMatch });
           // Wave D / D-plans: a recovery write invalidates the *selected* Vault's index, exactly
           // like the other mutating tools (contract §11/§21 MV-I03) — the primary facade's
@@ -197,11 +192,13 @@ export function registerLinkTools(server) {
           invalidateSelectedVaultIndex(restoredFile.restoredPath);
           return ok(restoredFile);
         }
-        const plan = await createRestoreVersionPlan({ versionId, destination, overwrite, ifMatch });
-        const applied = await applyNotePlan(plan.planId, plan.planHash, randomUUID());
+        const plan = await createRestoreVersionPlan({ versionId, path, revision, destination, overwrite, ifMatch });
+        const applied = await applyNotePlan(plan.planId, plan.planHash, randomUUID(), { returnPreWriteVersionId: true });
         const restored = applied.changed[0] || { path: plan.changes[0].path, revision: plan.changes[0].candidateRevision };
-        return ok({ versionId: source.versionId, restoredPath: restored.path, revision: restored.revision,
-          size: restored.size ?? source.size });
+        return ok({ ...(source ? { versionId: source.versionId } : { sourceRevision: plan.sourceRevision }),
+          restoredPath: restored.path, revision: restored.revision,
+          size: restored.size ?? source?.size ?? (await stat(resolveVaultPath(restored.path))).size,
+          ...(restored.preWriteVersionId ? { preWriteVersionId: restored.preWriteVersionId } : {}) });
       } catch (error) {
         return refusalForError(error) ?? err(error);
       }
@@ -212,7 +209,6 @@ export function registerLinkTools(server) {
     "delete_version",
     {
       title: "Delete Obsidian MCP File Version",
-      description: "Permanently delete one explicitly identified pre-write version snapshot. This is not a rollback and has no undo.",
       inputSchema: { versionId: z.string().min(1) },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -229,7 +225,6 @@ export function registerLinkTools(server) {
     "get_graph",
     {
       title: "Get Obsidian Link Graph",
-      description: "Return vault wikilink, Markdown-link, and embed graph nodes and edges.",
       inputSchema: { pathPrefix: z.string().optional(), limit: z.number().int().min(1).max(5000).default(1000) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -257,7 +252,6 @@ export function registerLinkTools(server) {
     "get_unresolved_links",
     {
       title: "Get Unresolved Obsidian Links",
-      description: "List unresolved or ambiguous internal links with source notes and candidate targets.",
       inputSchema: { pathPrefix: z.string().optional(), includeAmbiguous: z.boolean().default(true), limit: z.number().int().min(1).max(5000).default(500) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -284,7 +278,6 @@ export function registerLinkTools(server) {
     "get_orphans",
     {
       title: "Get Orphan Obsidian Notes",
-      description: "List notes with no resolved incoming links.",
       inputSchema: { pathPrefix: z.string().optional(), limit: z.number().int().min(1).max(5000).default(500) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -311,7 +304,6 @@ export function registerLinkTools(server) {
     "get_deadends",
     {
       title: "Get Dead-end Obsidian Notes",
-      description: "List notes with no resolved outgoing links.",
       inputSchema: { pathPrefix: z.string().optional(), limit: z.number().int().min(1).max(5000).default(500) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

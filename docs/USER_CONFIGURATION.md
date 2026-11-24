@@ -221,6 +221,15 @@ approval.
     for a watcher diagnostic for a file under the root — there is none.
 - A removed directory becomes `unavailable`; a renamed directory means *old id unavailable + new id
   pending*. An approval is **never** migrated to a new directory or reused by a recycled id.
+- This holds for an **unapproved** directory too: one that was discovered as `pending` and then
+  deleted stops reading as `pending` and shows `unavailable` / `directory-missing` (fixed 2026-11-19;
+  before that the served-Vault diff could never report it, so the Admin kept offering a folder that
+  no longer existed as waiting for approval). The admission **decision** stays `pending` in
+  `DATA_PATH/vault-admissions.json`, because a decision is not a runtime state.
+- Re-creating the directory with the same identity brings the entry back as it was. A `pending` entry
+  whose directory is gone for good **cannot be deleted from the Admin today** — the surface offers
+  initialise / approve / revoke only. It is invisible to every client in that state; treat it as a
+  record to clean up once a delete operation exists, or restore the directory and revoke it.
 - A refresh never resets unrelated sessions, open notes or in-flight calls.
 
 **Rolling back.** Set `VAULT_DISCOVERY_ENABLED=false` and restart. The automatic triggers stop; the
@@ -317,6 +326,17 @@ secondary's protected state lives under its own `dataKey` = full `sha256(vaultId
 | mutation idempotency | `/data/mutation-idempotency/` | `<DATA_PATH>/vaults/<dataKey>/mutation-idempotency/` |
 | Git configuration | the `GIT_*` baseline (or `git-vaults.json`, see the matrix above) | `git-vaults.json` record, default-disabled |
 | Publish records | `/data/publish/state.json` | the same file; records are keyed by `vaultId` + path |
+
+The retrieval index itself is a v2 generation beside that file: `retrieval-index-v2/`
+holds immutable `objects/<sha256>.f32` vector shards, `manifests/<sha256>.json`, and the atomic
+`current.json` pointer; the legacy `retrieval-index.json` stays read-only next to it. A non-empty
+legacy file with no published v2 generation makes retrieval answer `retrieval_index_migration_required`
+until `app/scripts/retrieval-v1-to-v2.mjs` converts it (run it as the service user, `--user 1002:10`,
+then restart the container — a blocked process does not re-read the directory by itself). Once v2 has
+been written, an old image can only read the stale legacy file, so a code rollback is not a data
+rollback. `commit()` prunes objects and manifests older than an hour, once an hour; each real change
+still writes one whole manifest (~21 MB on a 1,000-note Vault), so the steady state is the active and
+previous generation.
 
 `dataKey` is derived from the id and is not Vault identity. The discovery scan itself stays bounded —
 one `readdir` of the Vaults root plus a canonical-root check per candidate — and never builds a
@@ -491,6 +511,23 @@ Revoking/deleting a managed key or OAuth client also closes its current MCP sess
 ### ChatGPT and MCP tool metadata
 
 All tools expose an object `outputSchema` that describes the corresponding `structuredContent`; the same result is also serialized into a text content block for clients that do not consume structured results. Safety hints are explicit rather than relying on MCP defaults: read-only operations are idempotent and non-destructive, Vault mutations are closed-world unless they intentionally contact the embedding or Git remote, and destructive operations are marked accordingly. After changing a tool result, update `app/src/tool-contracts.js` and run the test suite so the advertised contract and returned object cannot drift silently.
+
+### Prompt copy (Base pack)
+
+Every Agent-facing natural-language string — canonical tool descriptions, compact group intents, memory reminders, `agent_bootstrap` workflow/boundaries/compatibility text, `research_brief` copy and the initialize instructions — lives in `app/prompts/base/`, one Markdown file per key, listed in `app/prompts/base/manifest.json`.
+
+- Edit the Markdown, not JavaScript. Tool modules carry schemas, Scopes and handlers only; `scripts/check-architecture.mjs` fails on a tool-config `description` literal.
+- `manifest.json` is the contract: it maps each key to its file and declares any template placeholders (`{{topic}}` for the research brief, `{{memoryPath}}` in the structured-memory descriptions). A pack with a missing, duplicate, blank, unstubbed-placeholder or over-limit entry is rejected whole at startup, so a half-migrated pack cannot serve.
+- Runtime values stay in code and are interpolated: Vault paths, write-tool names, `READ_ONLY` state, `policyVersion`, routing/entrypoints.
+- Budgets: 4 KiB per tool description or bootstrap text, 2 KiB per reminder/hint, 400 B per compact summary, 8 KiB per prompt body, 1 MiB per pack.
+- The pack ships inside the image (`COPY . ./`) as the first-install and recovery copy.
+- Publish changes without a rebuild or restart: `node scripts/promptctl.mjs base validate`, then `base diff --url https://host --password-stdin`, then `base publish --url https://host --revision N --reason "..." --password-stdin`. The password is read from stdin and never appears in argv or output; the CLI logs in through the Admin console and uses its CSRF token.
+- Both accepted pack shapes — a `values` map (JSON clients) and `manifest` + `files` (`promptctl`) — run the very same schema: an undeclared key or placeholder, a control character or any per-key or pack limit rejects the whole publish, and a rejected publish leaves the active revision serving. The Admin JSON body budget is 2x the 1 MiB pack budget, because JSON keys and escaping add bytes.
+- The server keeps the published Base in `<DATA_PATH>/prompt-registry/packs/<digest>.json` and points `<DATA_PATH>/agent-prompts.json` at it with a revision CAS. A failed write leaves the previous revision serving; a corrupt head or missing pack shows `degraded` in `/healthz.promptRegistry` and `server_info.promptRegistry` and serves the bundled Base.
+- **Runtime Override** is a sparse, default-empty layer above the Base: `promptctl override publish --set key=text --reason "..."` or `override reset --key key`. Allowed keys are the ones the manifest marks `overrideAllowed` (tool descriptions, compact summaries, memory reminders, workflow text, prompt copy). Initialize instructions, boundaries and compatibility text are Base-only, because they carry safety and identity wording. An empty string is never a deletion; `reset` is.
+- `override promote <key...> --to-repo <worktree>` writes the overrides into that worktree's `app/prompts/base` files and prints the `git diff`; it never commits or pushes. Review and commit it, then `base publish --reset-overrides key1,key2`: the new Base and the removal of those overrides happen in one revision, and a concurrent edit of the same override makes that publish fail instead of deleting the newer text. The publish also refuses (`422 PROMPT_OVERRIDE_MISMATCH`) when the new Base does not carry that exact text, so a mistyped or stale promote cannot silently swap reviewed copy for different copy.
+
+- `status`, `base adopt-bundled` and `rollback <revision>` use the same session: adopt-bundled republishes the shipped copy after drift, rollback publishes an older pack as a new revision (the counter never moves backwards).
 
 ### Agent-safe note change plans
 

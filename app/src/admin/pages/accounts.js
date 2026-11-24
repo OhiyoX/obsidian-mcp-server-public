@@ -100,7 +100,7 @@ function card(ctx, account) {
   return `<div class="mc"><div class="b">
     <a class="cell-link block" href="${esc(tabHref({ id: account.id }))}"><div class="nm"><b>${esc(model.acctName(account))}</b><span class="sub2">${esc(account.username || "")}${disabled ? esc(t("adm.accounts.cardDisabledSuffix")) : ""}</span></div></a>
     <div class="tags">${model.scopeTags(account.allowedScopes)}${model.vaultTags(account.allowedVaults)}</div>
-    <div class="meta"><span>${account.lastLoginAt ? esc(t("adm.accounts.loggedIn", { time: relTitle(account.lastLoginAt) })) : esc(t("adm.accounts.neverLoggedIn"))}</span><span>${esc(t("adm.accounts.clientCount", { count: linked.length }))}</span></div>
+    <div class="meta"><span>${account.lastLoginAt ? esc(t("adm.accounts.loggedIn", { time: model.rel(account.lastLoginAt) })) : esc(t("adm.accounts.neverLoggedIn"))}</span><span>${esc(t("adm.accounts.clientCount", { count: linked.length }))}</span></div>
   </div>${menu(ctx, account)}</div>`;
 }
 
@@ -172,8 +172,7 @@ function accountDrawer(ctx, account, mode) {
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="id" value="${esc(account.id)}">
     ${pick.scopes}
-    <div style="height:8px"></div>
-    ${pick.vaults}
+    <fieldset class="account-access-vaults"><legend>${esc(t("adm.accounts.allowedVaults"))}</legend>${pick.vaults}</fieldset>
     <div class="banner amber" style="margin:12px 0 0">${ic("alert")}<div>${t("adm.accounts.revokeBanner", { total: counts.total, access: counts.access, refresh: counts.refresh, clients: counts.clients || linked.length })}</div></div>
     <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.accounts.savePermissions"))}</button></div>
   </form>
@@ -181,8 +180,8 @@ function accountDrawer(ctx, account, mode) {
     <h3>${esc(t("adm.accounts.defaultVaultTitle"))}</h3>
     <input type="hidden" name="csrf" value="${esc(ctx.csrf)}">
     <input type="hidden" name="id" value="${esc(account.id)}">
-    ${renderDefaultVaultPicker(ctx, { current: account.defaultVaultId ?? null, allowedVaults: account.allowedVaults || [] })}
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" type="submit">${esc(t("adm.accounts.saveDefaultVault"))}</button></div>
+    ${renderDefaultVaultPicker(ctx, { showLabel: false, current: account.defaultVaultId ?? null, allowedVaults: account.allowedVaults || [] })}
+    <div class="default-vault-actions"><button class="btn primary" type="submit">${esc(t("adm.accounts.saveDefaultVault"))}</button></div>
   </form>
   <form class="dsec" method="post" action="/admin/auth/oauth/user/password">
     <h3>${esc(t("adm.accounts.resetPasswordTitle"))}</h3>

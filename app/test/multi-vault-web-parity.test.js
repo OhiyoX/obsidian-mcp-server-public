@@ -251,7 +251,10 @@ test("Web surface has no history/trash/version/Git entry point (old-red 10 conte
     // W4 / #437 adds the two long-lived automatic-trigger seams (`startVaultDiscovery` /
     // `stopVaultDiscovery`), called by the process entry and by its shutdown path — neither is a content
     // entry point.
-    "approveVaultAdmission", "createWebVault", "defaultWebVaultId", "initializeVaultAdmissions",
+    "approveVaultAdmission",
+    // #276 follow-up: the capability map published to server_info/Admin — the wired graph plus the
+    // live semantic fact. Not a content entry point either, and the list stays sorted.
+    "capabilitiesForVault", "createWebVault", "defaultWebVaultId", "initializeVaultAdmissions",
     "installVaultReconciliation", "listWebNotes", "listWebVaults", "loadVaultAdmissions", "readWebNote",
     "reconcileVaults", "resolveCanonicalVault", "resolveWebNoteLink", "resolveWebVault", "resolveWebVaultPath",
     "revokeVaultAdmission", "startVaultDiscovery", "statWebNote", "stopVaultDiscovery", "vaultAdmissionAdmin",

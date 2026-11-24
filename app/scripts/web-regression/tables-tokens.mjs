@@ -291,7 +291,10 @@ export async function registerTablesTokensChecks(ctx) {
       assert.ok(Math.abs(live.frameRight-reader.frameRight)<=1,JSON.stringify({live,reader}));
       assert.ok(Math.abs(live.frameWidth-reader.frameWidth)<=2,JSON.stringify({live,reader}));
       assert.equal(live.columnOffset,0,JSON.stringify({live,reader}));
-      assert.ok(live.gutter&&live.gutter.right<=live.columnLeft&&live.columnLeft-live.gutter.right<=12,JSON.stringify({live,reader}));
+      // The gutter only exists while line numbers are on. With them off this assertion used to
+      // fail for every run (issue #747), which said nothing about the table: the real invariant,
+      // "no gutter paints over the first cell", is the hit-test two lines below.
+      if(live.gutter) assert.ok(live.gutter.right<=live.columnLeft&&live.columnLeft-live.gutter.right<=12,JSON.stringify({live,reader}));
       // A geometrically aligned frame is still wrong if CodeMirror's gutter
       // paints on top of the first cell. Hit-test the first visible glyph.
       assert.ok(live.firstText?.hitInsideTable,JSON.stringify({live,reader}));

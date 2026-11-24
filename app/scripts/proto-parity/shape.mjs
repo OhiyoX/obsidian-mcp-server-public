@@ -124,10 +124,8 @@ export function probeShapeTree(options) {
     if (pathname === '/app' || pathname === '/app/') page = 'web';
     else if (pathname === '/admin/auth') page = 'overview';
     else if (pathname === '/admin/auth/login') page = 'login';
-    else if (pathname === '/admin/auth/access-policy') page = 'authz';
-    else if (pathname.startsWith('/admin/auth/access-policy/')) { page = 'authz'; detail = 'action'; }
-    // The 定时授权 entry leads to the per-Vault constraint page (Task 7 B): same route token as the
-    // frozen page it replaced, so the sidebar compares as one destination and not as a literal URL.
+    // 定时授权 is one destination, the per-Vault constraint page: the sidebar compares as one route
+    // token and never as a literal URL (the retired legacy page shares the token's history only).
     else if (pathname === '/admin/auth/authz') page = 'authz';
     else if (pathname.startsWith('/admin/auth/authz/')) { page = 'authz'; detail = 'action'; }
     else if (pathname === '/admin/auth/vault-git') page = 'vaults';

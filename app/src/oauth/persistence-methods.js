@@ -7,6 +7,7 @@ import {
 } from "./primitives.js";
 import { normalizeGeneration } from "./authorization-transfer-runtime.js";
 import { normalizeDefaultVaultId } from "../default-vault.js";
+import { normalizeAgentLabel } from "../api-key-agent-label.js";
 
 export const persistenceMethods = {
   async load() {
@@ -58,6 +59,8 @@ export const persistenceMethods = {
         record.allowedScopes = normalizedScopes(record.allowedScopes);
         record.allowedVaults = normalizedVaults(record.allowedVaults);
         if (record.defaultVaultId !== undefined) record.defaultVaultId = normalizeDefaultVaultId(record.defaultVaultId);
+        // #285: a key stored before the label existed reads as unbound; no migration pass.
+        record.agentLabel ??= null;
       }
       // #364: authorization codes minted before this release carry no generation.
       for (const record of Object.values(this.data.codes)) record.generation = normalizeGeneration(record.generation);
@@ -72,7 +75,7 @@ export const persistenceMethods = {
   },
 
 
-  async updateApiKey(id, { allowedScopes, allowedVaults, defaultVaultId } = {}) {
+  async updateApiKey(id, { allowedScopes, allowedVaults, defaultVaultId, agentLabel } = {}) {
     await this.ready;
     const found = Object.values(this.data.apiKeys).find((record) => record.id === id);
     if (!found) return false;
@@ -82,8 +85,18 @@ export const persistenceMethods = {
     const nextDefault = normalizeDefaultVaultId(
       defaultVaultId === undefined ? found.defaultVaultId ?? null : defaultVaultId, nextVaults,
     );
-    Object.assign(found, { allowedScopes: nextScopes, allowedVaults: nextVaults, defaultVaultId: nextDefault });
-    this.recordAudit({ action: "api-key.authorization.update", credentialType: "api-key", credentialId: id, clientId: `api-key:${id}`, scopes: found.allowedScopes, vaults: found.allowedVaults });
+    const previousAgentLabel = found.agentLabel ?? null;
+    const nextAgentLabel = agentLabel === undefined ? previousAgentLabel : normalizeAgentLabel(agentLabel);
+    Object.assign(found, { allowedScopes: nextScopes, allowedVaults: nextVaults, defaultVaultId: nextDefault, agentLabel: nextAgentLabel });
+    // Two independent rows: an authorization change must never be suppressed by a label write
+    // that arrived in the same call (and a label write claims no authorization change).
+    if (allowedScopes !== undefined || allowedVaults !== undefined || defaultVaultId !== undefined) {
+      this.recordAudit({ action: "api-key.authorization.update", credentialType: "api-key", credentialId: id, clientId: `api-key:${id}`, scopes: found.allowedScopes, vaults: found.allowedVaults });
+    }
+    // #285: the display label keeps its own row, carrying old → new.
+    if (agentLabel !== undefined) {
+      this.recordAudit({ action: "api-key.agent-label", credentialType: "api-key", credentialId: id, clientId: `api-key:${id}`, detail: `${previousAgentLabel ?? ""} → ${nextAgentLabel ?? ""}` });
+    }
     await this.save();
     return { ...found, allowedScopes: [...found.allowedScopes], allowedVaults: [...found.allowedVaults] };
   },

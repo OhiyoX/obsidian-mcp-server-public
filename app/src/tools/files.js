@@ -4,6 +4,7 @@ import path from "node:path";
 import { parseFrontmatter, stringifyMatter } from "../frontmatter.js";
 import { z } from "zod/v4";
 import { readZipEntryFile } from "../archive/zip.js";
+import { extractPdfText } from "../search/pdf-text-adapter.js";
 import { MAX_INLINE_TRANSFER_BYTES, MAX_READ_BYTES, OBSIDIAN_ACCEPTED_EXTENSIONS, TRANSFER_CHUNK_BYTES } from "../config.js";
 import { trackGitMutation } from "../git.js";
 import { buildNoteFileTransfer, noteFileTransferResult } from "../note-transfer.js";
@@ -45,7 +46,6 @@ export function registerFileTools(server) {
     "list_files",
     {
       title: "List Obsidian Files",
-      description: "List Obsidian-supported files, including Markdown, Bases, Canvas, images, audio, video, and PDFs.",
       inputSchema: {
         pathPrefix: z.string().optional(),
         recursive: z.boolean().default(false),
@@ -76,7 +76,6 @@ export function registerFileTools(server) {
     "pull_note_file",
     {
       title: "Pull Complete Obsidian Note File",
-      description: "Return one complete Markdown note as an MCP embedded resource plus structured text/base64 content so the client can save it unchanged to local storage.",
       inputSchema: {
         path: z.string().min(1),
         encoding: z.enum(["base64", "text"]).default("base64"),
@@ -107,17 +106,18 @@ export function registerFileTools(server) {
     "get_file",
     {
       title: "Get Obsidian File",
-      description: "Read any Obsidian-supported vault file as text, JSON, or base64.",
       inputSchema: {
         path: z.string().min(1),
         encoding: z.enum(["auto", "text", "json", "base64"]).default("auto"),
+        pdfText: z.boolean().default(false).describe("Return page-cited text extracted from a PDF instead of base64."),
+        maxChars: z.number().int().min(1).max(200000).default(20000).describe("pdfText only: total excerpt budget across pages."),
         acceptedOnly: z.boolean().default(true),
         offset: z.number().int().min(0).default(0),
         length: z.number().int().min(1).max(50 * 1024 * 1024).optional(),
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ path, encoding, acceptedOnly, offset, length }) => {
+    async ({ path, encoding, acceptedOnly, offset, length, pdfText, maxChars }) => {
       try {
         const abs = resolveVaultPath(path);
         if (acceptedOnly && !isAcceptedObsidianFile(abs)) throw new Error(`Unsupported Obsidian file extension: ${fileExtension(abs)}`);
@@ -125,6 +125,30 @@ export function registerFileTools(server) {
         const stat = await fs.stat(abs);
         const mode = encoding === "auto" ? (isTextFile(abs) ? "text" : "base64") : encoding;
         const output = { path: toVaultPath(abs), extension: fileExtension(abs), encoding: mode, revision: await fileRevision(abs), stat: { size: stat.size, modified: stat.mtime.toISOString(), created: stat.birthtime.toISOString() } };
+        // A PDF is binary, so `auto` keeps returning base64. Text extraction is an explicit request:
+        // it is bounded by the adapter's own caps, and a scanned or encrypted document refuses
+        // instead of inventing text.
+        if (pdfText) {
+          const extraction = extractPdfText(await fs.readFile(abs));
+          if (extraction.status !== "ok") {
+            const refusal = Object.assign(new Error(extraction.reason), { code: extraction.code });
+            return errStructured(refusal);
+          }
+          let budget = Math.min(maxChars, MAX_READ_BYTES);
+          const pages = [];
+          for (const page of extraction.pages) {
+            const text = page.text.slice(0, Math.max(0, budget));
+            if (!text) continue;
+            budget -= text.length;
+            pages.push({ page: page.page, text, truncated: text.length < page.text.length });
+          }
+          output.encoding = "pdf-text";
+          output.pdfText = true;
+          output.pageCount = extraction.pages.length;
+          output.pages = pages;
+          output.truncated = pages.length < extraction.pages.length || pages.some((page) => page.truncated);
+          return ok(output);
+        }
         if (mode === "base64") {
           const readLength = Math.min(length || Math.min(MAX_READ_BYTES, TRANSFER_CHUNK_BYTES), Math.max(0, stat.size - offset));
           const buffer = Buffer.alloc(readLength);
@@ -152,7 +176,6 @@ export function registerFileTools(server) {
     "pull_file",
     {
       title: "Pull Complete Vault File",
-      description: "Return one complete Vault attachment as an MCP embedded binary resource. For larger files, use get_file with base64 offset/length chunks.",
       inputSchema: {
         path: z.string().min(1),
         maxBytes: z.number().int().min(1).max(100 * 1024 * 1024).optional(),
@@ -181,7 +204,6 @@ export function registerFileTools(server) {
     "write_file",
     {
       title: "Write Obsidian File",
-      description: "Write a vault file as text, JSON, or base64.",
       inputSchema: {
         path: z.string().min(1),
         content: z.string().optional(),
@@ -257,7 +279,6 @@ export function registerFileTools(server) {
     "delete_file",
     {
       title: "Delete Obsidian Attachment",
-      description: "Delete a non-Markdown file through the same recoverable plan + durable Trash backup delete_note uses, then apply it. Markdown notes are refused (use delete_note); protected Vault internals (.git, .obsidian) are refused before any I/O. Any other extension is deletable, because uploads accept arbitrary extensions. There is no hard-delete option.",
       inputSchema: { path: z.string().min(1), ifMatch: z.string().optional() },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -285,7 +306,6 @@ export function registerFileTools(server) {
     "start_file_upload",
     {
       title: "Start Chunked Vault File Upload",
-      description: "Create a resumable upload for an attachment. Upload base64 chunks sequentially with upload_file_chunk; arbitrary attachment extensions are allowed outside protected Vault internals.",
       inputSchema: {
         path: z.string().min(1),
         totalBytes: z.number().int().min(0),
@@ -308,7 +328,6 @@ export function registerFileTools(server) {
     "start_direct_upload",
     {
       title: "Start Direct HTTP Vault File Upload",
-      description: "Create an HTTP upload handle so the file bytes travel from the client to the server without passing through the model, MCP JSON or base64. Send bytes to relativePath with the same credential. Either PUT the exact bytes in one request with the exact Content-Length, or resumable: PATCH consecutive byte ranges with Upload-Offset set to the bytes already stored (single writer, contiguous only; a mismatched offset returns 409 with the authoritative Upload-Offset). An interrupted upload can be resumed from its stored offset instead of restarting; expect a transient 409 UPLOAD_IN_PROGRESS right after a disconnect and retry after a short backoff.",
       inputSchema: {
         path: z.string().min(1),
         totalBytes: z.number().int().min(0),
@@ -330,7 +349,6 @@ export function registerFileTools(server) {
     "upload_file_chunk",
     {
       title: "Upload Vault File Chunk",
-      description: "Append the next canonical-base64 chunk to a staged upload. Set finalize=true on the last chunk to verify size/SHA-256 and atomically publish it into the Vault.",
       inputSchema: {
         uploadId: z.string().uuid(),
         offset: z.number().int().min(0),
@@ -352,7 +370,6 @@ export function registerFileTools(server) {
     "file_upload_status",
     {
       title: "Get Vault File Upload Status",
-      description: "Recover resumable upload progress after an MCP session or OAuth token refresh. Returns the next byte offset or the idempotent completion result.",
       inputSchema: { uploadId: z.string().uuid() },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -369,7 +386,6 @@ export function registerFileTools(server) {
     "cancel_file_upload",
     {
       title: "Cancel Vault File Upload",
-      description: "Delete a staged upload without changing the Vault.",
       inputSchema: { uploadId: z.string().uuid() },
       annotations: { destructiveHint: true, openWorldHint: false },
     },
@@ -386,7 +402,6 @@ export function registerFileTools(server) {
     "create_archive",
     {
       title: "Create Vault ZIP Archive",
-      description: "Package selected Vault files/directories into a ZIP stored in the Vault. Symbolic links, protected internals, excessive entry counts, and oversized inputs are rejected.",
       inputSchema: {
         sourcePaths: z.array(z.string().min(1)).min(1).max(100),
         destination: z.string().min(1),
@@ -408,7 +423,6 @@ export function registerFileTools(server) {
     "inspect_archive",
     {
       title: "Inspect Vault ZIP Archive",
-      description: "Validate a ZIP and return its entry manifest without extracting it.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -425,7 +439,6 @@ export function registerFileTools(server) {
     "read_archive_entry",
     {
       title: "Read Vault ZIP Entry",
-      description: "Read a single file entry from a Vault ZIP archive without extracting it.",
       inputSchema: {
         archivePath: z.string().min(1),
         entry: z.string().min(1),
@@ -443,7 +456,6 @@ export function registerFileTools(server) {
     "extract_archive",
     {
       title: "Safely Extract Vault ZIP Archive",
-      description: "Validate and extract a ZIP into a Vault directory. Defaults to dryRun=true; path traversal, symlinks, encrypted/ZIP64 files, duplicates, protected internals, excessive expansion, and unintended overwrite are rejected.",
       inputSchema: {
         archivePath: z.string().min(1),
         destinationDirectory: z.string().default(""),
@@ -465,7 +477,6 @@ export function registerFileTools(server) {
     "get_canvas",
     {
       title: "Get Obsidian Canvas",
-      description: "Read and validate a JSON Canvas .canvas file.",
       inputSchema: { path: z.string().min(1) },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -485,7 +496,6 @@ export function registerFileTools(server) {
     "write_canvas",
     {
       title: "Write Obsidian Canvas",
-      description: "Create or overwrite a JSON Canvas .canvas file.",
       inputSchema: {
         path: z.string().min(1),
         canvas: z.object({ nodes: z.array(z.record(z.string(), z.unknown())), edges: z.array(z.record(z.string(), z.unknown())) }).passthrough(),
@@ -513,7 +523,6 @@ export function registerFileTools(server) {
     "manage_folders",
     {
       title: "Manage Obsidian Folders",
-      description: "List, create, or delete vault folders.",
       inputSchema: {
         folder: z.string().default(""),
         action: z.enum(["list", "create", "delete"]).default("list"),

@@ -216,9 +216,8 @@ test("§31/D1: server.js injects that ONE instance and keeps no inline Web root 
   }
   assert.ok(!server.includes("process.env.WEB_VAULTS_ROOT"), "the inline WEB_VAULTS_ROOT read is gone (§31/D2)");
   assert.ok(!/vaultsRoot:/.test(server), "the assembly takes its root from the injected registry");
-  // The frozen pre-F1 size was 498 lines; server.js may only shrink (LINE_BUDGET is 500).
-  const lines = server.replaceAll("\r\n", "\n").split("\n").length - (server.endsWith("\n") ? 1 : 0);
-  assert.ok(lines <= 498, `server.js grew to ${lines} lines; Wave F may only shrink it`);
+  // The hard code-line gate (the 498-line Wave F/F1 freeze, b986da54) was retired by owner
+  // decision (2026-11-13); the single-instance and no-inline-read checks above are the contract.
 });
 
 test("§14: Publish resolves Vaults through the canonical registry's own resolver", () => {
@@ -263,7 +262,12 @@ test("§3.4: the capability graph claims exactly the wired keys and records ever
 test("§31: the capability graph reaches the caller-visible planes from the canonical registry", () => {
   // server_info and the Admin assembly read the SAME descriptors, so a flipped key is observable
   // (§18.1: the metadata plane may report capabilities, never roots/paths/credentials).
-  assert.match(read("src/app/vault-registry.js"), /capabilitiesFor: wiredCapabilities/, "the canonical registry must carry the wired graph");
+  // The registry publishes the wired graph COMPOSED with the live semantic fact: `wiredCapabilities()`
+  // alone reports `semantic` unavailable by construction, which made Admin claim 10/13 on a process
+  // whose provider was enabled (measured 2026-11-21).
+  assert.match(read("src/app/vault-registry.js"), /capabilitiesFor: capabilitiesForVault/, "the canonical registry must carry the composed graph");
+  assert.match(read("src/app/vault-registry.js"), /wiredCapabilities\(\)/, "and start from the wired graph");
+  assert.match(read("src/app/vault-registry.js"), /semanticConfiguration\(\)\?\.enabled/, "merging the live provider fact for `semantic`");
   assert.match(read("src/tools/info.js"), /webVaultRegistry\.get\(String\(vault\.id\)\)\?\.capabilities/, "server_info must report the registry's per-Vault capabilities");
   assert.match(read("src/admin/vault-git-routes.js"), /capabilityList\(descriptor\)/, "Admin must render the registry descriptor's capabilities");
 });

@@ -15,6 +15,7 @@
 import { createCellNode, createSpriteIcon, describeCellValue, EMPTY_CELL_TOKEN } from "./cell.js";
 import { createRowLayouts } from "./row-layouts.js";
 import { buildKanbanLazily } from "./kanban-lazy.js";
+import { scrollTableHorizontally } from "../document/table-wheel-scroll.js";
 import { BASE_SURFACE_CSS } from "./styles.js";
 import {
   readViewConfig,
@@ -297,6 +298,11 @@ export function createBaseView({
   function buildTable(state, columns, widths) {
     const wrap = doc.createElement("div");
     wrap.className = "base-table-wrap";
+    // A wide Base scrolls sideways from the wheel like a Live table: Shift+wheel
+    // (or a tilt/trackpad deltaX) moves this box, plain wheel stays native.
+    wrap.addEventListener?.("wheel", (event) => {
+      scrollTableHorizontally(event, wrap);
+    }, { passive: false, capture: true });
     const table = doc.createElement("table");
     table.className = "base-table";
     // Wave C browser-contract hook (A5 selectors.table).

@@ -63,7 +63,7 @@ const POLICY_FILE = path.join(fixtures, "legacy-policies.json");
 const env = await (await import("./helpers/permission-baseline-env.js")).seedPermissionBaselineEnv();
 const { bootLegacyState, redactLegacyState, serializeLegacyPolicies, LEGACY_FIXED_NOW } = await import("./helpers/legacy-fixtures.js");
 
-test.after(async () => fs.rm(env.root, { recursive: true, force: true }));
+test.after(async () => fs.rm(env.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
 
 const REWRITE = process.env.PERMISSION_LEGACY_WRITE === "1";
 const boot = await bootLegacyState({ dataPath: env.dataPath });

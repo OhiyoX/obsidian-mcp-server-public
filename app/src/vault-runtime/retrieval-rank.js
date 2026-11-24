@@ -19,6 +19,9 @@
 
 import { createHash } from "node:crypto";
 
+import { prepareLexicalStats, scoreBM25 } from "./retrieval-lexical-stats.js";
+import { cosineWithNorms, vectorNorm } from "./retrieval-vector-math.js";
+
 /** sha256 hex of a chunk identity string. Behaviorally identical to BASE `retrieval.js`. */
 function hash(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -116,34 +119,11 @@ export function metadataFor(record) {
 }
 
 function cosine(left, right) {
-  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length || !left.length) return null;
-  let dot = 0;
-  let leftNorm = 0;
-  let rightNorm = 0;
-  for (let index = 0; index < left.length; index += 1) {
-    dot += left[index] * right[index];
-    leftNorm += left[index] ** 2;
-    rightNorm += right[index] ** 2;
-  }
-  return leftNorm && rightNorm ? dot / Math.sqrt(leftNorm * rightNorm) : null;
+  return cosineWithNorms(left, right);
 }
 
 function bm25Scores(chunks, queryTokens) {
-  const documents = chunks.map((chunk) => tokenize(`${chunk.note.metadata.title} ${chunk.heading} ${chunk.text}`));
-  const averageLength = documents.reduce((sum, tokens) => sum + tokens.length, 0) / Math.max(1, documents.length);
-  const scores = new Array(chunks.length).fill(0);
-  for (const token of [...new Set(queryTokens)]) {
-    const documentFrequency = documents.filter((tokens) => tokens.includes(token)).length;
-    if (!documentFrequency) continue;
-    const idf = Math.log(1 + (documents.length - documentFrequency + 0.5) / (documentFrequency + 0.5));
-    documents.forEach((tokens, index) => {
-      const frequency = tokens.filter((item) => item === token).length;
-      if (!frequency) return;
-      const denominator = frequency + 1.2 * (1 - 0.75 + 0.75 * tokens.length / Math.max(1, averageLength));
-      scores[index] += idf * (frequency * 2.2) / denominator;
-    });
-  }
-  return scores;
+  return scoreBM25(prepareLexicalStats(chunks.map((chunk) => `${chunk.note.metadata.title} ${chunk.heading} ${chunk.text}`)), queryTokens);
 }
 
 function matchesFilters(note, options) {
@@ -163,21 +143,40 @@ function matchesFilters(note, options) {
  * collaborators: `{ semanticConfiguration, embedTexts }`. Pure with respect to
  * module state; the only side effect is the injected embedding call.
  */
+// One prepared statistics set per committed generation and filter set. The cache
+// lives in the per-Vault runtime (collaborators.lexicalStats), never in a module.
+// The key must name exactly the fields `matchesFilters` reads: a key that differs
+// from the filter would score a different chunk list with the wrong statistics.
+const FILTER_KEY_FIELDS = Object.freeze(["pathPrefix", "types", "status", "kinds", "tags", "entities"]);
+export function retrievalFilterKey(options = {}) {
+  return JSON.stringify(FILTER_KEY_FIELDS.map((field) => options[field] ?? null));
+}
+
+function preparedLexicalScores(chunks, queryTokens, current, options, collaborators) {
+  const documents = chunks.map((chunk) => `${chunk.note.metadata.title} ${chunk.heading} ${chunk.text}`);
+  if (typeof collaborators.lexicalStats !== "function") return scoreBM25(prepareLexicalStats(documents), queryTokens);
+  return scoreBM25(collaborators.lexicalStats(current, documents, retrievalFilterKey(options)), queryTokens);
+}
+
 export async function rankRecall(current, query, options = {}, collaborators = {}) {
   const notes = Object.values(current.notes).filter((note) => matchesFilters(note, options));
   const chunks = notes.flatMap((note) => note.chunks.map((chunk) => ({ ...chunk, note })));
   const queryTokens = tokenize(query);
-  const lexicalScores = bm25Scores(chunks, queryTokens);
+  const lexicalScores = preparedLexicalScores(chunks, queryTokens, current, options, collaborators);
   const maxLexical = Math.max(0, ...lexicalScores);
   let queryEmbedding = null;
+  let queryNorm = null;
   let semanticError = null;
   if (options.semantic !== false && collaborators.semanticConfiguration().enabled && chunks.some((chunk) => chunk.embedding)) {
-    try { [queryEmbedding] = await collaborators.embedTexts(query, { priority: "interactive", race: true }); }
+    try {
+      [queryEmbedding] = await collaborators.embedTexts(query, { priority: "interactive", race: true });
+      queryNorm = vectorNorm(queryEmbedding);
+    }
     catch (error) { semanticError = error.message; }
   }
   const scored = chunks.map((chunk, index) => {
     const lexical = maxLexical ? lexicalScores[index] / maxLexical : 0;
-    const cosineValue = queryEmbedding ? cosine(queryEmbedding, chunk.embedding) : null;
+    const cosineValue = queryEmbedding ? cosineWithNorms(queryEmbedding, chunk.embedding, queryNorm, chunk.norm ?? vectorNorm(chunk.embedding)) : null;
     const semantic = cosineValue === null ? 0 : Math.max(0, (cosineValue + 1) / 2);
     const metadataText = tokenize([chunk.note.metadata.title, chunk.note.metadata.description, ...chunk.note.metadata.tags, ...chunk.note.metadata.entities].join(" "));
     const metadataMatches = queryTokens.filter((token) => metadataText.includes(token)).length;

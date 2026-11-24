@@ -185,17 +185,17 @@ test("the classifier reads NUL-delimited paths with --no-renames", () => {
 test("the heavy gates only skip on an explicit false from a successful classification", () => {
   // The checkout may use CRLF on Windows while the committed blob uses LF.
   const workflow = fs.readFileSync(workflowPath, "utf8").replace(/\r\n/g, "\n");
-  const failClosed = "!cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.code != 'false')";
+  // 2026-11-19: the heavy jobs (app / dependency-audit / browser) were retired on 2026-11-14, so
+  // there is no fail-closed gate left to read. What must hold is the retirement: none of them
+  // comes back without a decision, and the classifier the gate used still exists.
   for (const job of ["app", "dependency-audit", "browser"]) {
-    const block = new RegExp(`\\n  ${job}:[\\s\\S]*?(?=\\n  [a-z-]+:\\n)`).exec(workflow);
-    assert.ok(block, `job ${job} is missing from the workflow`);
-    assert.ok(
-      block[0].includes(`if: \${{ ${failClosed} }}`),
-      `job ${job} must keep the fail-closed gate`,
-    );
+    assert.equal(new RegExp(`\\n  ${job}:\\n`).test(workflow), false,
+      `job ${job} was retired; re-adding it means revisiting the fail-closed gate and this test`);
   }
-  assert.match(workflow, /classify-change-set\.sh/);
-  // The release gate itself must never depend on the classifier.
-  assert.match(workflow, /release-gate:[\s\S]*?if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
-  assert.match(workflow, /release-gate:[\s\S]*?needs: \[app, browser, dependency-audit\]/);
+  assert.ok(fs.existsSync(classifier),
+    "the classifier the retired gate used still ships");
+  // The release gate moved to the in-house CI with the rest of the heavy jobs, so this mirror workflow
+  // keeps only the cheap `check` job. Pinning that shape stops a retired job from drifting back in.
+  const jobNames = [...workflow.matchAll(/^  ([a-z][a-z-]*):$/gm)].map((match) => match[1]);
+  assert.deepEqual(jobNames, ["check"], "the mirror keeps only the cheap check job");
 });

@@ -62,6 +62,26 @@ function describe(value) {
   return typeof value;
 }
 
+// Cached field text and lengths belong to the same per-Vault record snapshot.
+export function projectLexicalFields(record) {
+  const normalize = (value) => String(value ?? "").normalize("NFKC").toLowerCase();
+  const lines = String(record.content ?? "").split(/\r?\n/);
+  const headingIndexes = new Set(record.headings?.map((heading) => heading.index)
+    ?? lines.flatMap((line, index) => /^#{1,6}\s/.test(line) ? [index] : []));
+  const headings = lines.filter((_, index) => headingIndexes.has(index));
+  const text = {
+    title: String(record.frontmatter?.title ?? record.basename ?? ""),
+    alias: [...new Set((record.aliases || []).map(String))].join("\n"),
+    path: String(record.path ?? "").replace(/\.md$/i, ""),
+    heading: headings.map((line) => line.replace(/^#{1,6}\s+/, "")).join("\n"),
+    // Parsed content excludes YAML, so frontmatter cannot inflate body frequency.
+    body: lines.filter((_, index) => !headingIndexes.has(index)).join("\n"),
+  };
+  return Object.fromEntries(Object.entries(text).map(([field, value]) => [field, {
+    text: value, normalized: normalize(value), length: (normalize(value).match(/[\p{L}\p{N}_]+/gu) || []).length,
+  }]));
+}
+
 function emptyStats() {
   return { files: 0, reparsed: 0, reused: 0, removed: 0, skipped: 0, durationMs: 0 };
 }
@@ -291,6 +311,8 @@ export function createVaultIndexRuntime({ vaultRuntime, deps } = {}) {
           links: extractLinks(projected.content, vaultPath),
         },
       });
+      const record = nextCache.get(vaultPath).record;
+      record.lexicalFields = projectLexicalFields(record);
       reparsed += 1;
     }
 

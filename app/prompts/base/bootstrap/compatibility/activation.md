@@ -1,0 +1,1 @@
+Server-only delivery: initialization instructions, discoverable tool descriptions and throttled tool-result reminders. No client rule files, hooks or native memory are changed. A host may ignore these hints; this server cannot observe or trigger conversations that never call it.

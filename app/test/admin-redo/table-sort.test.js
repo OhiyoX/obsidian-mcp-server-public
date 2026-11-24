@@ -97,7 +97,7 @@ test("a sortable header is a real link; the direction glyph appears only on the 
 test("without a sort context the table is byte-for-byte the old markup", () => {
   const cols = [["名称", "26%", "", "name"], ["", "", "act"]];
   const rows = ["<tr><td>x</td><td class=\"act\"></td></tr>"];
-  assert.equal(table(cols, rows, ""), '<div class="tw hide-m"><table class="tbl"><colgroup><col style="width:26%"><col></colgroup><thead><tr><th>名称</th><th class="act"></th></tr></thead><tbody><tr><td>x</td><td class="act"></td></tr></tbody></table></div>');
+  assert.equal(table(cols, rows, ""), '<div class="tw hide-m"><table class="tbl"><colgroup><col style="width:var(--admin-col-0,26%)"><col style="width:var(--admin-col-1,auto)"></colgroup><thead><tr><th>名称</th><th class="act"></th></tr></thead><tbody><tr><td>x</td><td class="act"></td></tr></tbody></table></div>');
 });
 
 // ------------------------------------------------------------------ the page really reorders

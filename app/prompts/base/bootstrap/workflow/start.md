@@ -1,0 +1,1 @@
+Once per conversation, load this contract. For a long-lived project, search_notes or recall by project/system, then get_note on the existing project README and relevant decisions. Use lexical search if semantic recall is unavailable.

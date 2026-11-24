@@ -21,11 +21,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = path.join(here, "fixtures", "permission-architecture");
 
 // `src/config.js` reads its paths at import time, so the isolated environment comes first.
-const env = await (await import("./helpers/permission-baseline-env.js")).seedPermissionBaselineEnv();
+const { removeBaselineRoot, seedPermissionBaselineEnv } = await import("./helpers/permission-baseline-env.js");
+const env = await seedPermissionBaselineEnv();
 const { deriveBoundaryEntries, routeKeysOf, withMountTracking } = await import("./helpers/permission-boundary-inventory.js");
 const express = (await import("express")).default;
 
-test.after(async () => fs.rm(env.root, { recursive: true, force: true }));
+test.after(async () => removeBaselineRoot(env.root));
 
 const { entries, counts } = await deriveBoundaryEntries();
 const manifest = JSON.parse(await fs.readFile(path.join(fixtures, "manifest.json"), "utf8"));

@@ -1,0 +1,1 @@
+Validate and atomically create or replace an Obsidian .base YAML document. This is a WHOLE-DOCUMENT rewrite: the document is re-serialised from the parsed mapping, so formatting is normalised, key order is not guaranteed and comments or unknown keys may not survive. Use `patch_base` when the file must keep everything you did not ask to change.

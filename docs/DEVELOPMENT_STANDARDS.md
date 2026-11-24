@@ -2,7 +2,7 @@
 
 本规范适用于后续功能、修复、重构、测试、发布和文档变更。参考 TimeTrace 的 `docs/10-audit-refactor-development-plan.md`：先确认产品事实，再审查测试；测试全绿不代表契约正确。用户特别要求 Reader 与编辑模式的样式渲染保持完全一致。
 
-本文件定义验收要求；[QUALITY_AUDIT.md](QUALITY_AUDIT.md) 记录当前证据与缺口。自动化脚本是否已经实现、合并或部署必须分别核验，不能由规范存在推断。
+本文件定义验收要求。日期的审计与缺陷记录不进本仓，见 Obsidian 项目笔记 `_Workspace/40-Projects/obsidian_mcp_server/History/`。自动化脚本是否已经实现、合并或部署必须分别核验，不能由规范存在推断。
 
 参考证据于 2026-10-02 重新读取 TimeTrace `master@2a9bb0e4c3092429a9b77598f71c1ba360b102b5`：
 
@@ -114,22 +114,20 @@ Web 与 MCP 对相同附件能力使用相同 Scope 契约；`obsidian.read` 的
 - 发布：记录最终 commit/tree、依赖、环境、命令、计数和原始产物。已授权本机或指定环境验证通过可直接发布部署，仓库 CI 继续后台运行。
 - 外部/非本地改动或缺少可信环境证据：沿用常规 CI required checks。保留完整 CI 回归，不能伪造 CI 绿灯。
 
-可用命令按范围选：app 下 npm ci（依赖/运行时变化时）、npm run check、node --test <相关文件>、node scripts/run-node-tests-ci.mjs（需要全量时）、npm run build:web、node scripts/run-browser-tests-ci.mjs、相关 parity、npm audit --audit-level=low；根目录 Python 测试与 inventory 检查用于相关脚本/工具变更。
+可用命令按范围选：app 下 npm ci（依赖/运行时变化时）、npm run check、node --test <相关文件>、node scripts/run-node-tests-local.mjs 或 `npm test`（本地全量，自动给一个隔离的 `DATA_PATH`；`authorization-*` 与 Web catalog 路由套件在这个变量缺失时会拒绝运行）；CI 里的 `node scripts/run-node-tests-ci.mjs`（15 分钟预算，无环境隔离，**固定 `--test-concurrency=4`**，可用 `NODE_TEST_GATE_CONCURRENCY` 覆盖；默认并发下必有 1–3 个 flake，见 #732）、npm run build:web、node scripts/run-browser-tests-ci.mjs、相关 parity、npm audit --audit-level=low；根目录 Python 测试与 inventory 检查用于相关脚本/工具变更。
 
 缺测、空跑、全 skip、超时不是通过；合法平台 skip 写原因与未证实项。未知失败先定位，不自动当环境抖动整套重跑；浏览器 CI 默认一次，显式诊断最多一次补跑并保留首轮产物。runner/网络/证书故障与产品失败区分，真实安全或产品失败不能忽略。
 
-工具配置与运行事实见 RELEASE_AND_DEPLOY.md；源码里的 gate 列表不构成每刀都重复执行的固定流水线。当前行数预算是 800，按第 7 节登记例外；不按过时 500 行副本机械拆分。
+工具配置与运行事实见 RELEASE_AND_DEPLOY.md；源码里的 gate 列表不构成每刀都重复执行的固定流水线。行数不作为门禁（2026-11-13 业主取消，见第 7 节）；拆分按职责判断，不按行数阈值机械拆分。
 
-## 7. 行数预算与例外登记
+## 7. 行数：不作门禁
 
-行数门禁由 `scripts/check-architecture.mjs`（扫描与接线）和 `scripts/line-budget.mjs`（纯逻辑）实现，随 `npm run check` 一起执行。
+**业主口径 2026-11-13：取消硬性行数门禁。** 机制本体随之下线：`scripts/line-budget.mjs`、`scripts/line-budget-baseline.json` 与 `scripts/check-architecture.mjs` 里的行数扫描/例外登记全部删除，`npm run check` 不再统计任何文件的行数。
 
-- **预算 800 行（非硬限制）**，行数按 `wc -l` 口径计算（结尾换行不算额外一行），覆盖 `frontend/`、`src/`、`scripts/`、`test/`（递归，`.js`/`.mjs`）以及根级 `*.js`/`*.mjs`（即 `server.js`）。`src/app/assets/` 是 `build:web` 生成物，排除在外，不得手工编辑。**业主口径 2026-10-11：500 → 800，并取消硬限制。**
-- **新代码优先拆**：未登记文件超过 800 行会 fail，提示 extract a cohesive module，**或登记 reason+plan 例外**。默认按职责抽出内聚模块，而不是把整块逻辑塞进一个文件。
-- **判断口径**：能拆就拆；只有确属用例密集的测试矩阵、生成/基准脚本或一次性 harness 才允许登记例外。登记是**已确认的债务**，不是继续扩张的许可。
-- **例外登记（给理由才放行）**：`app/scripts/line-budget-baseline.json` 的结构为 `{ "entries": { "<repo 相对路径>": { "maxLines": <int>, "reason": "<为什么允许长>", "plan": "<拆分计划或保持理由>" } } }`。`maxLines` 必须是大于 800 的整数，`reason` 与 `plan` 都必须是非空字符串；缺失或形状非法即 fail。文件回落到 800 行以内后**必须**从 baseline 删除该条。
-- **取消「只缩不涨」**：登记值不再是单向下调的棘轮。已登记文件若超过其 `maxLines` 会 fail 并提示更新 `maxLines`；**在同一改动里抬高 `maxLines` 并重述 `reason`/`plan` 即可作为例外放行** —— 即「超限须给出理由」，而不是绝对禁止。
-- 拆分完成或脚本归档后同步删除对应 baseline 条目，并更新本节的判断依据。
+- 历史：2026-10-11 业主曾把预算从 500 抬到 800 并允许登记例外；2026-11-13 进一步取消整条门禁，理由是不再用行数代替「职责是否内聚」的判断。
+- **现在保留的架构检查都是行为/关系检查**：禁止的旧别名、跨树运行时 import（`src/` → `frontend/`）、OAuth/admin 挂载重复、模块边界与 import allowlist 等，见 `scripts/check-architecture.mjs` 与相关 `test/*architecture*` / 契约测试。
+- **拆分仍按职责判断**：文件大到难以阅读、承担多个职责时抽出内聚模块；不以行数阈值或「只缩不涨」为依据，也不因行数拒绝合入。
+- 测试与文档里若还出现「行数上限」的表述，按本节的判断口径处理：它可以是当时的拆分理由记录，但不再是门禁。
 
 ## 8. PR、文档和状态验收
 

@@ -92,7 +92,8 @@ async function startServer(env, base) {
   const output = [];
   child.stdout.on("data", (chunk) => output.push(chunk.toString()));
   child.stderr.on("data", (chunk) => output.push(chunk.toString()));
-  for (let attempt = 0; attempt < 450; attempt += 1) {
+  // 1200 x 100 ms = 120 s: a cold boot on this container's CIFS mount measured 7-56 s (2026-11-13).
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`server exited early (${child.exitCode}): ${output.join("")}`);
     try {
       const response = await fetch(`${base}/healthz`);
@@ -247,7 +248,7 @@ test("web first-load budget (#414): asset cache policy, gzip negotiation and byt
   // `assetUrl("icons.svg")`), so changing the file must change every reference.
   await t.test("every sprite reference in the served pages carries the published content hash (U38)", async () => {
     const pagesModule = await import("../src/app/pages.js");
-    const { appPage, publishPage, loginPage } = pagesModule;
+    const { appPage, publishPage, loginPage, publishFolderPage } = pagesModule;
     const spriteHash = createHash("sha256").update(await fs.readFile(path.join(ASSETS_DIR, "icons.svg"))).digest("hex").slice(0, 16);
     const publishedSprite = `/app/assets/icons.svg?v=${spriteHash}`;
     // Issue #579: the gate used to name appPage() and publishPage() by hand, so loginPage()
@@ -257,8 +258,11 @@ test("web first-load budget (#414): asset cache policy, gzip negotiation and byt
       ["loginPage()", loginPage("", {}, "/app/"), false],
       ["appPage()", appPage({ username: WEB_USERNAME, displayName: "Budget", csrf: "csrf-token" }, {}), true],
       ["publishPage()", publishPage({ title: "budget", content: "", publishedAt: "" }), true],
+      // 60bbf07e (2026-11-09) added the opaque-token folder index: it publishes the sprite URL
+      // but draws no glyph, so the hash and no-unversioned-reference checks still apply to it.
+      ["publishFolderPage()", publishFolderPage({ title: "budget", notes: [], publishedAt: "" }), false],
     ];
-    const covered = new Set(["appPage", "publishPage", "loginPage"]);
+    const covered = new Set(["appPage", "publishPage", "loginPage", "publishFolderPage"]);
     const uncovered = Object.entries(pagesModule)
       .filter(([name, value]) => typeof value === "function" && !covered.has(name))
       .map(([name]) => name);

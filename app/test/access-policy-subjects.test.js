@@ -177,8 +177,8 @@ test("username/displayName are never used and tokens never leak into subjects", 
 
 test("module stays pure: no clock, no environment, no I/O", async () => {
   const text = await readFile(MODULE_URL, "utf8");
-  const lines = text.split(/\r?\n/);
-  assert.ok(lines.length <= 500, `subjects.js is ${lines.length} lines`);
+  // The hard code-line gate was retired by owner decision (2026-11-13); the purity bans below
+  // are the contract.
   assert.doesNotMatch(text, /Date\.now|process\.env|node:fs|node:child_process/);
   assert.doesNotMatch(text, /\.(?:username|displayName|token|secret)\b/);
 });

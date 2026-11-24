@@ -110,17 +110,10 @@ const ADMIN_BOUNDARY_EXPECTATIONS = {
   "ADMIN GET /audit/export.csv": "admin_metadata_read",
   "ADMIN POST /audit/clear": "admin_metadata_read",
   "ADMIN GET /language": "admin_metadata_read",
-  "ADMIN GET /access-policy": "admin_metadata_read",
-  "ADMIN POST /access-policy/preview": "admin_metadata_read",
-  "ADMIN POST /access-policy/subjects": "admin_metadata_read",
+  "ADMIN POST /api-key/agent": "admin_metadata_read", // a display label, not a grant
   "ADMIN POST /api-key/default-vault": "admin_metadata_read", // a preference, not a grant
   "ADMIN POST /oauth/client/default-vault": "admin_metadata_read",
   "ADMIN POST /oauth/user/default-vault": "admin_metadata_read",
-  "ADMIN POST /access-policy/create": "admin_authorization_manage",
-  "ADMIN POST /access-policy/delete": "admin_authorization_manage",
-  "ADMIN POST /access-policy/repair": "admin_authorization_manage",
-  "ADMIN POST /access-policy/toggle": "admin_authorization_manage",
-  "ADMIN POST /access-policy/update": "admin_authorization_manage",
   "ADMIN GET /authz": "admin_authorization_manage",
   "ADMIN POST /authz/create": "admin_authorization_manage",
   "ADMIN POST /authz/delete": "admin_authorization_manage",
@@ -165,7 +158,7 @@ test("catalog_maps_every_native_tool_resource_and_web_route_once", () => {
   assert.deepEqual([...catalogToolIds].sort(), TOOL_NAMES.toSorted());
 
   const boundaries = manifestBoundaries();
-  assert.equal(boundaries.length, 191, "the P0 manifest is the 182-row coverage set plus the Task 4 rename and delete routes, the two folder Publish routes and the per-Vault constraint page with its five writes, minus the frozen editor's preview fragment, which no surface reached");
+  assert.equal(boundaries.length, 184, "the P0 manifest is the 182-row coverage set plus the Task 4 rename and delete routes, the two folder Publish routes and the per-Vault constraint page with its five writes, plus the #285 API-key Agent-label write, minus the frozen editor's preview fragment, which no surface reached, minus the retired legacy access-policy page and its seven writes");
 
   for (const boundary of boundaries) {
     const operationId = capabilityForBoundary(boundary);
@@ -189,7 +182,7 @@ test("catalog_maps_admin_actions_to_control_operations", () => {
   for (const [boundary, expected] of Object.entries(ADMIN_BOUNDARY_EXPECTATIONS)) {
     assert.equal(capabilityForBoundary(boundary), expected, boundary);
   }
-  assert.equal(Object.keys(ADMIN_BOUNDARY_EXPECTATIONS).length, 44);
+  assert.equal(Object.keys(ADMIN_BOUNDARY_EXPECTATIONS).length, 37);
 });
 
 test("catalog_maps_each_resource_once_with_its_own_read_capability", () => {

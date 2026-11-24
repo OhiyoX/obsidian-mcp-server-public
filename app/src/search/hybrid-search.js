@@ -1,16 +1,19 @@
 import { recall, semanticConfiguration } from "../retrieval.js";
 import { evaluateObsidianQuery } from "./evaluator.js";
+import { lexicalFieldStats, rankLexicalCandidates } from "./field-ranker.js";
+import { DEFAULT_FUSION_CONFIG, fuseRankedResults, rankedIdentity } from "./fusion.js";
 
 function resultFor(record, exact, semantic) {
   return {
     path: record.path,
+    ...(record.vaultId === undefined ? {} : { vaultId: record.vaultId }),
     matchCount: exact?.matchCount || 0,
     tags: record.tags,
     aliases: record.aliases,
     snippets: exact?.snippets?.length ? exact.snippets : semantic?.chunks?.map((chunk) => chunk.text).filter(Boolean) || [],
     stat: record.stat,
     revision: record.revision,
-    score: exact ? 1 + Math.min(exact.matchCount, 20) / 20 : semantic?.score || 0,
+    score: exact ? 1 : semantic?.score || 0,
     reasons: exact ? ["exact", ...(exact.matchedClauses || []).map((value) => `query:${value}`)] : semantic?.reasons || [],
   };
 }
@@ -29,8 +32,8 @@ export function semanticModeFor(options) {
 // fallback both funnel through this single path so the recall call and the
 // semanticCandidate hard-filter revalidation exist exactly once. Retrieval
 // candidates are never returned directly: every candidate is re-evaluated with
-// `evaluateObsidianQuery(record, parsed, { ...options, semanticCandidate:
-// true })` so structural filters, negatives, and properties stay mandatory. A
+// the fusion boundary's literal query, so structural filters, negatives,
+// properties, and quoted phrases stay mandatory. A
 // recall failure degrades to the exact results instead of throwing.
 //
 // Wave D / D-search: `recallImpl` is the *selected Vault's* recall (the search
@@ -39,37 +42,63 @@ export function semanticModeFor(options) {
 // every existing caller unchanged. `semanticConfiguration()` is process-level
 // (one shared embedding provider, contract §12) and stays the facade import.
 async function augmentWithRetrieval(exactByPath, records, parsed, options, recallImpl) {
+  const config = { ...DEFAULT_FUSION_CONFIG, ...options.fusion };
   let recalled;
+  let hybridUsed = true;
   try {
-    recalled = await recallImpl(parsed.semanticText, { semantic: true, limit: Math.max(options.limit || 50, 100), chunksPerNote: 2, snippetLength: 400 });
+    recalled = await recallImpl(parsed.semanticText, { semantic: true, limit: config.candidateCap, chunksPerNote: 2, snippetLength: 400 });
   } catch (error) {
-    return { results: [...exactByPath.values()], semanticUsed: false, semanticError: error.message, hybridUsed: false };
+    recalled = { results: [], semanticUsed: false, semanticError: error.message || String(error) };
+    hybridUsed = false;
   }
-  const recordByPath = new Map(records.map((record) => [record.path, record]));
-  for (const semantic of recalled.results) {
-    const record = recordByPath.get(semantic.path);
-    if (!record || exactByPath.has(record.path)) continue;
-    const candidate = evaluateObsidianQuery(record, parsed, { ...options, semanticCandidate: true });
-    if (candidate.matched) exactByPath.set(record.path, resultFor(record, null, semantic));
-  }
-  const embeddingEnabled = semanticConfiguration().enabled;
-  const semanticError = recalled.semanticError || (!recalled.semanticUsed && !embeddingEnabled
-    ? "Embedding provider is not configured; lexical hybrid ranking was used"
-    : null);
-  return {
-    results: [...exactByPath.values()],
-    semanticUsed: recalled.semanticUsed,
-    semanticError,
-    hybridUsed: true,
-  };
+  const identity = (item) => rankedIdentity(item, options.vaultId);
+  const recordByPath = new Map(records.map((record) => [identity(record), record]));
+  const candidates = recalled.results.flatMap((candidate) => {
+    const record = recordByPath.get(identity(candidate));
+    return record ? [exactByPath.get(identity(record)) || resultFor(record, null, candidate)] : [];
+  });
+  const exact = [...exactByPath.values()];
+  const fused = fuseRankedResults({
+    exact,
+    lexical: recalled.semanticUsed ? exact : [...exact, ...candidates],
+    semantic: {
+      ...recalled,
+      results: recalled.semanticUsed ? candidates : [],
+      enabled: recalled.semanticUsed || semanticConfiguration().enabled,
+    },
+    constraints: { records, parsed, options, vaultId: options.vaultId },
+    config,
+  });
+  return { ...fused, hybridUsed };
 }
 
 export async function hybridSearch(records, parsed, options = {}, recallImpl = recall) {
+  if (options.vaultId !== undefined) records = records.filter((record) => record.vaultId === undefined || record.vaultId === options.vaultId);
+  const identity = (item) => rankedIdentity(item, options.vaultId);
   const exactByPath = new Map();
   for (const record of records) {
     const exact = evaluateObsidianQuery(record, parsed, options);
-    if (exact.matched) exactByPath.set(record.path, resultFor(record, exact));
+    if (exact.matched) exactByPath.set(identity(record), resultFor(record, exact));
   }
+  const candidates = records.filter((record) => exactByPath.has(identity(record)));
+  const vaults = [...new Set(candidates.map((record) => record.vaultId ?? options.vaultId))];
+  const ranked = vaults.flatMap((vaultId) => {
+    const sameVault = (record) => (record.vaultId ?? options.vaultId) === vaultId;
+    return rankLexicalCandidates({ ...parsed, includeFrontmatter: options.includeFrontmatter }, candidates.filter(sameVault), lexicalFieldStats(records.filter(sameVault)))
+      .map((item) => ({ ...item, vaultId }));
+  });
+  for (const item of ranked) {
+    const result = exactByPath.get(identity(item));
+    result.score = 1 + item.score / (1 + item.score);
+    result.reasons.push(...item.reasons);
+    if (item.topSnippetRef && options.maxMatchesPerNote !== 0) {
+      result.snippets = [...new Set([item.topSnippetRef.text, ...result.snippets])].slice(0, options.maxMatchesPerNote || 10);
+    }
+  }
+  // Preserve the ranker's path tie order for callers that retain result order.
+  const ordered = ranked.map((item) => [identity(item), exactByPath.get(identity(item))]);
+  exactByPath.clear();
+  for (const [path, result] of ordered) exactByPath.set(path, result);
   // exactMatched is the exact evaluator's own hit count, captured before any
   // retrieval augmentation, so both the auto decision and the returned field
   // describe the exact phase rather than the final fused result set.

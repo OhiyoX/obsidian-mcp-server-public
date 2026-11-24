@@ -150,6 +150,12 @@ const TOOL_EXTRA_SCOPES = Object.freeze({
   daily_note: Object.freeze(["obsidian.write"]),
 });
 
+// #276: the tools whose answer is a write. Derived from the scope table above rather than
+// listed again, so a new mutating tool cannot be missing from the bootstrap's capability view.
+export const WRITE_TOOLS = Object.freeze(
+  Object.keys(TOOL_EXTRA_SCOPES).filter((name) => TOOL_EXTRA_SCOPES[name].includes("obsidian.write")).sort(),
+);
+
 // The only visibility mode implemented today: every registered tool is visible
 // in tools/list unconditionally.
 export const EAGER_VISIBILITY = "eager";

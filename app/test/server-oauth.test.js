@@ -42,7 +42,8 @@ async function stopChild(child) {
 
 async function waitFor(url, child, output) {
   // Full-suite crypto/index tests can briefly saturate slower NAS-class CPUs.
-  for (let attempt = 0; attempt < 450; attempt += 1) {
+  // 1200 x 100 ms = 120 s: a cold boot on this container's CIFS mount measured 7-56 s (2026-11-13).
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`Server exited early with code ${child.exitCode}: ${output.join("")}`);
     try {
       const response = await fetch(url);
@@ -600,7 +601,9 @@ test("HTTP server exposes OAuth discovery and challenges unauthenticated MCP req
     assert.match(clientsHtml, new RegExp(`localhost:${port}`));
     assert.match(clientsHtml, /title="来源：[^"]*注册/);
     assert.match(clientsHtml, /title="来源：[^"]*(?:授权|调用|请求)/);
-    assert.match(clientsHtml, /<th>已授权账户<\/th>/);
+    // The clients table became sortable, so the header cell now wraps its label in a sort link.
+    assert.match(clientsHtml, /<th[^>]*>(?:<a[^>]*>)?已授权账户/, "the clients table keeps the 已授权账户 column");
+    assert.match(clientsHtml, /aria-sort=/, "and that column is still sortable");
     assert.match(clientsHtml, /域名来自实际授权(?: resource 与 MCP 调用|与调用)/);
     // Proto clients row: the one 已授权账户 cell links both accounts' own drawers, not a count.
     assert.equal([...clientsHtml.matchAll(/<td class="cellt"><a href="\/admin\/auth\?tab=accounts&amp;id=[^"]+">(?:Second Owner|test-owner)<\/a>(?:、<a href="\/admin\/auth\?tab=accounts&amp;id=[^"]+">(?:Second Owner|test-owner)<\/a>)*<\/td>/g)].length, 1, "both authorizing accounts share the cell, each as a link");
@@ -611,7 +614,8 @@ test("HTTP server exposes OAuth discovery and challenges unauthenticated MCP req
     assert.match(auditHtml, /class="seg"[\s\S]{0,400}outcome=(?:success|failure)/, "the outcome filter is the prototype's segmented links");
     assert.match(auditHtml, /name="origin"[^>]*value="localhost"/); assert.match(auditHtml, new RegExp(`localhost:${port}`));
     // Agent attribution is owned by `audit-attribution-http.test.js`; this file keeps the filters.
-    assert.match(auditHtml, /<th>Agent<\/th>/);
+    // Sortable tables wrap the header label in a sort link; the column is what the contract names.
+    assert.match(auditHtml, /<th[^>]*>(?:<a[^>]*>)?Agent/, "the audit table keeps its Agent column");
     assert.match(auditHtml, /href="\/app\/"[\s\S]*?进入 Obsidian Web/);
     const tokenPage = await fetch(`http://127.0.0.1:${port}/admin/auth?tab=tokens&order=asc`, { headers: { Cookie: cookie } });
     const tokenHtml = await tokenPage.text();
@@ -700,6 +704,17 @@ test("HTTP server exposes OAuth discovery and challenges unauthenticated MCP req
     const keyIds = [...keysHtml.matchAll(/<td><a class="cell-link block" href="\/admin\/auth\?tab=keys&amp;id=([^"]+)"/g)].map((m) => m[1]);
     const managedKeyId = keyIds.find((id) => id !== "configured-env") || keyIds[0];
     assert.ok(managedKeyId);
+    // The expiry is a real column, and the deployment key says so instead of showing a dash.
+    // A sortable header renders a real GET link, so the label sits inside the anchor.
+    assert.match(keysHtml, /<th[^>]*>(<a[^>]*>)?到期/);
+    assert.match(keysHtml, /sort=expires/);
+    const managedRow = keysHtml.split("</tr>").find((row) => row.includes(`id=${managedKeyId}`)) || "";
+    assert.match(managedRow, /永不|天后|今天到期|已过期/);
+    // The new-key drawer asks for an expiry instead of promising one.
+    const newKeyHtml = await (await fetch(`http://127.0.0.1:${port}/admin/auth?tab=keys&id=new`, { headers: { Cookie: cookie } })).text();
+    assert.match(newKeyHtml, /name="expiry"/);
+    assert.match(newKeyHtml, /name="expiresOn"/);
+    assert.equal(/规划中/.test(newKeyHtml.split('id="new-key"')[1]?.split("</form>")[0] || ""), false, "the expiry control must not carry the planned marker");
     async function setManagedKeyAuthorization(scopes, vault) {
       const body = new URLSearchParams({ csrf, id: managedKeyId, allowedVault: vault });
       for (const scope of scopes) body.append("allowedScope", scope);
@@ -713,10 +728,19 @@ test("HTTP server exposes OAuth discovery and challenges unauthenticated MCP req
     }
 
     await setManagedKeyAuthorization(["obsidian.write"], "vault");
-    const deniedRead = await fetch(`http://127.0.0.1:${port}/mcp`, {
+    // Scope is decided per `tools/call` member, never on `initialize` (src/auth.js builds an
+    // authorization request only for tool calls), so the handshake succeeds and the *call* is what
+    // must be refused. Asserting 403 on `initialize` measured the wrong step.
+    const noReadInit = await fetch(`http://127.0.0.1:${port}/mcp`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "X-API-Key": managedKey },
       body: JSON.stringify({ jsonrpc: "2.0", id: 19, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "managed-key-no-read", version: "1" } } }),
+    });
+    assert.equal(noReadInit.status, 200, "the handshake itself is not a scope decision");
+    const deniedRead = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "X-API-Key": managedKey },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 19, method: "tools/call", params: { name: "list_notes", arguments: {} } }),
     });
     assert.equal(deniedRead.status, 403);
     assert.equal((await deniedRead.json()).error, "insufficient_scope");
@@ -832,7 +856,10 @@ test("HTTP server exposes OAuth discovery and challenges unauthenticated MCP req
       { headers: { Cookie: cookie } },
     )).text();
     // W3 Option B: the scopes form is in the `?id=` drawer; the row link exposes the account id.
-    const firstUserId = freshAccountsHtml.match(/href="\/admin\/auth\?tab=accounts&amp;id=([^"]+)"[\s\S]{0,300}?test-owner/)?.[1];
+    // Take the id from the row that *is* this account: since 89ae4c16 the table sorts by name, so a
+    // text-first match lands on another row's ⋯ menu and yields "…&amp;confirm=delete" instead of an id.
+    const ownerRow = (freshAccountsHtml.match(/<tr[\s\S]*?<\/tr>/g) ?? []).find((row) => row.includes("test-owner")) ?? "";
+    const firstUserId = ownerRow.match(/href="\/admin\/auth\?tab=accounts&amp;id=([^"&]+)"/)?.[1];
     assert.ok(firstUserId, "must resolve the first OAuth user's admin id");
 
     const narrowFirstUser = await fetch(`http://127.0.0.1:${port}/admin/auth/oauth/user/scopes`, {

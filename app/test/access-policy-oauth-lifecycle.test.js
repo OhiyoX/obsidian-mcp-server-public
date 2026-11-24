@@ -59,7 +59,7 @@ async function newService(accessRuntime) {
 
 after(async () => {
   for (const provider of providers) await provider.drainPersistence();
-  await fs.rm(root, { recursive: true, force: true });
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 function policyFor({ mode = "revoke", subjects }) {

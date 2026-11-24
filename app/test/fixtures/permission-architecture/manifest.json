@@ -16,10 +16,6 @@
     },
     {
       "kind": "admin-action",
-      "id": "ADMIN GET /access-policy"
-    },
-    {
-      "kind": "admin-action",
       "id": "ADMIN GET /assets/:file"
     },
     {
@@ -40,31 +36,7 @@
     },
     {
       "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/create"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/delete"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/preview"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/repair"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/subjects"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/toggle"
-    },
-    {
-      "kind": "admin-action",
-      "id": "ADMIN POST /access-policy/update"
+      "id": "ADMIN POST /api-key/agent"
     },
     {
       "kind": "admin-action",

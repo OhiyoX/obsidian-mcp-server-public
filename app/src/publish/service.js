@@ -59,6 +59,7 @@ import {
 export const STATE_VERSION = 3;
 const LOADABLE_STATE_VERSIONS = new Set([1, 2, STATE_VERSION]);
 const DEFAULT_FILE = path.join(DATA_PATH, "publish", "state.json");
+const VIEW_SAVE_DEBOUNCE_MS = 5000;
 
 // A1 and A2 both name the frozen cross-surface code; wiring two owners without this
 // ratchet is a silent drift risk (§16).
@@ -87,6 +88,12 @@ function clean(value, max = 240) {
   return String(value ?? "").replace(/[\r\n\0]/g, " ").trim().slice(0, max);
 }
 
+// A record written before view counting has no counters, and a hand-edited file may hold garbage:
+// both read as "never opened" (no state-version bump, design 2026-11-16).
+function readViews(record) {
+  return Number.isInteger(record?.views) && record.views > 0 ? record.views : 0;
+}
+
 // `lifecycle` is part of the public record now (Admin/published: read it; §9).
 function publicRecord(record) {
   return {
@@ -98,6 +105,8 @@ function publicRecord(record) {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     createdBy: record.createdBy || null,
+    views: readViews(record),
+    lastViewedAt: typeof record.lastViewedAt === "string" ? record.lastViewedAt : null,
   };
 }
 
@@ -208,6 +217,9 @@ export class PublishService {
     this.saveQueue = Promise.resolve();
     this.mutationQueue = Promise.resolve();
     this.migrationIssues = [];
+    this.viewSaveTimer = null;
+    this.viewSavePending = false;
+    this.viewSequence = 0;
     this.ready = this.load();
   }
 
@@ -227,6 +239,16 @@ export class PublishService {
       throw new Error(`Cannot load publish state: unsupported state version ${String(parsed.version)}`);
     }
     const migrated = migratePublishState(parsed);
+    // The migration normalizes the fields it owns (id/path/lifecycle) and drops the rest, so the
+    // view counters are read back from the raw file by id. A record that was never viewed carries
+    // no counter at all: a missing field reads as 0 / null, so it stays out of the file.
+    const counters = new Map();
+    for (const entry of parsed.records) {
+      const id = typeof entry?.id === "string" ? entry.id : null;
+      const views = readViews(entry);
+      if (id === null || counters.has(id) || (views === 0 && typeof entry.lastViewedAt !== "string")) continue;
+      counters.set(id, { views, lastViewedAt: typeof entry.lastViewedAt === "string" ? entry.lastViewedAt : null });
+    }
     const records = [];
     const issues = [...migrated.issues];
     for (const record of migrated.records) {
@@ -234,7 +256,7 @@ export class PublishService {
         issues.push(`record ${record.id}: unsafe_record_path`);
         continue;
       }
-      records.push({ ...record });
+      records.push({ ...record, ...(counters.get(String(record.id)) ?? {}) });
     }
     this.migrationIssues = issues;
     this.data = { version: STATE_VERSION, records };
@@ -254,6 +276,54 @@ export class PublishService {
       }
     });
     return this.saveQueue;
+  }
+
+  // One served public page = one view. The counter lives in memory and reaches the file through
+  // one debounced save, so a page opened 100 times is one write, not 100 (design 2026-11-16).
+  // The callers are the public routes, so nothing that answered 404 is ever counted.
+  recordView(id) {
+    const record = this.data.records.find((item) => item.id === String(id || ""));
+    if (!record) return false;
+    record.views = readViews(record) + 1;
+    record.lastViewedAt = now();
+    this.viewSequence += 1;
+    this.#scheduleViewSave();
+    return true;
+  }
+
+  /** Write a pending view count now. `list()` calls it, so Admin never reads a stale number. */
+  async flush() {
+    if (this.viewSaveTimer) {
+      clearTimeout(this.viewSaveTimer);
+      this.viewSaveTimer = null;
+    }
+    if (!this.viewSavePending) return;
+    await this.#writeViewSave();
+  }
+
+  // The count is written only once a save resolved: a failed write re-arms the timer instead of
+  // dropping the count, and a count added during a write keeps the flag set (the sequence guard),
+  // so a later `flush()` writes it too.
+  #scheduleViewSave() {
+    this.viewSavePending = true;
+    if (this.viewSaveTimer) return;
+    this.viewSaveTimer = setTimeout(() => {
+      this.viewSaveTimer = null;
+      this.#writeViewSave().catch(() => {});
+    }, VIEW_SAVE_DEBOUNCE_MS);
+    // A pending count must not hold the process open.
+    this.viewSaveTimer.unref?.();
+  }
+
+  #writeViewSave() {
+    const sequence = this.viewSequence;
+    return this.save().then(() => {
+      if (this.viewSequence === sequence) this.viewSavePending = false;
+      else this.#scheduleViewSave();
+    }, (error) => {
+      this.#scheduleViewSave();
+      throw error;
+    });
   }
 
   // Single mutation lane for publish/revoke/resolve-observation/list-observation (§8.2).
@@ -495,6 +565,9 @@ export class PublishService {
   // Admin view (`includeInactive: true`) keeps retired records visible so they can be
   // cleaned up (§9); the default is the active-only published candidate set.
   async list({ vaultIds, includeInactive = false } = {}) {
+    // Admin must not read a stale count. A failed write keeps the count pending (nothing is lost)
+    // and must not take the whole listing down with it.
+    await this.flush().catch(() => {});
     return this.#enqueue(async () => {
       await this.ready;
       const allowed = vaultIds ? new Set(vaultIds.map(String)) : null;

@@ -1,0 +1,1 @@
+Read first; supply the returned revision as ifMatch for updates. On conflict reread and reconcile instead of overwriting. Capture purpose, architecture, paths/config names, evidence, recovery and next actions. Distinguish planned, implemented, and verified state.

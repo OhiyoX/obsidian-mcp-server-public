@@ -31,7 +31,7 @@ export function identifyAgentFromUserAgent(value) {
 
 // Display-only classification for the Admin audit table (issue #285). A programmatic
 // client (undici/node/httpx/...) declares no identity, so the Agent column would be
-// blank; the audit shows "通用客户端（无 UA 身份）" instead of pretending it is one of
+// blank; the audit shows "通用客户端（undici）" instead of pretending it is one of
 // the hosts above. Never used for authentication, Scope, Vault, AuthZ or allow/deny.
 const GENERIC_UA_RULES = [
   ["undici", /\bundici\b/i],
@@ -51,6 +51,15 @@ export function classifyGenericUserAgent(value) {
     if (pattern.test(userAgent)) return kind;
   }
   return null;
+}
+
+/**
+ * The one display hint the Admin drawer shows when a key carries no Agent label (#285): the
+ * known agent name, else the generic-client kind, else `null`. Display only — like the two
+ * classifiers above, it never grants permission and must not reach Scope, Vault or AuthZ.
+ */
+export function displayAgentHint(value) {
+  return identifyAgentFromUserAgent(value) || classifyGenericUserAgent(value) || null;
 }
 
 export function requestUserAgent(extra) {

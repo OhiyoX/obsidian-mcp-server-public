@@ -24,6 +24,8 @@ const VAULT_ROOT = path.join(ROOT, "vaults");
 const DATA_ROOT = path.join(ROOT, "data");
 const PRIMARY_ROOT = path.join(VAULT_ROOT, "primary");
 const INDEX_PATH = path.join(DATA_ROOT, "index", "retrieval-index.json");
+// M2: the runtime publishes a v2 generation; current.json is the "index exists" fact.
+const STORE_POINTER = path.join(path.dirname(INDEX_PATH), "retrieval-index-v2", "current.json");
 
 process.env.VAULT_PATH = PRIMARY_ROOT;
 process.env.WEB_VAULTS_ROOT = VAULT_ROOT;
@@ -85,7 +87,7 @@ test("R2: a durable revoke stops the process-shared primary search, and an armed
     assert.equal(typeof healthy?.fn, "function", "the production scheduleRetrievalRefresh armed a callback");
     healthy.fn();
     await primaryRetrievalRuntime.drainRetrievalIndex();
-    assert.equal(await exists(INDEX_PATH), true, "the live callback wrote the index (control)");
+    assert.equal(await exists(STORE_POINTER), true, "the live callback wrote the index (control)");
     healthyJob = (await primaryRetrievalRuntime.retrievalIndexStatus())?.indexJob ?? null;
 
     // Arm a NEW pending refresh while the handle is current, then durably revoke.
@@ -98,12 +100,12 @@ test("R2: a durable revoke stops the process-shared primary search, and an armed
     timers.restore();
   }
 
-  await fs.rm(INDEX_PATH, { force: true });
+  await fs.rm(path.dirname(STORE_POINTER), { recursive: true, force: true });
   await fs.writeFile(path.join(PRIMARY_ROOT, "after-revoke.md"), "# after revoke\n", "utf8");
   // The seat invoked the captured callback directly after the revoke. It must not write.
   pending.fn();
   await primaryRetrievalRuntime.drainRetrievalIndex();
-  assert.equal(await exists(INDEX_PATH), false, "a revoked primary callback never writes the index");
+  assert.equal(await exists(STORE_POINTER), false, "a revoked primary callback never writes the index");
   assert.equal(((await primaryRetrievalRuntime.retrievalIndexStatus())?.indexJob ?? null)?.id, healthyJob?.id ?? null, "no NEW retrieval job was started by the revoked callback");
 
   // Re-approval: the OLD callback stays refused; a fresh handle's facade can do real work.
@@ -113,8 +115,8 @@ test("R2: a durable revoke stops the process-shared primary search, and an armed
   assert.notEqual(freshSearch, search, "each generation gets its own facade");
   pending.fn();
   await primaryRetrievalRuntime.drainRetrievalIndex();
-  assert.equal(await exists(INDEX_PATH), false, "the previous generation's callback never revives");
+  assert.equal(await exists(STORE_POINTER), false, "the previous generation's callback never revives");
   freshSearch.retrieval.startRetrievalIndex({ embeddings: false, force: true });
   await primaryRetrievalRuntime.drainRetrievalIndex();
-  assert.equal(await exists(INDEX_PATH), true, "a current handle's facade can still start a real job");
+  assert.equal(await exists(STORE_POINTER), true, "a current handle's facade can still start a real job");
 });

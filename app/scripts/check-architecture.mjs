@@ -2,12 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { auditLineBudget, countLines } from "./line-budget.mjs";
-
 const root = process.cwd();
 const sourceRoots = ["frontend", "src"];
 const scriptRoots = ["scripts", "test"];
-const baselinePath = "scripts/line-budget-baseline.json";
 
 const ignoredPrefixes = ["src/app/assets/"];
 
@@ -28,9 +25,11 @@ const failures = [];
 const inspected = [];
 const forbiddenScope = [];
 
+// The owner retired the hard code-line gate on 2026-11-13: no line count is inspected here,
+// only the behavioural/relation checks below. `inspected` counts the files those checks cover.
 async function inspect(file) {
-  const content = await readFile(path.join(root, file), "utf8");
-  inspected.push({ file, lines: countLines(content) });
+  await readFile(path.join(root, file), "utf8");
+  inspected.push(file);
 }
 
 for (const sourceRoot of sourceRoots) {
@@ -49,18 +48,6 @@ for (const scriptRoot of scriptRoots) {
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isFile() || entry.name.startsWith(".") || !/\.(?:js|mjs)$/.test(entry.name)) continue;
   await inspect(entry.name);
-}
-
-let baseline;
-try {
-  baseline = JSON.parse(await readFile(path.join(root, baselinePath), "utf8"));
-} catch (error) {
-  failures.push(`${baselinePath}: cannot read line-budget baseline (${error.message})`);
-}
-if (baseline !== undefined) {
-  const audit = auditLineBudget({ inspected, baseline });
-  failures.push(...audit.failures);
-  for (const notice of audit.notices) console.log(`line-budget: ${notice}`);
 }
 
 const forbiddenPatterns = [
@@ -96,6 +83,17 @@ for (const file of await collect("src")) {
   if (CROSS_TREE_IMPORT.test(content)) {
     failures.push(`${file}: forbidden runtime import into frontend/ (the container mounts only app/server.js + app/src \u21d2 ERR_MODULE_NOT_FOUND in production; window #22)`);
   }
+}
+
+// Prompt copy lives in `prompts/base` (see test/prompt-base-inventory.test.js), never as a
+// tool-config literal: a duplicated description is what issue #825 was about. Zod parameter
+// `.describe(...)` calls are not this property and stay allowed.
+const PROMPT_COPY_OWNERS = ["src/base-create-face.js"];
+for (const file of await collect("src/tools")) PROMPT_COPY_OWNERS.push(file);
+for (const file of PROMPT_COPY_OWNERS) {
+  const content = await readFile(path.join(root, file), "utf8");
+  const line = content.split("\n").findIndex((entry) => /^\s*description:\s*(["'`]|$)/.test(entry));
+  if (line >= 0) failures.push(`${file}:${line + 1}: tool description literal (move the copy to prompts/base)`);
 }
 
 if (failures.length) {

@@ -1,0 +1,442 @@
+{
+  "version": 1,
+  "description": "Frozen relevance judgments for the Search v2 gate (Task S1). One row per (query, constraints, docId) with a graded relevance: 2 = the canonical answer, 1 = related, 0 = noise that must never outrank the canonical answer. `fixtureHash` is the SHA-256 of corpus.json; a corpus edit without a judgment review must fail the gate. Regenerate the frozen numbers with `node scripts/search-v2-baseline.mjs --freeze` only after reviewing the diff as a deliberate ranking change.",
+  "fixture": "corpus.json",
+  "fixtureHash": "sha256:d418dedb65a92c6692f9b3c4270a9508d359d18c58db2179664425c9b21a33e4",
+  "queries": [
+    {
+      "query": "网络故障",
+      "constraints": {},
+      "category": "cjk"
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "category": "cjk"
+    },
+    {
+      "query": "OpenWrt 网络故障",
+      "constraints": {},
+      "category": "mixed"
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "category": "english"
+    },
+    {
+      "query": "backup retention",
+      "constraints": {},
+      "category": "english"
+    },
+    {
+      "query": "restore_from_trash",
+      "constraints": {},
+      "category": "identifier-snake"
+    },
+    {
+      "query": "2c1a9f0",
+      "constraints": {},
+      "category": "identifier-commit"
+    },
+    {
+      "query": "app/src/search.js",
+      "constraints": {},
+      "category": "identifier-path"
+    },
+    {
+      "query": "planRestoreVersion",
+      "constraints": {},
+      "category": "identifier-camel"
+    },
+    {
+      "query": "path:Ops deploy",
+      "constraints": {},
+      "category": "path-constraint"
+    },
+    {
+      "query": "path:Code restore",
+      "constraints": {},
+      "category": "path-constraint"
+    },
+    {
+      "query": "tag:search/index refresh",
+      "constraints": {},
+      "category": "tag-constraint"
+    },
+    {
+      "query": "tag:ops/runbook deploy",
+      "constraints": {},
+      "category": "tag-constraint"
+    },
+    {
+      "query": "[owner:Ada] backup",
+      "constraints": {},
+      "category": "property-constraint"
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "category": "negation"
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "category": "negation"
+    },
+    {
+      "query": "\"delayed retry budget\"",
+      "constraints": {},
+      "category": "quoted-phrase"
+    },
+    {
+      "query": "vector cache eviction",
+      "constraints": {
+        "semantic": true
+      },
+      "category": "embeddings-unavailable"
+    }
+  ],
+  "rows": [
+    {
+      "query": "网络故障",
+      "constraints": {},
+      "docId": "Notes/Network Troubleshooting.md",
+      "relevance": 2
+    },
+    {
+      "query": "网络故障",
+      "constraints": {},
+      "docId": "Notes/中文说明.md",
+      "relevance": 1
+    },
+    {
+      "query": "网络故障",
+      "constraints": {},
+      "docId": "Archive/Legacy Network Log.md",
+      "relevance": 1
+    },
+    {
+      "query": "OpenWrt 网络故障",
+      "constraints": {},
+      "docId": "Notes/Network Troubleshooting.md",
+      "relevance": 2
+    },
+    {
+      "query": "OpenWrt 网络故障",
+      "constraints": {},
+      "docId": "Notes/OpenWrt Router Config.md",
+      "relevance": 1
+    },
+    {
+      "query": "OpenWrt 网络故障",
+      "constraints": {},
+      "docId": "Archive/Legacy Network Log.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "docId": "Notes/Retry Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "docId": "Notes/Retry Budget Policy.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "docId": "Archive/Retry Policy Old.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "docId": "Notes/Retry Policy Draft.md",
+      "relevance": 0
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "docId": "Notes/Retry Backoff Notes.md",
+      "relevance": 0
+    },
+    {
+      "query": "restore_from_trash",
+      "constraints": {},
+      "docId": "Code/Trash Restore.md",
+      "relevance": 2
+    },
+    {
+      "query": "restore_from_trash",
+      "constraints": {},
+      "docId": "Notes/Search Design.md",
+      "relevance": 1
+    },
+    {
+      "query": "restore_from_trash",
+      "constraints": {},
+      "docId": "Code/Restore Planner.md",
+      "relevance": 1
+    },
+    {
+      "query": "2c1a9f0",
+      "constraints": {},
+      "docId": "Ops/Changelog.md",
+      "relevance": 2
+    },
+    {
+      "query": "2c1a9f0",
+      "constraints": {},
+      "docId": "Notes/Release Notes Draft.md",
+      "relevance": 0
+    },
+    {
+      "query": "app/src/search.js",
+      "constraints": {},
+      "docId": "Code/app/src/search.js.md",
+      "relevance": 2
+    },
+    {
+      "query": "app/src/search.js",
+      "constraints": {},
+      "docId": "Notes/Search Design.md",
+      "relevance": 1
+    },
+    {
+      "query": "app/src/search.js",
+      "constraints": {},
+      "docId": "Code/app/src/index.js.md",
+      "relevance": 0
+    },
+    {
+      "query": "planRestoreVersion",
+      "constraints": {},
+      "docId": "Code/Restore Planner.md",
+      "relevance": 2
+    },
+    {
+      "query": "planRestoreVersion",
+      "constraints": {},
+      "docId": "Notes/Search Design.md",
+      "relevance": 1
+    },
+    {
+      "query": "planRestoreVersion",
+      "constraints": {},
+      "docId": "Code/Trash Restore.md",
+      "relevance": 1
+    },
+    {
+      "query": "path:Ops deploy",
+      "constraints": {},
+      "docId": "Ops/Deploy Runbook.md",
+      "relevance": 2
+    },
+    {
+      "query": "path:Ops deploy",
+      "constraints": {},
+      "docId": "Ops/Rollback Checklist.md",
+      "relevance": 1
+    },
+    {
+      "query": "path:Ops deploy",
+      "constraints": {},
+      "docId": "Notes/Deploy Notes.md",
+      "relevance": 0
+    },
+    {
+      "query": "tag:search/index refresh",
+      "constraints": {},
+      "docId": "Notes/Vault Index Notes.md",
+      "relevance": 2
+    },
+    {
+      "query": "tag:search/index refresh",
+      "constraints": {},
+      "docId": "Notes/Embedding Pipeline.md",
+      "relevance": 1
+    },
+    {
+      "query": "tag:search/index refresh",
+      "constraints": {},
+      "docId": "Ops/Deploy Runbook.md",
+      "relevance": 0
+    },
+    {
+      "query": "[owner:Ada] backup",
+      "constraints": {},
+      "docId": "Ops/Backup Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "[owner:Ada] backup",
+      "constraints": {},
+      "docId": "Notes/Backup Notes.md",
+      "relevance": 0
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "docId": "Notes/Retry Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "docId": "Notes/Retry Budget Policy.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "docId": "Archive/Retry Policy Old.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "docId": "Notes/Retry Policy Draft.md",
+      "relevance": 0
+    },
+    {
+      "query": "\"delayed retry budget\"",
+      "constraints": {},
+      "docId": "Notes/Retry Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "\"delayed retry budget\"",
+      "constraints": {},
+      "docId": "Notes/Retry Budget Policy.md",
+      "relevance": 1
+    },
+    {
+      "query": "\"delayed retry budget\"",
+      "constraints": {},
+      "docId": "Notes/Retry Backoff Notes.md",
+      "relevance": 0
+    },
+    {
+      "query": "vector cache eviction",
+      "constraints": {
+        "semantic": true
+      },
+      "docId": "Notes/Embedding Pipeline.md",
+      "relevance": 2
+    },
+    {
+      "query": "vector cache eviction",
+      "constraints": {
+        "semantic": true
+      },
+      "docId": "Notes/Vault Index Notes.md",
+      "relevance": 1
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "docId": "Notes/Network Troubleshooting.md",
+      "relevance": 2
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "docId": "Notes/中文说明.md",
+      "relevance": 1
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "docId": "Archive/Legacy Network Log.md",
+      "relevance": 1
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "docId": "Notes/OpenWrt Router Config.md",
+      "relevance": 1
+    },
+    {
+      "query": "backup retention",
+      "constraints": {},
+      "docId": "Ops/Backup Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "backup retention",
+      "constraints": {},
+      "docId": "Notes/Backup Notes.md",
+      "relevance": 1
+    },
+    {
+      "query": "path:Code restore",
+      "constraints": {},
+      "docId": "Code/Trash Restore.md",
+      "relevance": 2
+    },
+    {
+      "query": "path:Code restore",
+      "constraints": {},
+      "docId": "Code/Restore Planner.md",
+      "relevance": 1
+    },
+    {
+      "query": "path:Code restore",
+      "constraints": {},
+      "docId": "Notes/Search Design.md",
+      "relevance": 0
+    },
+    {
+      "query": "tag:ops/runbook deploy",
+      "constraints": {},
+      "docId": "Ops/Deploy Runbook.md",
+      "relevance": 2
+    },
+    {
+      "query": "tag:ops/runbook deploy",
+      "constraints": {},
+      "docId": "Ops/Rollback Checklist.md",
+      "relevance": 1
+    },
+    {
+      "query": "tag:ops/runbook deploy",
+      "constraints": {},
+      "docId": "Notes/Deploy Notes.md",
+      "relevance": 0
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "docId": "Notes/Retry Policy.md",
+      "relevance": 2
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "docId": "Notes/Retry Budget Policy.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "docId": "Archive/Retry Policy Old.md",
+      "relevance": 1
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "docId": "Notes/Retry Policy Draft.md",
+      "relevance": 0
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "docId": "Notes/Retry Backoff Notes.md",
+      "relevance": 0
+    }
+  ]
+}

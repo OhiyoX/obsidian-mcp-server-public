@@ -1,0 +1,513 @@
+{
+  "schemaVersion": 1,
+  "keys": {
+    "tools.canonical.agent_bootstrap.description": {
+      "file": "tools/canonical/agent_bootstrap.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.server_info.description": {
+      "file": "tools/canonical/server_info.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_note.description": {
+      "file": "tools/canonical/get_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_metadata.description": {
+      "file": "tools/canonical/get_metadata.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.write_note.description": {
+      "file": "tools/canonical/write_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.append_to_note.description": {
+      "file": "tools/canonical/append_to_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.patch_note.description": {
+      "file": "tools/canonical/patch_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.replace_in_note.description": {
+      "file": "tools/canonical/replace_in_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.manage_frontmatter.description": {
+      "file": "tools/canonical/manage_frontmatter.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.manage_tags.description": {
+      "file": "tools/canonical/manage_tags.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_notes.description": {
+      "file": "tools/canonical/list_notes.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_recent.description": {
+      "file": "tools/canonical/list_recent.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.search_notes.description": {
+      "file": "tools/canonical/search_notes.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_tags.description": {
+      "file": "tools/canonical/list_tags.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_files.description": {
+      "file": "tools/canonical/list_files.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.pull_note_file.description": {
+      "file": "tools/canonical/pull_note_file.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_file.description": {
+      "file": "tools/canonical/get_file.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.pull_file.description": {
+      "file": "tools/canonical/pull_file.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.write_file.description": {
+      "file": "tools/canonical/write_file.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.delete_file.description": {
+      "file": "tools/canonical/delete_file.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.start_file_upload.description": {
+      "file": "tools/canonical/start_file_upload.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.start_direct_upload.description": {
+      "file": "tools/canonical/start_direct_upload.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.upload_file_chunk.description": {
+      "file": "tools/canonical/upload_file_chunk.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.file_upload_status.description": {
+      "file": "tools/canonical/file_upload_status.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.cancel_file_upload.description": {
+      "file": "tools/canonical/cancel_file_upload.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.create_archive.description": {
+      "file": "tools/canonical/create_archive.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.inspect_archive.description": {
+      "file": "tools/canonical/inspect_archive.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.read_archive_entry.description": {
+      "file": "tools/canonical/read_archive_entry.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.extract_archive.description": {
+      "file": "tools/canonical/extract_archive.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_canvas.description": {
+      "file": "tools/canonical/get_canvas.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.write_canvas.description": {
+      "file": "tools/canonical/write_canvas.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.manage_folders.description": {
+      "file": "tools/canonical/manage_folders.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.move_note.description": {
+      "file": "tools/canonical/move_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.delete_note.description": {
+      "file": "tools/canonical/delete_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_backlinks.description": {
+      "file": "tools/canonical/get_backlinks.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_trash.description": {
+      "file": "tools/canonical/list_trash.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.restore_from_trash.description": {
+      "file": "tools/canonical/restore_from_trash.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_versions.description": {
+      "file": "tools/canonical/list_versions.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.delete_trash_entry.description": {
+      "file": "tools/canonical/delete_trash_entry.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.restore_version.description": {
+      "file": "tools/canonical/restore_version.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.delete_version.description": {
+      "file": "tools/canonical/delete_version.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_graph.description": {
+      "file": "tools/canonical/get_graph.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_unresolved_links.description": {
+      "file": "tools/canonical/get_unresolved_links.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_orphans.description": {
+      "file": "tools/canonical/get_orphans.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_deadends.description": {
+      "file": "tools/canonical/get_deadends.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_tasks.description": {
+      "file": "tools/canonical/list_tasks.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.update_task.description": {
+      "file": "tools/canonical/update_task.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.daily_note.description": {
+      "file": "tools/canonical/daily_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_templates.description": {
+      "file": "tools/canonical/list_templates.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.create_from_template.description": {
+      "file": "tools/canonical/create_from_template.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_properties.description": {
+      "file": "tools/canonical/list_properties.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.rename_property.description": {
+      "file": "tools/canonical/rename_property.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_aliases.description": {
+      "file": "tools/canonical/list_aliases.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.set_property_type.description": {
+      "file": "tools/canonical/set_property_type.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_bases.description": {
+      "file": "tools/canonical/list_bases.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_base.description": {
+      "file": "tools/canonical/get_base.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.write_base.description": {
+      "file": "tools/canonical/write_base.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.create_base_entry.description": {
+      "file": "tools/canonical/create_base_entry.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.patch_base.description": {
+      "file": "tools/canonical/patch_base.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.query_base.description": {
+      "file": "tools/canonical/query_base.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.list_base_views.description": {
+      "file": "tools/canonical/list_base_views.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_status.description": {
+      "file": "tools/canonical/git_status.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_diff.description": {
+      "file": "tools/canonical/git_diff.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_log.description": {
+      "file": "tools/canonical/git_log.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_commit.description": {
+      "file": "tools/canonical/git_commit.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_pull.description": {
+      "file": "tools/canonical/git_pull.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.git_push.description": {
+      "file": "tools/canonical/git_push.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.index_status.description": {
+      "file": "tools/canonical/index_status.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.reindex_vault.description": {
+      "file": "tools/canonical/reindex_vault.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.recall.description": {
+      "file": "tools/canonical/recall.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.find_related.description": {
+      "file": "tools/canonical/find_related.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.graph_health.description": {
+      "file": "tools/canonical/graph_health.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.suggest_links.description": {
+      "file": "tools/canonical/suggest_links.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.memory_capture.description": {
+      "file": "tools/canonical/memory_capture.md",
+      "placeholders": [
+        "memoryPath"
+      ],
+      "overrideAllowed": true
+    },
+    "tools.canonical.memory_recall.description": {
+      "file": "tools/canonical/memory_recall.md",
+      "placeholders": [
+        "memoryPath"
+      ],
+      "overrideAllowed": true
+    },
+    "tools.canonical.skill_list.description": {
+      "file": "tools/canonical/skill_list.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.skill_match.description": {
+      "file": "tools/canonical/skill_match.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.skill_validate.description": {
+      "file": "tools/canonical/skill_validate.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.skill_export.description": {
+      "file": "tools/canonical/skill_export.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.skill_import.description": {
+      "file": "tools/canonical/skill_import.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_note_context.description": {
+      "file": "tools/canonical/get_note_context.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_publish_status.description": {
+      "file": "tools/canonical/get_publish_status.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.manage_publish.description": {
+      "file": "tools/canonical/manage_publish.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.plan_restore_from_trash.description": {
+      "file": "tools/canonical/plan_restore_from_trash.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.plan_restore_version.description": {
+      "file": "tools/canonical/plan_restore_version.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.plan_delete_note.description": {
+      "file": "tools/canonical/plan_delete_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.plan_move_note.description": {
+      "file": "tools/canonical/plan_move_note.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.plan_note_changes.description": {
+      "file": "tools/canonical/plan_note_changes.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_note_plan.description": {
+      "file": "tools/canonical/get_note_plan.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.apply_note_plan.description": {
+      "file": "tools/canonical/apply_note_plan.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.get_note_version.description": {
+      "file": "tools/canonical/get_note_version.md",
+      "overrideAllowed": true
+    },
+    "tools.canonical.compare_note_versions.description": {
+      "file": "tools/canonical/compare_note_versions.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_edit.summary": {
+      "file": "tools/compact/obsidian_edit.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_plan.summary": {
+      "file": "tools/compact/obsidian_plan.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_apply.summary": {
+      "file": "tools/compact/obsidian_apply.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_soft_delete.summary": {
+      "file": "tools/compact/obsidian_soft_delete.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_restore.summary": {
+      "file": "tools/compact/obsidian_restore.md",
+      "overrideAllowed": true
+    },
+    "tools.compact.obsidian_history.summary": {
+      "file": "tools/compact/obsidian_history.md",
+      "overrideAllowed": true
+    },
+    "memory.firstRead": {
+      "file": "memory/first-read.md",
+      "overrideAllowed": true
+    },
+    "memory.checkpoint": {
+      "file": "memory/checkpoint.md",
+      "overrideAllowed": true
+    },
+    "memory.afterWrite": {
+      "file": "memory/after-write.md",
+      "overrideAllowed": true
+    },
+    "memory.readHint": {
+      "file": "memory/read-hint.md",
+      "overrideAllowed": true
+    },
+    "memory.writeHint": {
+      "file": "memory/write-hint.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.instructions": {
+      "file": "bootstrap/instructions.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.workflow.start": {
+      "file": "bootstrap/workflow/start.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.workflow.checkpoint": {
+      "file": "bootstrap/workflow/checkpoint.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.workflow.doc-hygiene": {
+      "file": "bootstrap/workflow/doc-hygiene.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.workflow.write": {
+      "file": "bootstrap/workflow/write.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.workflow.verify": {
+      "file": "bootstrap/workflow/verify.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.boundary.1": {
+      "file": "bootstrap/boundaries/1.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.2": {
+      "file": "bootstrap/boundaries/2.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.3": {
+      "file": "bootstrap/boundaries/3.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.4": {
+      "file": "bootstrap/boundaries/4.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.5": {
+      "file": "bootstrap/boundaries/5.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.6": {
+      "file": "bootstrap/boundaries/6.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.boundary.7": {
+      "file": "bootstrap/boundaries/7.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.compatibility.toolNaming": {
+      "file": "bootstrap/compatibility/tool-naming.md",
+      "overrideAllowed": false
+    },
+    "bootstrap.compatibility.fallback": {
+      "file": "bootstrap/compatibility/fallback.md",
+      "placeholders": [
+        "memoryPolicyNote"
+      ],
+      "overrideAllowed": false
+    },
+    "bootstrap.compatibility.activation": {
+      "file": "bootstrap/compatibility/activation.md",
+      "overrideAllowed": false
+    },
+    "prompts.research_brief.title": {
+      "file": "mcp-prompts/research_brief/title.md",
+      "overrideAllowed": true
+    },
+    "prompts.research_brief.description": {
+      "file": "mcp-prompts/research_brief/description.md",
+      "overrideAllowed": true
+    },
+    "prompts.research_brief.body": {
+      "file": "mcp-prompts/research_brief/body.md",
+      "placeholders": [
+        "topic"
+      ],
+      "overrideAllowed": true
+    },
+    "bootstrap.workflow.reuse-and-improve": {
+      "file": "bootstrap/workflow/reuse-and-improve.md",
+      "overrideAllowed": true
+    },
+    "bootstrap.boundary.8": {
+      "file": "bootstrap/boundaries/8.md",
+      "overrideAllowed": false
+    }
+  }
+}

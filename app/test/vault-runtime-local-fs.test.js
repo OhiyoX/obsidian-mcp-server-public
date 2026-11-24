@@ -356,3 +356,50 @@ test("the instance is frozen, methods are detachable and state lives per instanc
   assert.throws(() => createLocalFs({ root: "relative/root", dataPaths: { history: a.data, trash: a.data } }), /root must be absolute/);
   assert.throws(() => createLocalFs({ root: a.root }), /dataPaths must be the A7 vaultDataPaths mapping/);
 });
+
+// ---------------------------------------------------------------- #632: the rename race's error face
+//
+// On Windows a concurrent reader of the rename target (indexer, editor, AV scanner) makes the
+// final `fs.rename` answer EPERM/EACCES/EBUSY; the same race can answer EEXIST. Measured on Windows
+// in the full suite: the loser of a concurrent write surfaced a bare `EPERM: operation not
+// permitted, rename …` and the caller saw a 500 instead of the 409 it can act on. The seam below
+// forces exactly that answer on any platform.
+
+const renameRace = (code) => async () => { throw Object.assign(new Error(`${code}: operation not permitted, rename`), { code }); };
+
+test("#632: a rename race answers the conflict vocabulary, not the raw errno", async () => {
+  const { root, data } = await scratch();
+  const runtime = makeFs({ root, data, deps: { renameFile: renameRace("EPERM") } });
+  const target = runtime.resolveVaultPath("Race.md");
+  await fs.writeFile(target, "# current\n", "utf8");
+  const before = await runtime.fileRevision(target);
+
+  await assert.rejects(
+    () => runtime.atomicWriteFile(target, "# next\n", { ifMatch: before }),
+    (error) => {
+      assert.match(error.message, /^Revision conflict:/, "the routes map /Revision conflict/ to 409; a bare errno is a 500");
+      assert.equal(error.code, "REVISION_CONFLICT");
+      assert.match(error.message, /EPERM/, "the original errno must stay in the message for diagnosis");
+      return true;
+    },
+  );
+
+  // The mapping must not claim a change: the file still holds its old bytes and revision.
+  assert.equal(await fs.readFile(target, "utf8"), "# current\n");
+  assert.equal(await runtime.fileRevision(target), before);
+  // And no temporary file may be left behind by the failed publish.
+  assert.deepEqual((await fs.readdir(root)).filter((name) => name.endsWith(".tmp")), []);
+});
+
+test("#632: the allowlist stays narrow, so a real filesystem failure keeps its own answer", async () => {
+  // The mapping must not become "any rename failure is a conflict": a full disk or a read-only
+  // mount is not something the caller can fix by re-reading, and pretending otherwise would hide it.
+  const { root, data } = await scratch();
+  const runtime = makeFs({ root, data, deps: { renameFile: renameRace("ENOSPC") } });
+  const target = runtime.resolveVaultPath("Full.md");
+  await fs.writeFile(target, "# current\n", "utf8");
+  const error = await runtime.atomicWriteFile(target, "# next\n").then(() => null, (thrown) => thrown);
+  assert.ok(error, "the injected rename failure must reach the caller");
+  assert.equal(error.code, "ENOSPC", "an out-of-space failure keeps its own code");
+  assert.doesNotMatch(error.message, /^Revision conflict:/, "ENOSPC is not a conflict");
+});

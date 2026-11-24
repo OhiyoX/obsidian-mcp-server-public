@@ -20,10 +20,9 @@ function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
 }
 
-test("app.js stays within the architecture line budget", () => {
-  assert.ok(app.split(/\r?\n/).length <= 500, "app.js must stay within the local 500-line cap");
-});
-
+// The "app.js stays within the architecture line budget" test was deleted: it asserted only a
+// line count, and the hard code-line gate was retired by owner decision (2026-11-13). The
+// behavioural contracts below remain.
 test("app.js wires documentKind navigation through the dedicated modules", () => {
   assert.match(app, /import \{ createBaseNavigation \} from "\.\.\/features\/navigation\/base-navigation\.js"/);
   assert.match(app, /createBaseNavigation\(\{/);

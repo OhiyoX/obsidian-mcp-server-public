@@ -1,8 +1,8 @@
 // Shared probes for the issue #427 Explorer draft checks (desktop scene + mobile scene).
 //
 // Everything here observes the *real* app: the create POSTs the page actually issues, the
-// fixture Vault on disk, and the DOM. Kept in its own module so both scenes stay well under
-// the repository's file budget (`scripts/line-budget.mjs`).
+// fixture Vault on disk, and the DOM. Kept in its own module so both scenes stay small and
+// focus on one subject each.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 

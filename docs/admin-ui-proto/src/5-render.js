@@ -97,7 +97,7 @@ function timeline(p) {
   let rows = "";
   for (const d of [1, 2, 3, 4, 5, 6, 0]) {
     const ws = p.weekly.length ? p.weekly.filter((w) => w.day === d && w.to > w.from) : [{ from: "00:00", to: "24:00" }];
-    rows += `<span class="${d === today ? "today" : ""}">${DAYS[d].slice(1)}</span><div class="tr">${ws.map((w) => `<div class="w" style="left:${toPct(w.from)}%;width:${toPct(w.to) - toPct(w.from)}%" title="${w.from}–${w.to}"></div>`).join("")}${d === today ? `<div class="now" style="left:${nowPct}%" title="现在"></div>` : ""}</div>`;
+    rows += `<span class="${d === today ? "today" : ""}">${DAYS[d].slice(1)}</span><div class="tr">${ws.map((w) => `<div class="w" style="left:${toPct(w.from)}%;width:${toPct(w.to) - toPct(w.from)}%" title="${w.from}–${w.to}"><span class="h" data-edge="from"></span><span class="h" data-edge="to"></span></div>`).join("")}${d === today ? `<div class="now" style="left:${nowPct}%" title="现在"></div>` : ""}</div>`;
   }
   return `<div class="tl">${rows}<span></span><div class="ax"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
 }
@@ -276,6 +276,7 @@ function renderClients() {
     <td><div class="nm"><b style="${c.clientName ? "" : "font-style:italic;font-weight:400;color:var(--tx2)"}">${esc(clientName(c))}</b><span class="sub2">${idc(c.clientId)}</span></div></td>
     <td class="cellt">${la.length ? la.map((a) => `<a href="#/accounts/${a.id}" data-stop>${esc(acctName(a))}</a>`).join("、") : `<span class="muted">无有效授权</span>`}${c.transfer ? `<div><span class="tag amber" title="已撤销原账户授权，等待目标账户在客户端重新同意">转移中 → ${esc(acctName(acct(c.transfer.to)))}</span></div>` : ""}</td>
     <td class="cellt">${c.domains.length ? c.domains.map((d) => `<span title="来源：${d.src.join("、")}">${esc(d.host)}</span>`).join("") : `<span class="muted">—</span>`}</td>
+    <td class="cellt"><span title="${fmtFull(c.createdAt)}">${rel(c.createdAt)}</span></td>
     <td class="cellt">${c.lastCall ? `${rel(c.lastCall.at)} <span class="muted mono">${c.lastCall.ip}</span>` : `<span class="muted">从未调用</span>`}</td>
     <td class="cellt mono muted" title="${esc(c.redirectUris.join("\n"))}">${esc(c.redirectUris[0].replace(/^https?:\/\//, ""))}${c.redirectUris.length > 1 ? ` <span class="tag">+${c.redirectUris.length - 1}</span>` : ""}</td>
     <td class="act">${moreBtn("client", c.clientId)}</td></tr>`;
@@ -284,7 +285,7 @@ function renderClients() {
   return pageBar("OAuth 客户端", "", CLIENTS.length) + `<div class="content scroll"><div class="page">
   <p class="lede">客户端通过动态注册（DCR）自动出现。连接域名来自实际授权与调用，不从回调地址推测。</p>
   <div class="toolbar">${searchBox("搜索客户端名称或回调地址", S.q.clients, "clients")}</div>
-  ${table([["客户端", "24%", "", "client"], ["已授权账户", "22%", "", "accounts"], ["连接域名", "18%", "", "domains"], ["最后调用", "16%", "", "lastUsed"], ["回调地址", "20%", "", "callbacks"], ["", "", "act"]], rows, emptyState("app", "没有匹配的客户端", "换个关键词试试"), { base: "#/clients", defaultKey: "client" })}${mcards(cards)}
+  ${table([["客户端", "22%", "", "client"], ["已授权账户", "20%", "", "accounts"], ["连接域名", "16%", "", "domains"], ["创建", "14%", "", "created"], ["最后调用", "14%", "", "lastUsed"], ["回调地址", "14%", "", "callbacks"], ["", "", "act"]], rows, emptyState("app", "没有匹配的客户端", "换个关键词试试"), { base: "#/clients", defaultKey: "client" })}${mcards(cards)}
   </div></div>`;
 }
 

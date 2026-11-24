@@ -393,10 +393,10 @@ function browserChecks() {
       },
     },
     {
-      name: "editor: Ctrl+Enter submits the policy editor, from the page and from inside its inputs",
+      name: "editor: Ctrl+Enter submits the constraint editor, from the page and from inside its inputs",
       run: async ({ page, base, goto, requests }) => {
-        await goto("/admin/auth/access-policy?new=1");
-        await page.fill("#fld-label", "l2-keys harness");
+        await goto("/admin/auth/authz?new=1");
+        await page.fill('input[name="label"]', "l2-keys harness");
         await page.evaluate(() => document.activeElement?.blur?.());
         const posts = requests.length;
         await page.keyboard.press("Control+Enter");
@@ -408,8 +408,8 @@ function browserChecks() {
         second.setDefaultTimeout(5000);
         second.setDefaultNavigationTimeout(5000);
         try {
-          await second.goto(`${base}/admin/auth/access-policy?new=1`, { waitUntil: "load" });
-          await second.fill("#fld-label", "l2-keys harness in-field");
+          await second.goto(`${base}/admin/auth/authz?new=1`, { waitUntil: "load" });
+          await second.fill('input[name="label"]', "l2-keys harness in-field");
           const inField = requests.length;
           await second.keyboard.press("Control+Enter");
           await waitForPost(second, requests, inField, "inside an input (`allowInInput`)");
@@ -424,11 +424,11 @@ function browserChecks() {
 async function waitForPost(page, requests, since, label) {
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
-    const posted = requests.slice(since).find((entry) => entry.method === "POST" && entry.url.includes("/admin/auth/access-policy/create"));
+    const posted = requests.slice(since).find((entry) => entry.method === "POST" && entry.url.includes("/admin/auth/authz/create"));
     if (posted) return posted;
     await page.waitForTimeout(50);
   }
-  assert.fail(`Ctrl+Enter ${label} must submit the editor form (POST …/access-policy/create)`);
+  assert.fail(`Ctrl+Enter ${label} must submit the editor form (POST …/authz/create)`);
 }
 
 test("client-keys: real browser behaviour, with a negative control per behaviour", { timeout: 300000 }, async (t) => {
@@ -523,7 +523,7 @@ test("client-keys: real browser behaviour, with a negative control per behaviour
       ["j key removed", "rows: `j`/`k` move .kb.cur and Enter activates the selected row (audit disclosure)", "theme: the `t` key does the same in place"],
       ["Enter key removed", "rows: Enter on a detail row opens its ?id= drawer", "theme: the `t` key does the same in place"],
       ["g sequence removed", "nav: `g a` / `g t` / `g k` follow the sidebar links (the `t`/`k` collisions included)", "theme: the `t` key does the same in place"],
-      ["mod+enter removed", "editor: Ctrl+Enter submits the policy editor, from the page and from inside its inputs", "theme: the `t` key does the same in place"],
+      ["mod+enter removed", "editor: Ctrl+Enter submits the constraint editor, from the page and from inside its inputs", "theme: the `t` key does the same in place"],
     ];
     for (const [mutation, targetName, invariantName] of controls) {
       const source = MUTATIONS[mutation](moduleSource);

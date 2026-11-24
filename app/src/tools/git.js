@@ -33,39 +33,33 @@ async function runGitTool(work) {
 export function registerGitTools(server) {
   server.registerTool("git_status", {
     title: "Get Vault Git Status",
-    description: "Show the mounted vault Git branch, working-tree changes, and pending MCP auto-commit paths.",
     inputSchema: {}, annotations: { readOnlyHint: true, openWorldHint: false },
   }, async () => runGitTool((runtime) => gitStatusFor(runtime)));
 
   server.registerTool("git_diff", {
     title: "Get Vault Git Diff",
-    description: "Show a bounded unstaged or staged diff for the vault or one vault-relative path.",
     inputSchema: { staged: z.boolean().default(false), path: z.string().optional(), maxChars: z.number().int().min(1000).max(500000).default(100000) },
     annotations: { readOnlyHint: true, openWorldHint: false },
   }, async (options) => runGitTool((runtime) => gitDiffFor(runtime, options)));
 
   server.registerTool("git_log", {
     title: "Get Vault Git Log",
-    description: "List recent commits in the mounted vault repository.",
     inputSchema: { limit: z.number().int().min(1).max(200).default(20) }, annotations: { readOnlyHint: true, openWorldHint: false },
   }, async ({ limit }) => runGitTool(async (runtime) => ({ commits: await gitLogFor(runtime, limit) })));
 
   server.registerTool("git_commit", {
     title: "Commit Vault Changes",
-      description: "Commit selected vault paths, or all changes only when includeAll=true. Records explicit or derived agent/model metadata in Git author metadata. Never pushes unless push=true.",
     inputSchema: { message: z.string().min(1), paths: z.array(z.string().min(1)).default([]), includeAll: z.boolean().default(false), push: z.boolean().default(false), remote: z.string().optional(), branch: z.string().optional() },
     annotations: { destructiveHint: true, openWorldHint: true },
   }, async (options) => runGitTool((runtime) => commitGitFor(runtime, options)));
 
   server.registerTool("git_pull", {
     title: "Pull Vault Repository",
-    description: "Run a fast-forward-only pull. Refuses to run when the vault has uncommitted changes.",
     inputSchema: { remote: z.string().optional(), branch: z.string().optional() }, annotations: { destructiveHint: true, openWorldHint: true },
   }, async (options) => runGitTool((runtime) => pullGitFor(runtime, options)));
 
   server.registerTool("git_push", {
     title: "Push Vault Repository",
-    description: "Push committed vault changes to the configured or specified remote and branch.",
     inputSchema: { remote: z.string().optional(), branch: z.string().optional() }, annotations: { destructiveHint: true, openWorldHint: true },
   }, async (options) => runGitTool((runtime) => pushGitFor(runtime, options)));
 }

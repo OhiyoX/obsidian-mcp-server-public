@@ -89,6 +89,10 @@ test("the pairing measurement is sensitive to a real regression", () => {
 test("empty data keeps the phone surface usable (wrapper + empty state, no table)", () => {
   const html = content(renderTokensPage({ ...ctx, grants: [] }));
   assert.equal((html.match(/<table class="tbl">/g) || []).length, 0, "no desktop table for an empty list");
-  assert.equal((html.match(/<div class="tw hide-m">/g) || []).length, 1, "the wrapper still exists so the empty state shows on desktop");
+  // `table()` stopped marking the empty wrapper `hide-m` in acfb0f02 ("Compact credential controls
+  // and repair mobile empty states"): an empty list has no card list to fall back to, so the one
+  // wrapper must stay visible on a phone instead of being hidden with the table class.
+  assert.equal((html.match(/<div class="tw">/g) || []).length, 1, "the wrapper still exists so the empty state shows on both surfaces");
+  assert.equal((html.match(/<div class="tw hide-m">/g) || []).length, 0, "an empty wrapper is not hidden on a phone");
   assert.equal((html.match(/<div class="mcards">/g) || []).length, 0, "no card list for an empty list");
 });

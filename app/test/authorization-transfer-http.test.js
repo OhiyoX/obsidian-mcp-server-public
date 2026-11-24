@@ -86,7 +86,9 @@ async function spawnServer(port) {
 }
 
 async function waitForHealthz(base, child, output) {
-  for (let attempt = 0; attempt < 450; attempt += 1) {
+  // 1200 x 100 ms = 120 s: a cold boot on this container's CIFS mount measured 7-56 s depending on
+  // how many suites start at once (2026-11-13). 450 x 100 ms = 45 s measured the mount.
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`server exited early (${child.exitCode}): ${output.join("")}`);
     try {
       const response = await fetch(`${base}/healthz`);
@@ -192,15 +194,19 @@ async function expectStartupAbort(base, port, t, contents) {
   await fs.writeFile(TRANSFERS_FILE, contents, "utf8");
   const spawned = await spawnServer(port);
   t.after(async () => { await stopChild(spawned.child); });
+  // A cold module load of this server costs 7-56 s on the container's CIFS mount (measured
+  // 2026-11-13: 7.4 s at one concurrent suite, 56 s at ten), so a 20 s deadline measured the mount,
+  // not the abort. 120 s still fails a server that never aborts, and the message carries the time.
   let deadline = null;
+  const startedAt = Date.now();
   const exited = await Promise.race([
     new Promise((resolve) => spawned.child.once("exit", (code) => resolve({ code }))),
-    new Promise((resolve) => { deadline = setTimeout(() => resolve({ timeout: true }), 20_000); deadline.unref?.(); }),
+    new Promise((resolve) => { deadline = setTimeout(() => resolve({ timeout: true }), 120_000); deadline.unref?.(); }),
   ]);
   clearTimeout(deadline);
   if (exited.timeout) {
     await stopChild(spawned.child);
-    assert.fail(`an untrusted transfer store must abort startup, but the server kept running: ${spawned.output.join("")}`);
+    assert.fail(`an untrusted transfer store must abort startup, but the server kept running after ${Date.now() - startedAt} ms: ${spawned.output.join("")}`);
   }
   assert.notEqual(exited.code, 0, "an untrusted transfer store must abort startup with a non-zero code");
   assert.match(spawned.output.join(""), /authorization-transfer-store/i, "the failure must name the untrusted store");

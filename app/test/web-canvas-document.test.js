@@ -105,7 +105,8 @@ async function get(url, options = {}) {
 }
 
 test("the canvas document route serves the page, and refuses everything else", async (t) => {
-  for (let attempt = 0; attempt < 450; attempt += 1) {
+  // 1200 x 100 ms = 120 s: a cold boot on this container's CIFS mount measured 7-56 s (2026-11-13).
+  for (let attempt = 0; attempt < 1200; attempt += 1) {
     if (child.exitCode !== null) throw new Error(`server exited early: ${output.join("")}`);
     try { if ((await fetch(`${base}/healthz`)).ok) break; } catch {}
     await new Promise((resolve) => setTimeout(resolve, 100));

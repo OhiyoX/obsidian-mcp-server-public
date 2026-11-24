@@ -1,0 +1,1 @@
+List a note's persistent pre-write version snapshots (newest first) so you can roll back, undo or revert an accidental or mistaken write; every write response returns the preWriteVersionId of its own snapshot. 查看历史快照、版本历史、准备回滚误写时用它。

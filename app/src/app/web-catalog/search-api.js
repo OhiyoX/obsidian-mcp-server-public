@@ -15,8 +15,8 @@ import { allTagsForNote } from "../../obsidian.js";
 import { listVisibleNotes } from "../../publish/folder-listing.js";
 import { PUBLISH_RECORD_KINDS } from "../../publish/lifecycle.js";
 import { resolveCanonicalVault } from "../vault-registry.js";
-import { evaluateObsidianQuery, expandOccurrenceSnippets, expandTagSnippets } from "../../search/evaluator.js";
-import { parseObsidianQuery } from "../../search/obsidian-query.js";
+import { expandOccurrenceSnippets, expandTagSnippets } from "../../search/evaluator.js";
+import { createSearchService } from "../../search/search-service.js";
 import { recallFromSnapshot } from "../../retrieval.js";
 import { readNoteInRoot } from "./note-reader.js";
 import { SemanticUnavailableError, joinSemanticCandidates } from "./semantic-candidates.js";
@@ -186,7 +186,7 @@ export function collectItemSnippets({ record, parsed, result, caseSensitive = fa
 // invariant true for any candidate source.
 // The returned `read` flag is what the callers count as a real file read: a
 // publish-filter rejection must never be reported as a second-pass read.
-async function verifyCandidate({ vault, parsed, caseSensitive, readNote, candidate, semanticCandidate = false, publishFilter = null }) {
+async function verifyCandidate({ vault, searchService, parsed, caseSensitive, readNote, candidate, semanticCandidate = false, publishFilter = null }) {
   if (publishFilter && publishFilter.paths.has(candidate.path) !== publishFilter.published) {
     return { skipped: true, reason: "publish-filter", read: false };
   }
@@ -207,10 +207,9 @@ async function verifyCandidate({ vault, parsed, caseSensitive, readNote, candida
     content: read.content,
     raw: read.raw,
   };
-  // `semanticCandidate` keeps v1's hybrid semantics: positive textual clauses are
-  // satisfied by the retrieval hit and only the structural conditions are re-checked.
-  const result = evaluateObsidianQuery(record, parsed, { caseSensitive, semanticCandidate });
-  if (!result.matched) return { skipped: false, read: true };
+  const verified = await searchService.search(parsed.source, { rank: "existing-web", records: [record], parsed, caseSensitive, semanticCandidate });
+  const result = verified.results[0]?.evaluation;
+  if (!result) return { skipped: false, read: true };
   return {
     skipped: false,
     read: true,
@@ -271,9 +270,10 @@ export async function resolveSearchPage({ vault, query, getRuntime, readNote = r
 
   const store = runtime.store;
   const stale = store.isStale() || !runtime.status().covered;
+  const searchService = createSearchService({ vaultRuntime: vault });
   let parsed;
   try {
-    parsed = parseObsidianQuery(textQuery);
+    ({ parsed } = await searchService.search(textQuery, { rank: "existing-web" }));
   } catch {
     throw new WebCatalogHttpError(400, "invalid-query", "query could not be parsed");
   }
@@ -296,7 +296,7 @@ export async function resolveSearchPage({ vault, query, getRuntime, readNote = r
       // A successful semantic page never carries a cursor, so this cursor can only
       // belong to an already-established lexical fallback. Re-entering semantic here
       // would append a second "first page" onto the lexical one.
-      const lexical = await resolveLexicalPage({ vault, options, store, parsed, plan, stale, readNote, publishFilter });
+      const lexical = await resolveLexicalPage({ vault, searchService, options, store, parsed, plan, stale, readNote, publishFilter });
       lexical.semantic = {
         requested: true,
         used: false,
@@ -304,18 +304,18 @@ export async function resolveSearchPage({ vault, query, getRuntime, readNote = r
       };
       return lexical;
     }
-    const semantic = await resolveSemanticPage({ vault, options, store, parsed, stale, readNote, recall, publishFilter });
+    const semantic = await resolveSemanticPage({ vault, searchService, options, store, parsed, stale, readNote, recall, publishFilter });
     if (semantic.payload) return semantic.payload;
     // Explicit degradation: keep the lexical path, and report why semantic did not run.
-    const lexical = await resolveLexicalPage({ vault, options, store, parsed, plan, stale, readNote, publishFilter });
+    const lexical = await resolveLexicalPage({ vault, searchService, options, store, parsed, plan, stale, readNote, publishFilter });
     lexical.semantic = { requested: true, used: false, error: semantic.unavailable };
     return lexical;
   }
 
-  return resolveLexicalPage({ vault, options, store, parsed, plan, stale, readNote, publishFilter });
+  return resolveLexicalPage({ vault, searchService, options, store, parsed, plan, stale, readNote, publishFilter });
 }
 
-async function resolveLexicalPage({ vault, options, store, parsed, plan, stale, readNote, publishFilter = null }) {
+async function resolveLexicalPage({ vault, searchService, options, store, parsed, plan, stale, readNote, publishFilter = null }) {
   const items = [];
   let consumed = 0;
   let reads = 0;
@@ -345,7 +345,7 @@ async function resolveLexicalPage({ vault, options, store, parsed, plan, stale, 
         }
         examined = candidate;
         consumed += 1;
-        const verified = await verifyCandidate({ vault, parsed, caseSensitive: options.caseSensitive, readNote, candidate, publishFilter });
+        const verified = await verifyCandidate({ vault, searchService, parsed, caseSensitive: options.caseSensitive, readNote, candidate, publishFilter });
         if (verified.read) reads += 1;
         if (verified.skipped) {
           if (verified.reason === "publish-filter") skippedPublish += 1;
@@ -377,7 +377,7 @@ async function resolveLexicalPage({ vault, options, store, parsed, plan, stale, 
 // pass re-checks the structural conditions. There is no markdownFiles()/read-all path
 // anywhere in this flow, and a retrieval failure degrades explicitly (lexical results
 // plus a non-null semanticError), never silently.
-async function resolveSemanticPage({ vault, options, store, parsed, stale, readNote, recall: recallFn, publishFilter = null }) {
+async function resolveSemanticPage({ vault, searchService, options, store, parsed, stale, readNote, recall: recallFn, publishFilter = null }) {
   // Retrieval must receive the *query text*, never a control alias: the publish
   // filter is a constraint on the candidate set, not something to embed. This is also
   // v1 parity (`hybridSearch` recalls `parsed.semanticText`).
@@ -425,7 +425,7 @@ async function resolveSemanticPage({ vault, options, store, parsed, stale, readN
   let skippedPublish = 0;
   for (const candidate of joined.items) {
     if (items.length >= options.limit) break;
-    const verified = await verifyCandidate({ vault, parsed, caseSensitive: options.caseSensitive, readNote, candidate, semanticCandidate: true, publishFilter });
+    const verified = await verifyCandidate({ vault, searchService, parsed, caseSensitive: options.caseSensitive, readNote, candidate, semanticCandidate: true, publishFilter });
     if (verified.read) reads += 1;
     if (verified.skipped) {
       if (verified.reason === "publish-filter") skippedPublish += 1;

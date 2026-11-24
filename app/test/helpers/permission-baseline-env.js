@@ -33,3 +33,17 @@ export async function seedPermissionBaselineEnv() {
   process.env.EMBEDDING_PROVIDER = "disabled";
   return { root, vaults, primary, dataPath };
 }
+
+/**
+ * Remove a seeded root without racing the writer that lives inside it.
+ *
+ * `fs.rm({recursive:true})` enumerates a directory and then removes it. The OAuth store keeps an
+ * audit file under `data/oauth/`, and a debounced save can land between those two steps, so the final
+ * rmdir answers `ENOTEMPTY` — a cleanup failure that fails the whole FILE (measured 2026-11-20 in a
+ * full gate run: `ENOTEMPTY: directory not empty, rmdir '…/data/oauth'`, 39 ms into the file). The
+ * retries belong here, next to the seeding, so every suite that seeds a root cleans it up the same
+ * way instead of each keeping its own copy of the race.
+ */
+export async function removeBaselineRoot(root) {
+  await fs.rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+}

@@ -151,7 +151,7 @@ function liveDriver({ base, username, viewport = VIEWPORT }) {
     async setViewport(page, size) { await page.setViewportSize(size); },
     async openRow(page) { await row(page).locator('a.cell-link').first().click(); },
     async openMenu(page) { await row(page).locator('details.mn > summary').first().click(); },
-    dangerSelector: '#menu a.dz2, #menu [data-mi=del], details.mn .menu a.dz2, details.mn .menu a[href*="confirm=delete"]',
+    dangerSelector: '#menu a.dz2, #menu [data-mi=del], .menu.on a.dz2, .menu.on a[href*="confirm=delete"]',
     themeSelector: '.side-foot form[action$="/theme"] button',
     outsideSelector: '.main .bar h1',
     expected: { username },
@@ -376,7 +376,7 @@ export async function registerInteractionChecks(ctx, deps) {
     await check('admin-interaction: CSP 响应头 = D0 冻结值（script-src \'self\'，无 unsafe-inline/unsafe-eval/第三方）', async () => {
       const targets = [
         ['list', `${base}/admin/auth?tab=accounts`, authedContext.request],
-        ['authz', `${base}${PARITY_PAGES.find((entry) => entry.id === 'authz').live}`, authedContext.request],
+        ['authz 定时授权', `${base}/admin/auth/authz`, authedContext.request],
         ['vaults', `${base}${PARITY_PAGES.find((entry) => entry.id === 'vaults').live}`, authedContext.request],
         ['login (未认证)', `${base}/admin/auth/login`, openContext.request],
       ];

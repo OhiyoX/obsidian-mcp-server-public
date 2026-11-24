@@ -2344,6 +2344,9 @@ button { color: inherit; }
   padding-bottom: var(--md-heading-space-after, .55em);
 }
 
+/* #785 */
+.cm-line.cm-live-setext-underline-hidden { height: 0; }
+
 .cm-line.cm-live-frontmatter {
   font-family: var(--font-monospace);
   font-size: 0.9em;

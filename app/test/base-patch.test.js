@@ -28,7 +28,6 @@ import {
   patchBaseDocument,
 } from "../src/base-patch.js";
 import { insertLines, joinLines, splitLines } from "../src/base-patch-lines.js";
-import { countLines } from "../scripts/line-budget.mjs";
 
 const SOURCE_PATHS = ["base-patch.js", "base-patch-lines.js"].map((name) =>
   path.join(import.meta.dirname, "..", "src", name),
@@ -608,6 +607,6 @@ test("the module stays pure, small and free of write-surface coupling", async ()
     const file = path.basename(SOURCE_PATHS[index]);
     assert.ok(!/from\s+"[^"]*(?:node:fs|node:path|express|mcp)/.test(source), `${file}: no fs/path/express/MCP import`);
     assert.ok(!/from\s+"\.\/base-(?:grouping|summaries|values)\.js"/.test(source), `${file}: no extra domain coupling`);
-    assert.ok(countLines(source) <= 300, `${file} is ${countLines(source)} lines (lane limit 300)`);
+    // The hard code-line gate (a 300-line lane limit) was retired by owner decision 2026-11-13.
   }
 });

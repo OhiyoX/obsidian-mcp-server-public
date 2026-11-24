@@ -1,0 +1,243 @@
+{
+  "fixtureHash": "sha256:d418dedb65a92c6692f9b3c4270a9508d359d18c58db2179664425c9b21a33e4",
+  "queries": [
+    {
+      "query": "网络故障",
+      "constraints": {},
+      "category": "cjk",
+      "ranking": [
+        "Notes/Network Troubleshooting.md"
+      ],
+      "top1Path": "Notes/Network Troubleshooting.md",
+      "top1": 1,
+      "ndcg10": 0.726229,
+      "violations": []
+    },
+    {
+      "query": "网络",
+      "constraints": {},
+      "category": "cjk",
+      "ranking": [
+        "Notes/Network Troubleshooting.md",
+        "Archive/Legacy Network Log.md",
+        "Notes/中文说明.md",
+        "Notes/OpenWrt Router Config.md"
+      ],
+      "top1Path": "Notes/Network Troubleshooting.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "OpenWrt 网络故障",
+      "constraints": {},
+      "category": "mixed",
+      "ranking": [
+        "Notes/Network Troubleshooting.md"
+      ],
+      "top1Path": "Notes/Network Troubleshooting.md",
+      "top1": 1,
+      "ndcg10": 0.726229,
+      "violations": []
+    },
+    {
+      "query": "retry policy",
+      "constraints": {},
+      "category": "english",
+      "ranking": [
+        "Notes/Retry Policy.md",
+        "Archive/Retry Policy Old.md",
+        "Notes/Retry Policy Draft.md",
+        "Notes/Retry Budget Policy.md"
+      ],
+      "top1Path": "Notes/Retry Policy.md",
+      "top1": 1,
+      "ndcg10": 0.983218,
+      "violations": []
+    },
+    {
+      "query": "backup retention",
+      "constraints": {},
+      "category": "english",
+      "ranking": [
+        "Notes/Backup Notes.md",
+        "Ops/Backup Policy.md"
+      ],
+      "top1Path": "Notes/Backup Notes.md",
+      "top1": 0,
+      "ndcg10": 0.796708,
+      "violations": []
+    },
+    {
+      "query": "restore_from_trash",
+      "constraints": {},
+      "category": "identifier-snake",
+      "ranking": [
+        "Code/Trash Restore.md",
+        "Notes/Search Design.md"
+      ],
+      "top1Path": "Code/Trash Restore.md",
+      "top1": 1,
+      "ndcg10": 0.878962,
+      "violations": []
+    },
+    {
+      "query": "2c1a9f0",
+      "constraints": {},
+      "category": "identifier-commit",
+      "ranking": [
+        "Notes/Release Notes Draft.md",
+        "Ops/Changelog.md"
+      ],
+      "top1Path": "Notes/Release Notes Draft.md",
+      "top1": 0,
+      "ndcg10": 0.63093,
+      "violations": []
+    },
+    {
+      "query": "app/src/search.js",
+      "constraints": {},
+      "category": "identifier-path",
+      "ranking": [
+        "Code/app/src/search.js.md",
+        "Notes/Search Design.md"
+      ],
+      "top1Path": "Code/app/src/search.js.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "planRestoreVersion",
+      "constraints": {},
+      "category": "identifier-camel",
+      "ranking": [
+        "Code/Restore Planner.md",
+        "Notes/Search Design.md"
+      ],
+      "top1Path": "Code/Restore Planner.md",
+      "top1": 1,
+      "ndcg10": 0.878962,
+      "violations": []
+    },
+    {
+      "query": "path:Ops deploy",
+      "constraints": {},
+      "category": "path-constraint",
+      "ranking": [
+        "Ops/Deploy Runbook.md",
+        "Ops/Rollback Checklist.md"
+      ],
+      "top1Path": "Ops/Deploy Runbook.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "path:Code restore",
+      "constraints": {},
+      "category": "path-constraint",
+      "ranking": [
+        "Code/Restore Planner.md",
+        "Code/Trash Restore.md"
+      ],
+      "top1Path": "Code/Restore Planner.md",
+      "top1": 0,
+      "ndcg10": 0.796708,
+      "violations": []
+    },
+    {
+      "query": "tag:search/index refresh",
+      "constraints": {},
+      "category": "tag-constraint",
+      "ranking": [
+        "Notes/Vault Index Notes.md"
+      ],
+      "top1Path": "Notes/Vault Index Notes.md",
+      "top1": 1,
+      "ndcg10": 0.826235,
+      "violations": []
+    },
+    {
+      "query": "tag:ops/runbook deploy",
+      "constraints": {},
+      "category": "tag-constraint",
+      "ranking": [
+        "Ops/Deploy Runbook.md",
+        "Ops/Rollback Checklist.md"
+      ],
+      "top1Path": "Ops/Deploy Runbook.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "[owner:Ada] backup",
+      "constraints": {},
+      "category": "property-constraint",
+      "ranking": [
+        "Ops/Backup Policy.md"
+      ],
+      "top1Path": "Ops/Backup Policy.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "retry policy -draft",
+      "constraints": {},
+      "category": "negation",
+      "ranking": [
+        "Notes/Retry Policy.md",
+        "Archive/Retry Policy Old.md",
+        "Notes/Retry Budget Policy.md"
+      ],
+      "top1Path": "Notes/Retry Policy.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "retry -backoff",
+      "constraints": {},
+      "category": "negation",
+      "ranking": [
+        "Notes/Retry Policy.md",
+        "Archive/Retry Policy Old.md",
+        "Notes/Retry Budget Policy.md",
+        "Ops/Deploy Runbook.md"
+      ],
+      "top1Path": "Notes/Retry Policy.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "\"delayed retry budget\"",
+      "constraints": {},
+      "category": "quoted-phrase",
+      "ranking": [
+        "Notes/Retry Policy.md",
+        "Notes/Retry Budget Policy.md"
+      ],
+      "top1Path": "Notes/Retry Policy.md",
+      "top1": 1,
+      "ndcg10": 1,
+      "violations": []
+    },
+    {
+      "query": "vector cache eviction",
+      "constraints": {
+        "semantic": true
+      },
+      "category": "embeddings-unavailable",
+      "ranking": [
+        "Notes/Embedding Pipeline.md"
+      ],
+      "top1Path": "Notes/Embedding Pipeline.md",
+      "top1": 1,
+      "ndcg10": 0.826235,
+      "violations": []
+    }
+  ]
+}

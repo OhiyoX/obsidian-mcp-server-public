@@ -1,0 +1,1 @@
+Read the saved note and verify the intended delta and index link before saying it was stored. Record no change for pure Q&A/no durable delta. On failure keep a local pending Markdown note without secrets and report synchronization pending.

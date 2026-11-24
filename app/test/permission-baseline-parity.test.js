@@ -8,7 +8,8 @@ const ADMIN_PASSWORD = "test-only-password";
 // The in-process plane needs its isolated environment BEFORE any `src/` module is imported: the
 // spawn fixtures also import `src/` (transitively), so they are loaded dynamically below. The
 // spawned server gets its own explicit environment from `serverEnv`, so this cannot leak into it.
-const planeEnv = await (await import("./helpers/permission-baseline-env.js")).seedPermissionBaselineEnv();
+const { removeBaselineRoot, seedPermissionBaselineEnv } = await import("./helpers/permission-baseline-env.js");
+const planeEnv = await seedPermissionBaselineEnv();
 await fs.writeFile(path.join(planeEnv.primary, "note.md"), "# Parity note\n", "utf8");
 const {
   API_KEY, callTool, freePort, initialize, seedVault, serverEnv, startServer, stopChild,
@@ -58,7 +59,7 @@ test.after(async () => {
   await plane?.close();
   if (real) await stopChild(real.child);
   await fs.rm(REAL_ROOT, { recursive: true, force: true });
-  await fs.rm(planeEnv.root, { recursive: true, force: true });
+  await removeBaselineRoot(planeEnv.root);
 });
 
 /** The one policy both sides build: subject = the configured environment key, capability = get_note. */

@@ -81,6 +81,20 @@ export const WEB_BASES_SUPPORTED_DOCUMENTS = Object.freeze({
     '      - formula.link',
     '',
   ].join('\n'),
+  // Forty rows, for the scroll-and-pin contract (issue #747): the parity Base holds seven, which
+  // fills a 420px viewport exactly and therefore has nothing to scroll.
+  'Bulk.base': [
+    'filters:',
+    '  and:',
+    '    - file.hasTag("bulk")',
+    'views:',
+    '  - type: table',
+    '    name: Bulk rows',
+    '    order:',
+    '      - file.name',
+    '      - status',
+    '',
+  ].join('\n'),
 });
 
 // Unsupported configs. These must produce a fail-closed error after Wave B/C;
@@ -206,6 +220,11 @@ export async function createWebBasesFixtureVault(rootDir) {
   await writeFile(primary, 'Mixed/a-note.md', projectNote({ title: 'a lower', priority: 9 }));
   await writeFile(primary, 'Mixed/B-note.md', projectNote({ title: 'B upper', priority: 9 }));
   await writeFile(primary, 'Mixed/Z.base', WEB_BASES_SUPPORTED_DOCUMENTS['Files.base']);
+  await writeFile(primary, 'Bulk.base', WEB_BASES_SUPPORTED_DOCUMENTS['Bulk.base']);
+  for (let index = 1; index <= 40; index += 1) {
+    const name = `Row ${String(index).padStart(2, '0')}`;
+    await writeFile(primary, `Bulk/${name}.md`, projectNote({ title: name, tags: ['bulk'], priority: index }));
+  }
   await writeFile(primary, '.hidden-note.md', '# Hidden\n\nMust not appear.\n');
 
   // --- Secondary Vault: same-named Base, distinct content -------------------
@@ -225,6 +244,7 @@ export async function createWebBasesFixtureVault(rootDir) {
     uppercaseBase: 'Legacy.BASE',
     hiddenBase: '.hidden.base',
     mixedBase: 'Mixed/Z.base',
+    bulkBase: 'Bulk.base',
     mixedLowerNote: 'Mixed/a-note.md',
     mixedUpperNote: 'Mixed/B-note.md',
     readmeNote: 'Readme.md',

@@ -26,10 +26,10 @@ import { auditCsv } from "./pages/audit.js";
 import { renderAuthShell } from "./pages/shell.js";
 import { renderDocument } from "./layout.js";
 import { registerAuthorizationTransferRoutes } from "./auth-center-transfer-routes.js";
-import { registerAccessPolicyRoutes } from "./routes/access-policy.js";
 import { registerAuthorizationRoutes } from "./routes/authz.js";
 import { registerVaultGitRoutes } from "./routes/vault-git.js";
 import { registerDefaultVaultRoutes } from "./routes/default-vault.js";
+import { registerPromptRegistryRoutes } from "./routes/prompt-registry.js";
 import { registerLocaleRoutes } from "../app/locale-routes.js";
 import { localeInfo } from "../i18n/request.js";
 import { adminLocale, runWithAdminLocale, t } from "../i18n/context.js";
@@ -56,9 +56,13 @@ export function createAdminRouter({
   listVaults = async () => ({ vaults: [] }),
   publishService = null,
   publicBaseUrl = "",
+  oauthEnabled = false,
+  readOnly = false,
   accessPolicyAdmin = null,
   authorizationAdmin = null,
   vaultGitAdmin = null,
+  promptRegistryStore = null,
+  promptAdminService = null,
   vaultGitStore = null,
   authorization = null,
   authorizationShadow = null,
@@ -100,12 +104,14 @@ export function createAdminRouter({
   // content is public code with no data in it — a session is not required to read it.
   const CLIENT_MODULES = new Map([
     ["admin-client.js", "admin-client.js"],
+    ["admin-column-widths.js", "admin-column-widths.js"],
     ["admin-feature-registry.js", "admin-feature-registry.js"],
     ["admin-feature-overlays.js", "admin-feature-overlays.js"],
     ["admin-feature-keys.js", "admin-feature-keys.js"],
     ["admin-feature-lists.js", "admin-feature-lists.js"],
     ["admin-feature-select.js", "admin-feature-select.js"],
     ["admin-feature-nav.js", "admin-feature-nav.js"],
+    ["admin-feature-authz.js", "admin-feature-authz.js"],
   ]);
   router.get("/assets/:file", (req, res) => {
     const name = CLIENT_MODULES.get(String(req.params.file || ""));
@@ -238,44 +244,22 @@ export function createAdminRouter({
     next();
   });
 
-  // AuthZ / Vault-Git stay as their own route modules (they own service validation + CAS); their
-  // GET pages are slated to move onto `pages/authz.js` / `pages/vaults.js`. Until then they render
-  // inside this shell through the same view interface.
-  // Both route modules render the *same* sidebar, so each needs the other's base. `vaultGitBase` is
-  // not known while the access-policy routes register (they are mounted first), so the two bases are
-  // held here and injected late, at render time, through each module's `view` seam (#399).
-  let accessPolicyBase = null;
+  // AuthZ / Vault-Git stay as their own route modules (they own service validation + CAS); they
+  // render inside this shell through the same view interface. Both render the *same* sidebar, so
+  // the bases are held here and injected late, at render time, through each module's `view` seam
+  // (#399).
   let vaultGitBase = null;
-  // The sidebar's 「定时授权」 entry leads to the constraint page (Task 7 item B), not to the frozen
-  // legacy page: one entry, the page that works. The frozen page stays reachable from that page as a
-  // read-only link, and `accessPolicyBase` (below) still names it for the surfaces that read it.
   let constraintsBase = null;
 
-  accessPolicyBase = accessPolicyAdmin
-    ? registerAccessPolicyRoutes(router, {
-      admin: accessPolicyAdmin,
-      provider,
-      authorizationMode,
-      configuredApiKeyEnabled,
-      // Same inventory sources as the tab routes: the sidebar counts are part of this page.
-      listVaults,
-      publishService,
-      vaultGitAdmin,
-      requireAdmin,
-      requireCsrf,
-      view: {
-        renderAuthShell: (opts) => {
-          // Counts come from THIS request's catalog. The module-level `lastCatalog` fallback is exactly
-          // how the sidebar showed "Vault 与 Git 0" on /admin/auth/access-policy on the NAS (2026-10-21):
-          // a snapshot captured while the inventory was empty kept being reused long after two Vaults
-          // were admitted. A route may also pass its own counts (`authz`); those win over the catalog's.
-          const fallback = opts.catalog || lastCatalog;
-          return renderAuthShell({ ...opts, constraintsBase: constraintsBase ?? opts.constraintsBase, vaultGitBase: vaultGitBase ?? opts.vaultGitBase, theme: opts.theme || fallback?.theme || "dark", navCounts: { ...(fallback?.navCounts || {}), ...(opts.navCounts || {}) }, navAttention: { ...(fallback?.navAttention || {}), ...(opts.navAttention || {}) } });
-        },
-        layout: (title, body) => renderDocument({ title: title || t("adm.doc.title"), theme: lastCatalog?.theme || "dark", bodyHtml: body }),
-      },
-    })?.base ?? null
-    : null;
+  // Prompt Registry (#825): JSON routes under /admin/auth/prompt-registry. Their body
+  // limit is local to those routes; the form budget above is unchanged.
+  registerPromptRegistryRoutes(router, {
+    store: promptRegistryStore,
+    service: promptAdminService,
+    requireAdmin,
+    requireCsrf,
+  });
+
 
   vaultGitBase = vaultGitAdmin
     ? registerVaultGitRoutes(router, {
@@ -284,11 +268,10 @@ export function createAdminRouter({
       gitConfigStore: vaultGitStore,
       requireAdmin,
       requireCsrf,
-      actions: accessPolicyBase ? { accessPolicyBase } : undefined,
       view: {
         renderAuthShell: (opts) => {
           // Counts come from THIS request's catalog. The module-level `lastCatalog` fallback is exactly
-          // how the sidebar showed "Vault 与 Git 0" on /admin/auth/access-policy on the NAS (2026-10-21):
+          // how the sidebar showed "Vault 与 Git 0" on the 定时授权 page on the NAS (2026-10-21):
           // a snapshot captured while the inventory was empty kept being reused long after two Vaults
           // were admitted. A route may also pass its own counts (`authz`); those win over the catalog's.
           const fallback = opts.catalog || lastCatalog;
@@ -316,8 +299,6 @@ export function createAdminRouter({
       // render the page again. Building one here keeps the model in this router's hands and the route
       // module free of a second store read.
       catalog: (req) => buildCatalog({ deps, req, query: req.query }),
-      // The frozen legacy page, offered from the new page as a read-only link.
-      legacyPolicyBase: accessPolicyBase,
     },
     // The page renders inside the same shell the other Admin surfaces use, and the same late-injected
     // bases: 「定时授权」 is one nav entry, so a page that rendered its own sidebar would fork it.
@@ -405,7 +386,7 @@ export function createAdminRouter({
     }
     let page;
     try {
-      page = renderAuthTab(activeTab, { ...catalog, req, csrf: req.adminSession.csrf, session: req.adminSession, publicBaseUrl, accessPolicyBase, vaultGitBase, constraintBase: constraintsBase, authorizationMode });
+      page = renderAuthTab(activeTab, { ...catalog, req, csrf: req.adminSession.csrf, session: req.adminSession, publicBaseUrl, oauthEnabled, apiKeyEnabled: configuredApiKeyEnabled, readOnly, vaultGitBase, constraintBase: constraintsBase, authorizationMode });
     } catch (error) {
       res.status(500).send(renderError({ title: t("adm.router.error.renderTitle"), heading: t("adm.router.error.renderTitle"), message: String(error?.message || error), theme: catalog?.theme }));
       return;
@@ -462,6 +443,39 @@ export function createAdminRouter({
     }
   });
 
+  // #285: the Agent label is a display purpose, so this write is not an authorization change and
+  // revokes nothing. It never enters Scope, a Vault allowlist or the `api-key:<id>` subject string.
+  router.post("/api-key/agent", requireAdmin, requireCsrf, async (req, res) => {
+    const id = String(req.body?.id || "");
+    if (id === "configured-env") {
+      refuse(req, res, t("adm.refuse.heading"), t("adm.router.refuse.envReadOnlyScope"), "keys");
+      return;
+    }
+    try {
+      // An empty field clears the label; an unknown id is answered as missing, never created.
+      const updated = await provider.updateApiKey(id, { agentLabel: String(req.body?.agent ?? "") });
+      if (!updated) {
+        res.status(404).send(renderError({
+          title: t("adm.refuse.heading"),
+          heading: t("adm.refuse.heading"),
+          message: t("adm.router.refuse.keyMissingAgent"),
+          backHref: "/admin/auth?tab=keys",
+          backLabel: t("adm.back.list"),
+          theme: lastCatalog?.theme || "dark",
+        }));
+        return;
+      }
+      setFlash(req, t("adm.router.flash.keyAgentUpdated"));
+      redirectTab(res, "keys");
+    } catch (error) {
+      const code = error?.message;
+      const message = code === "agent_label_too_long" ? t("adm.keys.agentTooLong")
+        : code === "agent_label_invalid" ? t("adm.keys.agentInvalid")
+        : String(code || error);
+      res.status(400).send(renderError({ title: t("adm.router.error.updateTitle"), heading: t("adm.router.error.keyAgentHeading"), message }));
+    }
+  });
+
   router.post("/api-key/delete", requireAdmin, requireCsrf, async (req, res) => {
     const id = String(req.body?.id || "");
     if (id === "configured-env") {
@@ -514,6 +528,10 @@ export function createAdminRouter({
       // the live tokens keep it. (2026-10-21: adding one Vault to an account revoked all 255 of its
       // tokens; correct per design, but it deserved a warning with the count and a way to avoid it.)
       const before = (await provider.authorizationSnapshot()).oauthUsers.find((item) => item.id === userId);
+      // An unknown id used to fall through: `updateOAuthUser` returns null for it, the flash still said
+      // "narrowed" and the redirect still happened, so an operator believed a permission was removed
+      // while nothing changed (found 2026-11-13 by a test that had silently narrowed nothing).
+      if (!before) throw new Error(t("adm.accounts.staleConfirm"));
       const decision = decideGrantRevocation({ beforeScopes: before?.allowedScopes || [], afterScopes: scopes, beforeVaults: before?.allowedVaults || [], afterVaults: vaults });
       const keep = decision.keep;
       const result = await provider.updateOAuthUser(userId, { allowedScopes: scopes, allowedVaults: vaults, revokeGrants: !keep });

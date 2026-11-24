@@ -21,7 +21,7 @@ import { renderKeysPage } from "../../src/admin/pages/keys.js";
 import { renderClientsPage } from "../../src/admin/pages/clients.js";
 
 const CSRF = "csrf-lane-w1";
-const ACCESS_POLICY_BASE = "/admin/auth/access-policy";
+const CONSTRAINT_BASE = "/admin/auth/authz";
 const NOW = Date.parse("2026-10-12T08:00:00Z");
 
 // Prototype screenshot ids (scratch/admin-parity/out/proto) so a failure is easy to look up.
@@ -135,12 +135,13 @@ async function ctxFor(query = {}) {
       provider,
       listVaults: async () => ({ vaults: VAULTS }),
       configuredApiKeyEnabled: true,
-      accessPolicyAdmin: {
-        listPolicies: async () => ({
-          status: "ready",
+      // The per-Vault constraint document is what the keys page links (the legacy policy page is
+      // retired): one constraint names this API Key as its subject.
+      authorizationAdmin: {
+        list: () => ({
           revision: 3,
-          policies: [{ id: "p1", label: "工作时段只读", enabled: true, subjects: [`api-key:${K_DESKTOP}`], weekly: [] }],
-          orphaned: [],
+          timeConstraintsEnabled: true,
+          constraints: [{ id: "p1", label: "工作时段只读", enabled: true, mode: "suspend", subjects: [`api-key:${K_DESKTOP}`], selector: { anyOf: [{ surfaces: null, capabilities: null, targets: null }] }, schedule: { timezone: "Asia/Shanghai" } }],
         }),
       },
     },
@@ -148,7 +149,7 @@ async function ctxFor(query = {}) {
     query,
     now: NOW,
   });
-  return { ...catalog, csrf: CSRF, session: { csrf: CSRF }, accessPolicyBase: ACCESS_POLICY_BASE, vaultGitBase: "/admin/auth/vault-git" };
+  return { ...catalog, csrf: CSRF, session: { csrf: CSRF }, constraintBase: CONSTRAINT_BASE, vaultGitBase: "/admin/auth/vault-git" };
 }
 
 const render = async (page, query) => {
@@ -213,7 +214,9 @@ const ACCOUNT_COLUMNS = ["账户", "状态", "权限上限 · Vault", "已授权
 test("accounts: prototype table columns, widths and cell shapes", async () => {
   const { content } = await render("accounts", { tab: "accounts" });
   assert.ok(columnsAre(content, ACCOUNT_COLUMNS), `columns: ${JSON.stringify(columnsOf(content))}`);
-  for (const width of ["24%", "10%", "24%", "16%", "14%", "10%"]) assert.ok(content.includes(`<col style="width:${width}">`), `col width ${width}`);
+  // 2026-11-16: the table helper emits the prototype width as the `--admin-col-N` fallback, so the
+  // col markup is `width:var(--admin-col-0,24%)` and the literal `width:24%` no longer exists.
+  for (const [index, width] of ["24%", "10%", "24%", "16%", "14%", "10%"].entries()) assert.ok(content.includes(`<col style="width:var(--admin-col-${index},${width})">`), `col ${index} width ${width}`);
   assert.match(content, /<h1>OAuth 账户<span class="cnt">3<\/span><\/h1>/);
   assert.ok(content.includes('<p class="lede">账户用于客户端的 OAuth 同意页登录，与管理密码相互独立。</p>'));
   // 名称优先: display name + username second line + short id (prototype 189).
@@ -331,12 +334,13 @@ test("accounts: unknown ?id= renders the prototype's not-found empty state", asy
 
 // ---------------------------------------------------------------- API Key
 
-const KEY_COLUMNS = ["名称 / 前缀", "权限 · Vault", "最后调用", "来源", "创建", ""];
+// 2026-11-18: the 到期 column joined the table with the key-expiry feature (#773).
+const KEY_COLUMNS = ["名称 / 前缀", "权限 · Vault", "最后调用", "来源", "创建", "到期", ""];
 
 test("keys: prototype columns, env Key read-only row, named Key row", async () => {
   const { content } = await render("keys", { tab: "keys" });
   assert.ok(columnsAre(content, KEY_COLUMNS), `columns: ${JSON.stringify(columnsOf(content))}`);
-  for (const width of ["26%", "26%", "20%", "12%", "10%"]) assert.ok(content.includes(`<col style="width:${width}">`), `col width ${width}`);
+  for (const [index, width] of ["24%", "24%", "18%", "10%", "9%", "9%"].entries()) assert.ok(content.includes(`<col style="width:var(--admin-col-${index},${width})">`), `col ${index} width ${width}`);
   assert.match(content, /<h1>API Key<span class="cnt">2<\/span><\/h1>/);
   assert.ok(content.includes('<p class="lede">每个 Key 独立设置权限范围与可访问的 Vault。Key 明文只在创建时显示一次。</p>'));
   // The synthetic deployment Key: kind + note instead of a prefix, lock cell instead of a menu,
@@ -376,12 +380,14 @@ test("keys: ?id= drawer — env Key is read-only, a real Key is editable and lin
   const real = await render("keys", { tab: "keys", id: K_DESKTOP });
   assert.match(real.detailPanel, /<h1 class="ell">桌面客户端<\/h1>/);
   assert.ok(real.detailPanel.includes('name="allowedScope"'));
-  assert.ok(real.detailPanel.includes('<form class="dsec" method="post" action="/admin/auth/api-key/scopes">'));
-  assert.ok(real.detailPanel.includes(`${ACCESS_POLICY_BASE}?edit=p1`), "policy link uses the access-policy base");
+  assert.ok(real.detailPanel.includes('<form class="dsec" data-key-access-form method="post" action="/admin/auth/api-key/scopes">'));
+  assert.ok(real.detailPanel.includes(`${CONSTRAINT_BASE}?id=p1`), "the constraint that names this Key is linked to its drawer");
   assert.ok(real.detailPanel.includes('<div class="danger-zone">'));
   assert.ok(real.detailPanel.includes('href="/admin/auth?tab=keys&amp;id=' + K_DESKTOP + '&amp;confirm=delete"'));
   assert.ok(real.detailPanel.includes("绑定 Agent"));
-  assert.ok(real.detailPanel.includes("规划中 · #285"));
+  // #285 shipped: the label is real, so the drawer carries neither the planned marker nor its id.
+  assert.equal(real.detailPanel.includes("规划中"), false);
+  assert.equal(real.detailPanel.includes("#285"), false);
   assert.ok(scriptFree(real.detailPanel));
 });
 
@@ -396,14 +402,14 @@ test("keys: delete confirm types the Key name; empty search keeps .empty", async
 
 // ---------------------------------------------------------------- OAuth 客户端
 
-const CLIENT_COLUMNS = ["客户端", "已授权账户", "连接域名", "最后调用", "回调地址", ""];
+const CLIENT_COLUMNS = ["客户端", "已授权账户", "连接域名", "创建", "最后调用", "回调地址", ""];
 
 const withPendingTransfer = (ctx) => ({ ...ctx, transfers: [{ id: T_PENDING, clientId: C_CURSOR, sourceUserId: U_ALICE, targetUserId: U_CAROL, status: "pending", createdAt: "2026-10-11T02:00:00Z", expiresAt: "2026-10-18T02:00:00Z" }] });
 
 test("clients: prototype columns, linked accounts, connection domains, callbacks", async () => {
   const { content } = await render("clients", { tab: "clients" });
   assert.ok(columnsAre(content, CLIENT_COLUMNS), `columns: ${JSON.stringify(columnsOf(content))}`);
-  for (const width of ["24%", "22%", "18%", "16%", "20%"]) assert.ok(content.includes(`<col style="width:${width}">`), `col width ${width}`);
+  for (const [index, width] of ["22%", "20%", "16%", "14%", "14%", "14%"].entries()) assert.ok(content.includes(`<col style="width:var(--admin-col-${index},${width})">`), `col ${index} width ${width}`);
   assert.match(content, /<h1>OAuth 客户端<span class="cnt">2<\/span><\/h1>/);
   assert.ok(content.includes('<p class="lede">客户端通过动态注册（DCR）自动出现。连接域名来自实际授权与调用，不从回调地址推测。</p>'));
   assert.ok(content.includes(`<a href="/admin/auth?tab=accounts&amp;id=${U_ALICE}">Alice Chen</a>`));
@@ -412,6 +418,11 @@ test("clients: prototype columns, linked accounts, connection domains, callbacks
   assert.ok(content.includes('<span title="来源：注册、授权、调用">cursor.example</span>'));
   assert.ok(content.includes('cursor.example/callback</span> <span class="tag">+1</span>'));
   assert.ok(content.includes('title="https://cursor.example/callback\nhttps://cursor.example/callback-2"'), "callback title lists every URI");
+  // 创建时间: the registration instant, absolute in the cell title, relative in the text.
+  assert.match(content, /title="2026-09-01 \d{2}:00:00"/, "created cell carries the full instant in its title");
+  assert.match(content, /<td class="cellt"><span title="2026-09-01 \d{2}:00:00">[^<]+<\/span><\/td>/, "created cell renders relative time over the full instant");
+  assert.ok(content.includes('<td class="cellt"><span class="muted">—</span></td>'), "a client without a registration time renders a dash");
+
   // Unnamed client keeps the italic placeholder.
   assert.ok(content.includes('style="font-style:italic;font-weight:400;color:var(--tx2)"'));
   assert.ok(scriptFree(content));

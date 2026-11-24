@@ -1,0 +1,1 @@
+Obsidian memory verification: read back the saved note before claiming it is recorded; maintain the nearest project index when needed. On a version conflict, reread and reconcile instead of overwriting. No extra note is needed just to record this write.

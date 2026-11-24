@@ -40,7 +40,7 @@ const contracts = {
   restore_from_trash: ["restoredPath backupPath backupRemoved revision size"],
   delete_trash_entry: ["deletedBackup"],
   list_versions: ["path versions"],
-  restore_version: ["restoredPath versionId revision size"],
+  restore_version: ["restoredPath revision size", "versionId sourceRevision preWriteVersionId"],
   delete_version: ["deletedVersion"],
   manage_folders: ["", "folder entries created deleted recursive"],
   get_backlinks: ["target backlinks"],

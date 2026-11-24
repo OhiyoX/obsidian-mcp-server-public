@@ -75,8 +75,7 @@ test("hard revoke denies with 401 without permanently revoking the credential, a
   const second = await startServer(serverEnv({ port, root, extra: { AUTHZ_ENABLED: "true" } }));
   try {
     const health = await (await fetch(`${second.base}/healthz`)).json();
-    assert.equal(health.authorizationWindows.status, "ready");
-    assert.equal(health.authorizationWindows.policyCount, 0);
+    assert.equal("authorizationWindows" in health, false, "the legacy window summary is not reported any more");
     const init = await initialize(second.base, { key: API_KEY });
     assert.equal(init.status, 200);
   } finally {

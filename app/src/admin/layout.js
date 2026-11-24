@@ -142,7 +142,8 @@ export function renderDocument({ title, theme = "dark", bodyHtml, scripts = [], 
   // Only same-origin, external scripts: the CSP is `script-src 'self'` with no inline and no eval,
   // and the markup stays fully usable when the script never loads.
   const scriptTags = scripts.map((src) => `<script type="module" src="${esc(src)}"></script>`).join("");
-  return `<!doctype html><html lang="${adminHtmlLang()}" data-theme="${themeAttr}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="${themeColor}"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><style>${PROTO_CSS}${ADMIN_SSR_CSS}</style></head><body${bodyClass ? ` class="${esc(bodyClass)}"` : ""}>${ICON_SPRITE}${bodyHtml}${scriptTags}</body></html>`;
+  const columnWidths = scripts.length ? '<script src="/admin/auth/assets/admin-column-widths.js"></script>' : "";
+  return `<!doctype html><html lang="${adminHtmlLang()}" data-theme="${themeAttr}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="${themeColor}"><title>${esc(title)}</title><link rel="icon" type="image/svg+xml" href="/favicon.svg">${columnWidths}<style>${PROTO_CSS}${ADMIN_SSR_CSS}</style></head><body${bodyClass ? ` class="${esc(bodyClass)}"` : ""}>${ICON_SPRITE}${bodyHtml}${scriptTags}</body></html>`;
 }
 
 /**

@@ -144,9 +144,19 @@ test("W3-A real HTTP: 92 native descriptors map once into 35 risk-partitioned en
     const source = original.get(route.action);
     assert.ok(source, route.action);
     if (route.branch) {
-      assert.deepEqual(route.branch.properties.params, source.inputSchema, route.action);
-      assert.deepEqual(route.branch.required, ["action", "params"], route.action);
-      assert.equal(route.branch.additionalProperties, false, route.action);
+      // The branch states only what the parent cannot: which action, and the parameters that carry
+      // a different schema per action. Properties identical in every branch of the group are
+      // hoisted onto the parent (2026-11-14, -14.6 KB of the compact payload), so compare the
+      // *effective* parameters — parent plus branch — with the native schema, not the literal
+      // shape. The guarantee is unchanged: each action still validates exactly its own spec.
+      const hoisted = route.descriptor.inputSchema.properties.params.properties ?? {};
+      const params = route.branch.properties.params;
+      assert.deepEqual(
+        { ...params, properties: { ...hoisted, ...(params.properties ?? {}) } },
+        source.inputSchema,
+        route.action,
+      );
+      assert.deepEqual(route.descriptor.inputSchema.required, ["action", "params"], route.action);
       assert.equal(route.descriptor.inputSchema.additionalProperties, false, route.action);
       assert.equal(route.descriptor.inputSchema.oneOf.length > 0, true);
     } else {

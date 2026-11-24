@@ -201,13 +201,17 @@ test("the_boundary_list_partitions_the_catalog_and_cannot_drift", () => {
   assert.equal(new Set(partition).size, all.length, "no boundary may appear in two sets");
   assert.equal(legacy.length + trusted.length + exempt.length, all.length);
 
-  // The numbers the catalog produces today, so a change is a deliberate edit. 191 = the 186 rows the
+  // The numbers the catalog produces today, so a change is a deliberate edit. 183 = the 186 rows the
   // catalog held before the per-Vault plan, plus Task 5's five constraint writes and Task 6's
   // `GET /authz` page (Task 7's `POST /authz/subjects` had its own row and lost it with the route),
-  // minus the frozen editor's `GET /access-policy/preview` fragment, whose route is gone.
-  assert.equal(all.length, 191);
+  // minus the frozen editor's `GET /access-policy/preview` fragment, whose route was gone, and minus
+  // the retired legacy page and its seven writes (owner ruling 2026-11-12: the Admin speaks the
+  // per-Vault constraint model only). All eight were trusted-context rows.
+  // 2026-11-19: 184 = the 183 above plus `ADMIN POST /api-key/agent`, the Agent-label write from
+  // #782 (a trusted-context row: only an admin page posts it).
+  assert.equal(all.length, 184);
   assert.equal(legacy.length, 129);
-  assert.equal(trusted.length, 47);
+  assert.equal(trusted.length, 40);
   assert.equal(exempt.length, 15);
   // The list really contains the boundaries a client can reach the old plane through.
   for (const key of ["get_note", "write_note", "GET /api/web/v1/note", "PUT /uploads/:uploadId", "POST /oauth/token"]) {

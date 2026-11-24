@@ -12,6 +12,7 @@ import { validateVaultId } from "../vault-runtime/descriptor.js";
 import { createVaultAdmissionController } from "./vault-admission.js";
 import { createVaultAdmissionAdminBinding } from "./vault-admission-admin-binding.js";
 import { createVaultServingGate, servingRefusalError } from "../vault-runtime/serving-gate.js";
+import { semanticConfiguration } from "../embeddings.js";
 import { wiredCapabilities } from "../vault-runtime/capabilities.js";
 import { createVaultRegistry } from "../vault-runtime/registry.js";
 import { getWebCatalogRuntime } from "./web-catalog/runtime.js";
@@ -41,12 +42,29 @@ const vaultServingGate = VAULTS_ROOT !== null ? createVaultServingGate() : null;
 // and refresh counter could drift from the Web face. Its descriptors carry the Wave D capability
 // graph (`wiredCapabilities`), which is the per-Vault runtime fact §3.4 requires server_info and
 // Admin to report.
+/**
+ * The per-Vault capability map the registry publishes to `server_info` and Admin.
+ *
+ * `wiredCapabilities()` is honest about what the VaultRuntime wires, but it reports `semantic` as
+ * unavailable BY CONSTRUCTION — the composite fact is "retrieval wired per Vault AND the
+ * process-shared embedding provider enabled", and only the first half belongs to that static graph.
+ * On a deployment with a working provider that made the Admin claim a capability the process had
+ * (measured 2026-11-21: EMBEDDING_PROVIDER=openai, model qwen3-embedding-4b-q6, enabled:true, while
+ * the drawer showed 语义检索 unavailable and "本机未配置向量服务"). Configuration decides
+ * availability; a transient model-server outage must not flip a capability.
+ */
+export function capabilitiesForVault() {
+  const graph = wiredCapabilities();
+  if (semanticConfiguration()?.enabled !== true) return graph;
+  return { ...graph, semantic: Object.freeze({ available: true }) };
+}
+
 const registry = createVaultRegistry({
   primaryRoot: VAULT,
   primaryId: VAULTS_ROOT ? DEFAULT_ID : "default",
   vaultsRoot: VAULTS_ROOT,
   writable: !READ_ONLY,
-  capabilitiesFor: wiredCapabilities,
+  capabilitiesFor: capabilitiesForVault,
   // W2 (#437) §2.1/§2.2: a PERSISTENT admission gate. Inert until the admission controller exists;
   // afterwards EVERY refresh (including the Admin inventory route, which this wave does not own) is
   // gated, so an ungated publish is impossible. See `vault-admission.js`.

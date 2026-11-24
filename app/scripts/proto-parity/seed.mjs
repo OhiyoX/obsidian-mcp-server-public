@@ -8,81 +8,66 @@
 // the pages are driven by the same data a deployment produces, and a seeding failure is reported
 // instead of being papered over.
 //
-// The two access policies are the exception: Task 3 froze every legacy write route (all seven answer
-// 409 `access_policy_frozen`), so they are written into the store file by the same store/service code
-// an operator's save used to run, BEFORE the fixture server boots (`seedParityPolicies`, called from
-// `admin-layout-fixture.mjs`'s `prepareData`). The server loads that file at boot and never re-reads
-// it, so this is the only seam a running fixture has — the same one
-// `test/permission-baseline-parity.test.js` uses.
+// The security gate's hostile label is the exception: no page renders a storable *policy* any more (the
+// legacy page and its seven writes are retired), so it is planted as a constraint label in
+// `data/authorization.json` BEFORE the fixture server boots (`seedHostileLabelConstraint`, called
+// through `startAdminLayoutFixture`'s `prepareData`). The server loads that file at boot and never
+// re-reads it, so this is the only seam a running fixture has.
 
 import path from "node:path";
-import { createAccessPolicyStore } from "../../src/access-policy/store.js";
-import { createAccessPolicyAdmin } from "../../src/admin/access-policy.js";
+import { AUTHORIZATION_CATALOG_VERSION } from "../../src/authorization/catalog.js";
+import { serializeAuthorizationDocument } from "../../src/authorization/schema.js";
 import { XSS_PAYLOADS } from "./injection.mjs";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 const FORM_HEADERS = { "content-type": "application/x-www-form-urlencoded" };
 
 /**
- * The prototype's own fixture carries rows whose *state* is part of the required elements: a client
- * with a pending authorization transfer (`.tag.amber` 转移中), a retired publication
- * (`.banner.amber` 已失效) and a policy with an orphaned subject plus an `all` capability chip
- * (`.banner.amber` + `.tag.amber`). Those states are seeded through the real routes below instead
- * of being excluded from the gate — a criterion that silently disappears with the fixture is not a
- * criterion (lane w5-gates-fix).
+ * The shadow's registration timestamp for the planted hostile constraint: any valid ISO instant.
+ * The value is never compared — the label is.
  */
-const RETIRED_PUBLISH_PATH = "notes/gate-published.md";
-/** An `api-key:<uuid>` that no credential will ever have: the policy subject stays orphaned. */
-const ORPHAN_SUBJECT = "api-key:9f1c0b6e-3a44-4c1f-9a2d-7e5b8c0d1f22";
-const ALL_WEEK = Object.freeze(Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((day) => [day, [["00:00", "24:00"]]])));
-const POLICY_LABEL = "parity-gate-policy";
+const PLANTED_AT = "2026-11-01T00:00:00.000Z";
 
 /**
- * The two policies every Admin gate needs, written before the fixture boots.
- *
- *  * `parity-gate-policy`: all seven days 00:00-24:00 with ONE capability (`scope:obsidian.read`), so
- *    the gate's own MCP calls stay outside the matched capability set (a policy matches only when
- *    BOTH subject and capability intersect) and the row still exercises a real stored window;
- *  * `parity-gate-orphan`: `revoke` mode with `["all"]` capabilities (the schema forces that) on a
- *    subject no credential has, seeded already disabled — the 孤立主体 banner, the `all` chip and the
- *    `.dim` disabled row in one row.
- *
- * Both labels are short on purpose: the table keeps a policy label on one line
- * (`docs/DEVELOPMENT_STANDARDS.md`, the `#401` keep contract), so a deliberately hostile, unbreakable
- * 31-character label would open a 320px horizontal scroll on the mobile gate for a fixture reason. The
- * hostile label lives in the security gate's own fixture (`seedHostileLabelPolicy`).
- */
-export async function seedParityPolicies(dataRoot) {
-  return writePolicies(dataRoot, [
-    { label: POLICY_LABEL, mode: "suspend", enabled: true, timezone: "Asia/Shanghai", subjects: ["api-key:configured-env"], capabilities: ["scope:obsidian.read"], weekly: ALL_WEEK },
-    { label: "parity-gate-orphan", mode: "revoke", enabled: false, timezone: "Asia/Shanghai", subjects: [ORPHAN_SUBJECT], capabilities: ["all"], weekly: { mon: [["00:00", "24:00"]] } },
-  ]);
-}
-
-/**
- * The XSS gate's own fixture: one stored policy whose label IS the hostile payload.
+ * The XSS gate's own fixture: one stored constraint whose label IS the hostile payload.
  *
  * The positive control must prove that the renderer escapes a hostile label *somewhere it can really
- * be stored*. No write route can store it any more (all seven refuse), so it is planted the way a
- * legacy save would have left it — in the store file, before the process starts — and the control then
- * reads it back from the list, the `?id=` drawer and the `?edit=` view.
+ * be stored*. A constraint label is exactly that: it is written by the operator through the real form,
+ * and the plane renders it on the list row, in the `?id=` drawer and in the `?edit=` editor. Planting
+ * it before boot keeps the control independent of the write path it is protecting.
  */
-export async function seedHostileLabelPolicy(dataRoot) {
-  return writePolicies(dataRoot, [
-    { label: XSS_PAYLOADS.policyLabel, mode: "suspend", enabled: false, timezone: "Asia/Shanghai", subjects: ["api-key:configured-env"], capabilities: ["scope:obsidian.read"], weekly: { mon: [["00:00", "24:00"]] } },
-  ]);
+export async function seedHostileLabelConstraint(dataRoot) {
+  const document = {
+    schemaVersion: 1,
+    catalogVersion: AUTHORIZATION_CATALOG_VERSION,
+    revision: 1,
+    timeConstraintsEnabled: true,
+    subjects: {},
+    constraints: [{
+      id: "9f1c0b6e-3a44-4c1f-9a2d-7e5b8c0d1f22",
+      label: XSS_PAYLOADS.policyLabel,
+      enabled: true,
+      subjects: ["api-key:configured-env"],
+      mode: "suspend",
+      selector: { anyOf: [{ surfaces: null, capabilities: null, targets: null }] },
+      schedule: { timezone: "Asia/Shanghai", weekly: { mon: [["00:00", "24:00"]] }, dateRanges: [], startsAt: null, expiresAt: null },
+      createdAt: PLANTED_AT,
+      updatedAt: PLANTED_AT,
+    }],
+  };
+  const { mkdir, writeFile } = await import("node:fs/promises");
+  await mkdir(dataRoot, { recursive: true });
+  await writeFile(path.join(dataRoot, "authorization.json"), serializeAuthorizationDocument(document));
 }
 
-/** Write `drafts` into the fixture's store file through the same service an operator's save ran. */
-async function writePolicies(dataRoot, drafts) {
-  const store = createAccessPolicyStore({ file: path.join(dataRoot, "access-policy.json") });
-  await store.ready;
-  const admin = createAccessPolicyAdmin({ store });
-  for (const draft of drafts) {
-    const created = await admin.createPolicy(draft);
-    if (!created.ok) throw new Error(`the fixture policy ${draft.label} could not be stored: ${created.code ?? JSON.stringify(created).slice(0, 200)}`);
-  }
-}
+/**
+ * The note published and then deleted, so the publishes page carries one retired record: its amber
+ * 「已失效」 banner is a required element of the prototype's page.
+ */
+const RETIRED_PUBLISH_PATH = "notes/gate-published.md";
+
+/** The API Key this seed creates: the marker the idempotency check looks for. */
+const GATE_KEY_LABEL = "gate key（未命名占位）";
 
 /** The seeded OAuth account's display name — the transfer target, so the pick is not order-dependent. */
 const GATE_ACCOUNT_DISPLAY_NAME = "Gate 账户";
@@ -123,8 +108,7 @@ async function adminLogin(base, password) {
 }
 
 async function postForm(base, url, fields, cookie) {
-  // Still used for the routes that are NOT frozen (OAuth user/key create, client transfer,
-  // user toggle). Access policies never travel this way any more — see `seedParityPolicies`.
+  // Still used for the real write routes (OAuth user/key create, client transfer, user toggle).
   const body = new URLSearchParams();
   for (const [key, value] of Object.entries(fields)) {
     for (const item of Array.isArray(value) ? value : [value]) body.append(key, String(item ?? ""));
@@ -181,22 +165,19 @@ export async function seedParityFixture({ base, password, apiKey, vaultId = "def
   // another scene having seeded the fixture first: run it alone on a clean fixture and it compared
   // empty pages against the prototype's populated mock (3/7 checks green, ~150 "differences" that were
   // really "there are no rows"). Every caller may now call it; if the fixture already has the rows,
-  // the seed says so and does nothing (creating a second account/policy would change what the other
-  // scenes measure).
+  // the seed says so and does nothing (a second account or key would change what the other scenes
+  // measure). The markers are the account and the Key THIS seed creates, never "any row".
   if (session?.cookie) {
     const hasRows = async (url, pattern) => {
       const response = await fetch(`${base}${url}`, { headers: { cookie: session.cookie } });
       return pattern.test(await response.text());
     };
-    const [accounts, policies] = await Promise.all([
-      // Not "any account row": the server seeds `OAUTH_INITIAL_USERNAME` itself. The marker is the
-      // account THIS seed creates, and the policy the fixture plants before boot.
+    const [accounts, keys] = await Promise.all([
       hasRows("/admin/auth?tab=accounts", new RegExp(username)),
-      // The frozen list page renders no write links at all, so the row's own label is the marker.
-      hasRows("/admin/auth/access-policy", new RegExp(POLICY_LABEL)),
+      hasRows("/admin/auth?tab=keys", new RegExp(GATE_KEY_LABEL)),
     ]);
-    if (accounts && policies) {
-      steps.push({ name: "fixture already seeded (skipped)", ok: true, detail: "accounts + access policies present" });
+    if (accounts && keys) {
+      steps.push({ name: "fixture already seeded (skipped)", ok: true, detail: "accounts + API Keys present" });
       return { steps, errors, client: null, account: null, seeded: false };
     }
   }
@@ -212,13 +193,12 @@ export async function seedParityFixture({ base, password, apiKey, vaultId = "def
 
   await step("create API Key", async () => {
     const created = await postForm(base, "/admin/auth/api-key/create", {
-      csrf: session.csrf, label: "gate key（未命名占位）", allowedScope: scopes, allowedVault: [vaultId],
+      csrf: session.csrf, label: GATE_KEY_LABEL, allowedScope: scopes, allowedVault: [vaultId],
     }, session.cookie);
     if (created.status !== 303) throw new Error(`status ${created.status}`);
     return "303";
   });
 
-  // MCP calls first: the access policy created below suspends this key outside its window.
   await step("MCP write_note (audit row + pending batch)", () => mcpCall(base, apiKey, "write_note", { path: "notes/gate-write.md", overwrite: true, content: "# parity gate\n" }));
   await step("MCP manage_publish (publish row)", () => mcpCall(base, apiKey, "manage_publish", { action: "publish", path: "notes/seed.md" }));
   // The prototype renders one retired publication and its amber banner is a required element, so the

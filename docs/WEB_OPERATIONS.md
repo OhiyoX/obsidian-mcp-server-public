@@ -173,12 +173,18 @@ per-engine fallbacks). It is set so that the shells we ship — and the relative
 - Real-device expectations per platform live in `docs/manual-mobile-verification.md`; this section
   only fixes **which engines are in scope**.
 
-## Browser regression CI gate
+## Browser regression gate (local and owner-designated runs)
 
-The `browser` job in `.github/workflows/ci.yml` runs the real-Chromium Web regression
-(`app/scripts/web-regression.mjs`) on every pull request and on `main`/tag pushes. It is blocking: a
-non-zero harness exit, any `FAIL` check, any uncaught page error, a missing/empty `results.json`, or
-a missing Playwright runtime fails the run.
+The real-Chromium Web regression (`app/scripts/web-regression.mjs`) runs before a release on the
+machine the owner designates, and its result goes into the release receipt as a local check. The
+GitHub `browser` job was deleted on 2026-11-14 together with the rest of the heavy mirror jobs: it
+ran 25 minutes on the self-hosted pool, duplicated a gate that already ran locally, and no merge,
+release or deploy decision depended on it. The in-house CI does not run a browser gate either.
+
+When it runs it is blocking, exactly as before: a non-zero harness exit, any `FAIL` check, any
+uncaught page error, a missing/empty `results.json`, or a missing Playwright runtime fails the run.
+The paragraphs below describe the harness, the pins and the artifact layout; they still apply, they
+are no longer a CI contract.
 
 - `app/scripts/run-browser-ci.mjs` is the CI adapter. It resolves the Playwright runtime
   (`PLAYWRIGHT_MODULE` or the app-local `playwright` package), runs the harness with

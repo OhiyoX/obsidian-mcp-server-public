@@ -1,4 +1,61 @@
 import { extractInlineTags, normalizeTag } from "../obsidian.js";
+import { analyzePositiveClauses } from "./analyzer.js";
+
+// The clause types whose value is rankable text. A hard filter (path/file/tag/property) is
+// never ranked, so it is never analyzed either.
+const TEXTUAL_TYPES = new Set(["text", "content", "line", "section"]);
+
+// S2 (Search v2): the analyzer is opt-in and off by default, so an unset flag leaves every
+// result byte-identical to today.
+export function analyzerFlagOn() {
+  return /^(1|true|yes|on)$/.test(String(process.env.SEARCH_V2_ANALYZER ?? "").trim().toLowerCase());
+}
+
+// S2 adapter: parse first, analyze second. Only a positive textual clause is handed over; a
+// negative, a hard filter and a field group are the parser's business. `kind` is the parser's
+// own distinction (`raw` keeps the quote characters, `value` does not).
+function textualClauses(parsed) {
+  const entries = [];
+  for (const clause of (parsed?.groups ?? []).flat()) {
+    if (clause.negated || !TEXTUAL_TYPES.has(clause.type)) continue;
+    entries.push({
+      clause,
+      text: clause.values ? clause.values.join(" ") : String(clause.value ?? ""),
+      kind: String(clause.raw ?? "").startsWith('"') ? "phrase" : "term",
+    });
+  }
+  return entries;
+}
+
+export function clausesToAnalyze(parsed) {
+  return textualClauses(parsed).map(({ text, kind }) => ({ text, kind }));
+}
+
+// The analyzed values a live clause must all contain. A quoted phrase keeps its literal only
+// (the parser already owns the phrase), and an `ascii_fold` alias is dropped: a fold compares
+// against analyzed text while the index holds raw NFKC text, so a fold token could only ever
+// remove a candidate today's needle matched.
+function needlesFor(entry) {
+  const tokens = entry.kind === "phrase"
+    ? entry.tokens.filter((token) => token.kind === "phrase.literal")
+    : entry.tokens.filter((token) => token.kind !== "ascii_fold");
+  return tokens.map((token) => token.value);
+}
+
+// One analysis per parsed query, whatever the record count.
+const needlesCache = new WeakMap();
+function analyzedNeedles(parsed) {
+  const cached = needlesCache.get(parsed);
+  if (cached) return cached;
+  const entries = textualClauses(parsed);
+  const needles = new Map();
+  if (entries.length) {
+    const analyzed = analyzePositiveClauses(entries.map(({ text, kind }) => ({ text, kind }))).clauses;
+    for (const entry of analyzed) needles.set(entries[entry.clauseIndex].clause, needlesFor(entry));
+  }
+  needlesCache.set(parsed, needles);
+  return needles;
+}
 
 function normalize(value, caseSensitive) {
   const text = String(value ?? "").normalize("NFKC");
@@ -99,6 +156,8 @@ function matchedTags(record, clause, caseSensitive) {
 function matchClause(record, clause, options) {
   const caseSensitive = options.caseSensitive === true;
   const needles = (clause.values || [clause.value]).map((value) => normalize(value, caseSensitive));
+  // S2: analyzed tokens are NFKC + lowercase, so a case-sensitive comparison cannot use them.
+  const gate = caseSensitive ? undefined : options.analyzedNeedles?.get(clause);
   const needle = needles[0];
   let values = [];
   if (clause.type === "path") values = [record.path];
@@ -126,7 +185,8 @@ function matchClause(record, clause, options) {
   for (const value of values) {
     const text = normalize(value, caseSensitive);
     const occurrences = needles.map((item) => countMatches(text, item, options));
-    const current = occurrences.every(Boolean) ? occurrences.reduce((sum, item) => sum + item, 0) : 0;
+    let current = occurrences.every(Boolean) ? occurrences.reduce((sum, item) => sum + item, 0) : 0;
+    if (current && gate && !gate.every((item) => countMatches(text, item, options) > 0)) current = 0;
     count += current;
     if (current && snippets.length < options.maxMatchesPerNote) snippets.push(makeSnippet(value, clause.values?.[0] || clause.value, options.contextLength));
   }
@@ -134,8 +194,7 @@ function matchClause(record, clause, options) {
 }
 
 function clausePasses(record, clause, options, semanticCandidate) {
-  const textual = ["text", "content", "line", "section"].includes(clause.type);
-  if (semanticCandidate && textual && !clause.negated) return { passed: true, count: 0, snippets: [] };
+  if (semanticCandidate && TEXTUAL_TYPES.has(clause.type) && !clause.negated) return { passed: true, count: 0, snippets: [] };
   const result = matchClause(record, clause, options);
   return { ...result, passed: clause.negated ? !result.matched : result.matched };
 }
@@ -348,6 +407,7 @@ export function expandTagSnippets(record, parsed, options = {}) {
 
 export function evaluateObsidianQuery(record, parsed, options = {}) {
   const settings = { contextLength: 120, maxMatchesPerNote: 10, ...options };
+  if (settings.analyzedNeedles === undefined && analyzerFlagOn()) settings.analyzedNeedles = analyzedNeedles(parsed);
   if (!parsed.groups.length) return { matched: true, matchCount: 0, snippets: [], matchedClauses: [] };
   const selected = selectGroup(record, parsed, settings);
   if (!selected) return { matched: false, matchCount: 0, snippets: [], matchedClauses: [] };

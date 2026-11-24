@@ -169,23 +169,20 @@ test("case 1: the scope cell shows the Vault's id, and 「全部 Vault」 for ta
 
 /* ---------------------------------------------------------------- case 2 */
 
-test("case 2: one multi-select lists every admitted Vault, and no inline handler exists", async () => {
+test("case 2: radio options choose the Vault scope, and checkboxes list each admitted Vault", async () => {
   const catalog = await pageModel();
   const html = editorOf(catalog).content;
-  const selects = [...html.matchAll(/<select[^>]*>/g)].map((match) => match[0]);
-  // `vaultIds` is the field the route decodes (`decodeConstraintDraft`): the plan's sketch says
-  // `name="vaults"`, but a field the service never reads could not store a scope at all.
-  const vaultSelect = selects.find((tag) => /name="vaultIds"/.test(tag));
-  assert.ok(vaultSelect, `the editor renders its Vault scope as one select (tags: ${JSON.stringify(selects)})`);
-  assert.match(vaultSelect, /\bmultiple\b/, "the Vault scope is a multi-select");
-  const scopeBlock = /<select[^>]*name="vaultIds"[\s\S]*?<\/select>/.exec(html)?.[0] ?? "";
-  assert.match(scopeBlock, /value="all"/, "「全部 Vault」 is a choice of its own");
+  assert.match(html, /type="radio" name="vaultScope" value="all" checked/);
+  assert.match(html, /type="radio" name="vaultScope" value="selected"/);
+  const scopeBlock = /<div[^>]*data-vault-choices>[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
   for (const vault of catalog.constraintPage.vaults) {
-    assert.match(scopeBlock, new RegExp(`value="${vault.id}"`), `Vault ${vault.id} is listed`);
+    assert.match(scopeBlock, new RegExp(`type="checkbox" name="vaultIds" value="${vault.id}"`));
     assert.match(scopeBlock, new RegExp(vault.name), `Vault ${vault.id} shows its name`);
   }
-  // No inline handler anywhere: CSP is `default-src 'none'`, so a handler could never run.
   assert.deepEqual([...html.matchAll(/\son[a-z]+=/g)].map((match) => match[0]), [], "no inline event handler");
+  assert.equal(decodeConstraintDraft({ vaultScope: "all", vaultIds: ["a"] }).vaultIds, null);
+  assert.deepEqual(decodeConstraintDraft({ vaultScope: "selected", vaultIds: ["a", "b"] }).vaultIds, ["a", "b"]);
+  assert.deepEqual(decodeConstraintDraft({ vaultScope: "selected" }).vaultIds, []);
 });
 
 /* ---------------------------------------------------------------- case 3 */
@@ -193,22 +190,20 @@ test("case 2: one multi-select lists every admitted Vault, and no inline handler
 test("case 3: the picker offers catalog operation ids and no legacy atom for a new constraint", async () => {
   const catalog = await pageModel();
   const html = editorOf(catalog).content;
-  const picker = /<select[^>]*name="addOperation"[\s\S]*?<\/select>/.exec(html)?.[0];
-  assert.ok(picker, "the picker is a real select in the form");
-  const values = [...picker.matchAll(/<option value="([^"]*)"/g)].map((match) => match[1]).filter(Boolean);
-  assert.ok(values.length > 20, `the picker offers the catalog, actual ${values.length} options`);
+  const values = [...html.matchAll(/<input type="checkbox" name="capabilities" value="([^"]*)"/g)].map((match) => match[1]);
+  assert.ok(values.length > 20, "the grouped checkboxes offer the whole operation catalog");
   const operations = new Set(catalog.constraintPage.operations.map((operation) => operation.id));
-  assert.deepEqual(values.filter((value) => !operations.has(value)), [], "every option is a catalog operation");
-  assert.deepEqual(values.filter((value) => value.includes(":")), [], "no `tool:`/`scope:` atom is offered");
-  assert.ok(values.every((value) => catalogOperationIds.includes(value)), "every option is one of the catalog's own ids");
-  // Grouped by surface, as design §6.3 asks.
-  assert.ok(/<optgroup label="[^"]+"/.test(picker), "the operations are grouped by surface");
+  assert.deepEqual(values.filter((value) => !operations.has(value)), []);
+  assert.equal(new Set(values).size, values.length, "an operation is offered once");
+  assert.ok(values.every((value) => catalogOperationIds.includes(value)));
+  assert.match(html, /data-operation-group open/);
+  assert.doesNotMatch(html, /name="addOperation"/);
   // A NEW constraint cannot carry an atom either: an empty document offers no chip to inherit.
   const fresh = await pageModel({ constraints: [] });
   const freshHtml = editorOf(fresh).content;
   assert.equal(/data-imported-atoms/.test(freshHtml), false, "a new constraint inherits no atom");
   assert.equal(/<input[^>]*name="capabilities"[^>]*value="[^"]*:[^"]*"/.test(freshHtml), false, "and starts with no atom chip");
-  assert.equal(operationPicker(catalog.constraintPage.operations, { chosen: [] }).includes(":"), false, "no atom can be chosen");
+  assert.doesNotMatch(operationPicker(catalog.constraintPage.operations), /name="capabilities" value="[^"]*:[^"]*"/);
 });
 
 /* ---------------------------------------------------------------- case 4 */
@@ -281,11 +276,11 @@ test("case 7: the page carries no <script> and no handler, and its preview card 
     assert.equal(/\son[a-z]+=/i.test(html), false, "no inline handler");
     assert.equal(/javascript:/i.test(html), false, "no javascript: URL");
   }
-  const preview = /<aside class="ped-side" data-preview="constraints">([\s\S]*?)<\/aside>/.exec(editorOf(catalog).content)?.[1] ?? "";
+  const preview = /<aside class="ped-side" data-preview="constraints">([\s\S]*?)<\/aside>/.exec(editorOf(catalog, { constraint: constraint() }).content)?.[1] ?? "";
   assert.ok(preview, "the editor renders the preview card");
   assert.doesNotMatch(preview, /<form|<button|<input/i, "the preview card submits nothing");
   assert.match(preview, /只读预览/, "and says so");
-  assert.match(preview, /现在/, "the verdict on it is the server's");
+  assert.match(preview, /判定时间/, "the verdict on it is the server's");
 });
 
 /* ---------------------------------------------------------------- case 8 (R8) */
@@ -366,8 +361,8 @@ async function start(t, { mode = "legacy", withService = true, constraints = [co
     adminPassword: PASSWORD,
     secureCookie: false,
     listVaults: async () => ({ vaults: [{ id: "a", name: "Work" }, { id: "b", name: "Life" }] }),
-    // The frozen legacy store: its routes are what give the shell a legacy base, and its page is the
-    // read-only link this page must offer (Task 7 item B).
+    // The legacy store is read for ONE fact: which legacy atom an imported constraint came from. Its
+    // page and its routes are retired.
     accessPolicyAdmin: { listPolicies: async () => ({ status: "ready", revision: 7, policies: [legacyPolicy()], orphaned: [] }) },
     authorization: { summary: () => ({ mode }) },
     ...(withService ? { authorizationAdmin: service } : {}),
@@ -414,7 +409,7 @@ test("the router serves the page, its editor and the drawer, and says the mode i
   assert.equal(/name="vaultIds"/.test(gone), false, "a missing constraint opens no editor");
 });
 
-test("the sidebar's 定时授权 entry reaches this page, and the frozen page is a read-only link from it", async (t) => {
+test("the sidebar's 定时授权 entry reaches this page, and no link points at the retired legacy page", async (t) => {
   const harness = await start(t, { mode: "enforce" });
   const html = await (await fetch(`${harness.origin}${BASE}`, { headers: { cookie: harness.cookie } })).text();
 
@@ -426,12 +421,12 @@ test("the sidebar's 定时授权 entry reaches this page, and the frozen page is
     .find((anchor) => anchor.includes("定时授权"));
   assert.ok(entry, "the sidebar carries the 定时授权 entry");
   assert.match(entry, new RegExp(`href="${BASE}"`), "the entry leads to the constraint page, not to the frozen one");
-  assert.equal(sidebar.includes('href="/admin/auth/access-policy"'), false, "the frozen page is not a nav entry any more");
+  assert.equal(sidebar.includes('href="/admin/auth/access-policy"'), false, "the retired page is not a nav entry any more");
   assert.match(sidebar, /<a class="ni[^"]*"[^>]*href="\/admin\/auth\/authz"[^>]*data-hotkey="z"/, "the hotkey survives the move");
 
-  // The frozen page is reachable here, as a plain read-only link.
-  assert.match(html, /<a class="btn ghost" href="\/admin\/auth\/access-policy">历史策略（只读）<\/a>/, "the history link is on the page");
-  assert.doesNotMatch(html, /action="\/admin\/auth\/access-policy\//, "and it offers no legacy write");
+  // The legacy page is retired, so the page carries neither a history link nor a legacy write form.
+  assert.doesNotMatch(html, /href="\/admin\/auth\/access-policy/, "no link points at the retired page");
+  assert.doesNotMatch(html, /action="\/admin\/auth\/access-policy\//, "and no legacy write survives");
 
   // The mobile primary row carries the same destination.
   const mnav = /<nav class="mnav"[\s\S]*?<details class="mmore">/.exec(html)?.[0] ?? "";
@@ -526,7 +521,7 @@ test("C1: a stored subject the snapshot no longer lists survives an untouched sa
   assert.deepEqual([...before].sort(), [ghost, SUBJECT].sort(), "the seeded constraint names the orphan");
 
   const { editor, response } = await saveUnchanged(harness);
-  const picker = /data-subject-picker[\s\S]*?<\/div>/.exec(editor)?.[0] ?? "";
+  const picker = /<div[^>]*data-subject-picker>[\s\S]*?<\/div>/.exec(editor)?.[0] ?? "";
   assert.match(picker, new RegExp(`name="subjects" value="${ghost}" checked`), "the orphan is a ticked row, so the form carries it");
   assert.match(picker, /class="tag danger"/, "and it is marked with the danger tag the list and the drawer use");
   assert.match(picker, /快照里已经没有这个主体/, "with the reason, in the picker's own words");
@@ -546,20 +541,45 @@ test("I1: a no-op save keeps the stored surfaces, and the page shows them", asyn
   assert.deepEqual(storedConstraint(harness).selector.anyOf[0].surfaces, ["mcp"], "the selector's surfaces are unchanged by a save nobody touched");
 });
 
-test("I2: a constraint that restricts every operation reads as 全部操作, not as none chosen", async (t) => {
+test("no page of the surface leaks a secret, a stored revision or a bearer token", async (t) => {
+  const harness = await start(t, { constraints: [constraint()] });
+  const pages = ["", `?id=${CONSTRAINT_ID}`, `?edit=${CONSTRAINT_ID}`, "?new=1"];
+  for (const query of pages) {
+    const html = await (await fetch(`${harness.origin}${BASE}${query}`, { headers: { cookie: harness.cookie } })).text();
+    assert.ok(html.length > 500, `the page rendered (${query || "list"})`);
+    for (const marker of ["schemaVersion", "clientSecret", "accessToken", "refreshToken", "createdAt", "updatedAt", "revision\":", "Bearer "]) {
+      assert.equal(html.includes(marker), false, `${query || "the list"} must not carry ${marker}`);
+    }
+  }
+});
+
+test("every operation is kept by an untouched save, and one ticked operation narrows it", async (t) => {
   const every = constraint({ selector: { anyOf: [{ surfaces: null, capabilities: null, targets: [{ kind: "vault", vaultId: "a" }] }] } });
   const harness = await start(t, { constraints: [every] });
+  const before = storedConstraint(harness).selector.anyOf[0];
 
   const { editor, response } = await saveUnchanged(harness);
   assert.match(editor, /data-every-operation/, "the editor renders the every-operation state");
   assert.match(editor, /全部操作/, "in the words the list and the drawer use");
-  assert.doesNotMatch(editor, /还没有选择操作/, "not as 「no operation chosen」, the opposite meaning");
-  assert.match(editor, /本页无法改写/, "the page names the state it cannot write");
-  assert.match(editor, /只能删除/, "and says delete is what is left");
-  assert.match(editor, /<button class="btn primary" type="submit" form="authz-constraint" disabled/, "the save button is off");
-  assert.match(editor, new RegExp(`action="${BASE}/delete"`), "the delete form is still there");
-  assert.equal(response.status, 400, "a crafted submit of that same form is refused, not stored in a different shape");
-  assert.equal(storedConstraint(harness).selector.anyOf[0].capabilities, null, "the stored selector is unchanged");
+  assert.match(editor, /<p class="help" data-no-operations hidden>/, "the empty message is hidden while all operations apply");
+  assert.match(editor, /name="capabilitiesAll" value="1"/, "and the form carries that state back");
+  assert.doesNotMatch(editor, /只能删除/, "the page no longer calls this state delete-only");
+  assert.equal(response.status, 303, "the save applies");
+  assert.equal(storedConstraint(harness).selector.anyOf[0].capabilities, null, "the stored operation set stays whole");
+  assert.deepEqual(storedConstraint(harness).selector.anyOf[0].targets, before.targets, "and the scope is untouched");
+
+  // Ticking one operation is the operator's explicit narrowing, and it replaces the marker.
+  const { response: applied } = await saveUnchanged(harness, (html) => {
+    const params = new URLSearchParams(formFields(html));
+    params.delete("capabilitiesAll");
+    params.append("capabilities", "get_note");
+    return params;
+  });
+  assert.equal(applied.status, 303);
+  assert.deepEqual(storedConstraint(harness).selector.anyOf[0].capabilities, ["get_note"], "the ticked set is what is stored");
+  const after = await (await fetch(`${harness.origin}${BASE}?edit=${CONSTRAINT_ID}`, { headers: { cookie: harness.cookie } })).text();
+  assert.match(after, /data-every-operation hidden/, "the all-operations message is hidden");
+  assert.doesNotMatch(after, /name="capabilitiesAll"/, "the form no longer carries the all-operations marker");
 });
 
 test("I2: a Vault the registry no longer admits is named, and the constraint is delete-only", async (t) => {
@@ -585,9 +605,10 @@ test("M1: the preview card names the deciding backend, and the banner says the s
 
 test("M2: the preview card says it shows the saved window", async () => {
   const catalog = await pageModel();
-  const preview = /<aside class="ped-side" data-preview="constraints">([\s\S]*?)<\/aside>/.exec(editorOf(catalog).content)?.[1] ?? "";
+  const preview = /<aside class="ped-side" data-preview="constraints">([\s\S]*?)<\/aside>/.exec(editorOf(catalog, { constraint: constraint() }).content)?.[1] ?? "";
   assert.match(preview, /按已保存的约束计算/, "the card says its input is the saved constraint");
   assert.match(preview, /不跟随未保存的改动/, "and that unsaved changes do not reach it");
+  assert.match(editorOf(catalog).content, /保存后，这里会显示服务端计算的生效状态/);
   const everyOperation = /<aside class="ped-side" data-preview="constraints">([\s\S]*?)<\/aside>/.exec(editorOf(catalog, {
     constraint: constraint({ selector: { anyOf: [{ surfaces: null, capabilities: null, targets: null }] } }),
   }).content)?.[1] ?? "";
@@ -607,4 +628,35 @@ test("I2: a constraint with several selector branches is delete-only, not collap
   assert.match(html, /它有 2 个并列分支/, "the page names the branch count");
   assert.match(html, /只能删除/, "and says the constraint is delete-only");
   assert.match(html, /<button class="btn primary" type="submit" form="authz-constraint" disabled/, "the save button is off");
+});
+
+test("each constraint row carries its own pause/resume POST, not only the drawer and the master switch (owner 2026-11-20)", async () => {
+  // The owner's request verbatim: 停用/启用 directly on the table. The control must be the same
+  // compare-and-swap POST the drawer sends, so a stale page cannot flip a constraint it never read.
+  const enabled = constraint();
+  const disabled = constraint({ id: "c-off", label: "已停用的约束", enabled: false });
+  const html = pageOf(await pageModel({ constraints: [enabled, disabled] })).content; // 3 rows: table, cards
+
+  const forms = [...html.matchAll(/<form[^>]*action="\/admin\/auth\/authz\/toggle"[^>]*>[\s\S]*?<\/form>/g)].map((m) => m[0]);
+  assert.equal(forms.length, 4, `each of the two constraints needs a control in the table AND the card list, got ${forms.length}`);
+
+  const forEnabled = forms.filter((form) => form.includes(`value="${enabled.id}"`));
+  const forDisabled = forms.filter((form) => form.includes('value="c-off"'));
+  assert.equal(forEnabled.length, 2, "the enabled constraint has one control per rendering");
+  assert.equal(forDisabled.length, 2);
+  for (const form of forEnabled) {
+    assert.match(form, /method="post"/);
+    assert.match(form, /name="csrf" value="csrf-token"/, "the row control carries the CSRF token");
+    assert.match(form, /name="expectedRevision" value="3"/, "and the revision it read, like the switch");
+    assert.match(form, /name="enabled" value="false"/, "pausing an enabled constraint posts enabled=false");
+    assert.match(form, /停用/, "the label says what the click does");
+  }
+  for (const form of forDisabled) {
+    assert.match(form, /name="enabled" value="true"/, "resuming a paused constraint posts enabled=true");
+    assert.match(form, /启用/);
+  }
+
+  // A store whose revision cannot be read has nothing to swap on: no control, exactly like the switch.
+  const broken = pageOf(await pageModel({ status: "broken" })).content;
+  assert.equal(/action="\/admin\/auth\/authz\/toggle"/.test(broken), false, "an unreadable document renders no row control");
 });

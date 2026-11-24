@@ -508,7 +508,7 @@ test("§17 architecture: tool layer reuses the single mode source and keeps no s
   assert.ok(!source.includes("evaluateObsidianQuery"), "tools/search.js must not embed a second evaluator");
 });
 
-test("§17 architecture: the Search v2 analyzer still has no production importer", async () => {
+test("§17 architecture: the Search v2 analyzer has exactly one production importer", async () => {
   const importers = [];
   async function walk(directory) {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
@@ -523,8 +523,12 @@ test("§17 architecture: the Search v2 analyzer still has no production importer
   for (const file of importers) {
     const content = await fs.readFile(file, "utf8");
     if (/from\s+["'][^"']*\/analyzer\.js["']|require\(["'][^"']*\/analyzer\.js["']\)/.test(content)) {
-      offenders.push(path.relative(APP_ROOT, file));
+      // Vault-relative paths use "/" on every Host: a Windows checkout must run this guard too.
+      offenders.push(path.relative(APP_ROOT, file).split(path.sep).join("/"));
     }
   }
-  assert.deepEqual(offenders, [], "analyzer.js must stay offline-only (no production importer) in P1");
+  // P1 kept the analyzer offline on purpose. S2 (2026-11-13) wired it into the lexical clause path
+  // behind SEARCH_V2_ANALYZER (default off) — one importer, the evaluator, and nothing else: a second
+  // importer would mean a second query interpretation to keep in sync.
+  assert.deepEqual(offenders, ["src/search/evaluator.js"], "analyzer.js must have exactly one production importer (src/search/evaluator.js)");
 });

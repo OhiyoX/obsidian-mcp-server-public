@@ -19,6 +19,8 @@ const tableSurfaceDom = source("../frontend/app/features/editor/extensions/table
 const tableCellEditor = source("../frontend/app/features/editor/extensions/table-cell-editor.js");
 const tableCellRender = source("../frontend/app/features/editor/extensions/table-cell-render.js");
 const tableGeometry = source("../frontend/app/features/editor/extensions/table-surface-geometry.js");
+const tableWheelScroll = source("../frontend/app/features/document/table-wheel-scroll.js");
+const baseView = source("../frontend/app/features/bases/view.js");
 const packageJson = JSON.parse(source("../package.json"));
 
 test("Table Surface v2 is a local whole-table block widget", () => {
@@ -68,9 +70,14 @@ test("dynamic editor theme contains no legacy row-simulated table layout", () =>
 });
 
 test("Table Surface v2 keeps one horizontal scroll owner and root transactions", () => {
-  assert.match(tableGeometry, /viewport\.scrollLeft \+= delta/);
+  assert.match(tableGeometry, /scrollTableHorizontally\(event, viewport\)/);
+  assert.match(tableWheelScroll, /viewport\.scrollLeft \+= delta/);
   assert.match(tableGeometry, /capture:\s*true/);
-  assert.match(tableGeometry, /event\.preventDefault\(\)/);
+  assert.match(tableWheelScroll, /event\.preventDefault\(\)/);
+  // One implementation for both surfaces: the Base wrap calls the shared helper
+  // and never carries its own copy of the delta rule.
+  assert.match(baseView, /scrollTableHorizontally\(event, wrap\)/);
+  assert.doesNotMatch(baseView, /horizontalWheelDelta/);
   assert.doesNotMatch(tableSurface, /addEventListener\("wheel"/);
   assert.match(tableCellEditor, /view\.dispatch\(\{/);
   assert.match(tableCellEditor, /userEvent/);

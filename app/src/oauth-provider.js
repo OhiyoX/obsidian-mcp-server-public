@@ -27,6 +27,15 @@ import { requestContext } from "./request-context.js";
 import { normalizeDefaultVaultId } from "./default-vault.js";
 import { attributeApiKeyLabel } from "./request-attribution.js";
 import { LOGIN_LOCK_MAX_FAILURES, LOGIN_LOCK_WINDOW_MS, lockRetryAfterSeconds } from "./login-lockout.js";
+import { apiKeyExpired } from "./api-key-expiry.js";
+
+/** One shape for the refusal, so the caller can branch on it without parsing a message. */
+export function apiKeyExpiredError(keyId) {
+  const error = new Error("API key expired");
+  error.code = "api_key_expired";
+  error.keyId = keyId;
+  return error;
+}
 
 export { DEFAULT_VAULT_ID, OAUTH_SCOPES, resolvePublicOrigin } from "./oauth/primitives.js";
 
@@ -117,7 +126,7 @@ class PersistentOAuthProvider {
     return origin;
   }
 
-  async createApiKey(label, allowedScopes = OAUTH_SCOPES, allowedVaults = [DEFAULT_VAULT_ID], defaultVaultId = null) {
+  async createApiKey(label, allowedScopes = OAUTH_SCOPES, allowedVaults = [DEFAULT_VAULT_ID], defaultVaultId = null, expiresAt = null) {
     await this.ready;
     const cleanLabel = String(label || "").trim();
     if (!cleanLabel || cleanLabel.length > 120 || /[\r\n\0]/.test(cleanLabel)) throw new InvalidRequestError("API key remark must be 1-120 single-line characters");
@@ -135,9 +144,12 @@ class PersistentOAuthProvider {
       allowedScopes: normalizedScopes(allowedScopes),
       allowedVaults: normalizedAllowedVaults,
       defaultVaultId: normalizeDefaultVaultId(defaultVaultId, normalizedAllowedVaults),
+      // #285: a display purpose only; an operator sets it from the Admin drawer later.
+      agentLabel: null,
+      expiresAt: expiresAt || null,
     };
     this.data.apiKeys[digest(secret)] = record;
-    this.recordAudit({ action: "api-key.create", credentialType: "api-key", credentialId: id, scopes: record.allowedScopes, vaults: record.allowedVaults, detail: cleanLabel });
+    this.recordAudit({ action: "api-key.create", credentialType: "api-key", credentialId: id, scopes: record.allowedScopes, vaults: record.allowedVaults, expiresAt: record.expiresAt, detail: cleanLabel });
     await this.save();
     return { ...record, secret };
   }
@@ -146,10 +158,15 @@ class PersistentOAuthProvider {
     await this.ready;
     const record = this.data.apiKeys[digest(secret)];
     if (!record) throw new Error("Invalid API key");
+    // Typed, because the caller must be able to say WHY it refused: a bare throw reached
+      // `src/auth.js` as an anonymous `invalid credential`, which cannot be told apart from a
+      // wrong secret. No audit is written here - `verifyApiKeyDeferred` promises no side effects,
+      // so the caller records the refusal.
+      if (apiKeyExpired(record, Date.now())) throw apiKeyExpiredError(record.id);
     record.lastUsedAt = new Date().toISOString();
     record.lastSource = usage.source || null;
     record.lastUserAgent = usage.userAgent || null;
-    this.recordAudit({ action: usage.action || "mcp.call", credentialType: "api-key", credentialId: record.id, clientId: `api-key:${record.id}`, scopes: record.allowedScopes, vaults: record.allowedVaults, ...attributeApiKeyLabel(usage, record.label), outcome: "success" });
+    this.recordAudit({ action: usage.action || "mcp.call", credentialType: "api-key", credentialId: record.id, clientId: `api-key:${record.id}`, scopes: record.allowedScopes, vaults: record.allowedVaults, ...attributeApiKeyLabel(usage, record.agentLabel || record.label), outcome: "success" });
     return { type: "api-key", clientId: `api-key:${record.id}`, scopes: [...record.allowedScopes], allowedVaults: [...record.allowedVaults], defaultVaultId: record.defaultVaultId ?? null, keyId: record.id };
   }
 
@@ -159,6 +176,11 @@ class PersistentOAuthProvider {
     await this.ready;
     const record = this.data.apiKeys[digest(secret)];
     if (!record) throw new Error("Invalid API key");
+    // Typed, because the caller must be able to say WHY it refused: a bare throw reached
+      // `src/auth.js` as an anonymous `invalid credential`, which cannot be told apart from a
+      // wrong secret. No audit is written here - `verifyApiKeyDeferred` promises no side effects,
+      // so the caller records the refusal.
+      if (apiKeyExpired(record, Date.now())) throw apiKeyExpiredError(record.id);
     return { type: "api-key", clientId: `api-key:${record.id}`, scopes: [...record.allowedScopes], allowedVaults: [...record.allowedVaults], defaultVaultId: record.defaultVaultId ?? null, keyId: record.id };
   }
 
@@ -174,7 +196,7 @@ class PersistentOAuthProvider {
       clientId: record ? `api-key:${record.id}` : (auth?.clientId || null),
       scopes: record?.allowedScopes ?? auth?.scopes ?? [],
       vaults: record?.allowedVaults ?? auth?.allowedVaults ?? [],
-      ...attributeApiKeyLabel(usage, record?.label),
+      ...attributeApiKeyLabel(usage, record?.agentLabel || record?.label),
       outcome: "success",
     });
   }

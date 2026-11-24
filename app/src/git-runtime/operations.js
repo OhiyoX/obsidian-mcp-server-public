@@ -65,11 +65,12 @@ export class GitOperations {
     this.#enabledConfig();
     try {
       const result = await this.#exec("git", [...this.baseArgs(), ...args], {
-        encoding: "utf-8",
+        encoding: options.rawStdout ? "buffer" : "utf-8",
+        ...(options.timeout ? { timeout: options.timeout } : {}),
         maxBuffer: options.maxBuffer ?? this.#maxBuffer,
         ...(this.#execEnv ? { env: typeof this.#execEnv === "function" ? this.#execEnv() : { ...this.#execEnv } } : {}),
       });
-      return { stdout: String(result?.stdout ?? "").trimEnd(), stderr: String(result?.stderr ?? "").trimEnd(), exitCode: 0 };
+      return { stdout: options.rawStdout ? Buffer.from(result?.stdout ?? "") : String(result?.stdout ?? "").trimEnd(), stderr: String(result?.stderr ?? "").trimEnd(), exitCode: 0 };
     } catch (error) {
       if (options.allowExitCodes?.includes(error?.code)) {
         return { stdout: String(error.stdout || "").trimEnd(), stderr: String(error.stderr || "").trimEnd(), exitCode: error.code };

@@ -1,0 +1,1 @@
+Delete a non-Markdown file through the same recoverable plan + durable Trash backup delete_note uses, then apply it. Markdown notes are refused (use delete_note); protected Vault internals (.git, .obsidian) are refused before any I/O. Any other extension is deletable, because uploads accept arbitrary extensions. There is no hard-delete option.

@@ -106,3 +106,34 @@ test("daily_note read actions resolve the author but are not treated as mutation
     assert.equal(result._meta?.["obsidian/memoryReminder"], undefined, `${action} must not emit a verify-write reminder`);
   }
 });
+
+// #827 R-1: with a registry injected, the registrar used `registry.snapshot()` directly,
+// so a publish landing mid-request could still change the reminder inside that request.
+// The request pin must win.
+test("an injected registry never overrides the request's pinned snapshot", async () => {
+  const { runWithPromptSnapshot } = await import("../src/prompt-registry/request-snapshot.js");
+  const snapshotOf = (revision, text) => ({
+    revision,
+    tuning: {},
+    values: { "memory.firstRead": text, "memory.checkpoint": "CHK", "memory.afterWrite": "AFTER", "memory.readHint": "H", "memory.writeHint": "W" },
+    sources: {},
+  });
+  const registry = { snapshot: () => snapshotOf(9, "PUBLISHED DURING REQUEST") };
+  const pinned = { snapshot: () => snapshotOf(3, "PINNED BEFORE REQUEST") };
+  const tools = new Map();
+  const server = { registerTool: (name, config, handler) => tools.set(name, { config, handler }), server: { getClientVersion: () => undefined } };
+  const registrar = createMemoryGuidanceRegistrar(server, { registry });
+  registrar.registerTool("get_note", { description: "x" }, async () => ({ content: [{ type: "text", text: "{}" }] }));
+
+  const outside = await tools.get("get_note").handler();
+  assert.match(outside.content.at(-1).text, /PUBLISHED DURING REQUEST/);
+
+  // Fresh registrar: the first read happens inside a pinned request.
+  const pinnedTools = new Map();
+  const pinnedServer = { registerTool: (name, config, handler) => pinnedTools.set(name, { config, handler }), server: { getClientVersion: () => undefined } };
+  const pinnedRegistrar = createMemoryGuidanceRegistrar(pinnedServer, { registry });
+  pinnedRegistrar.registerTool("get_note", { description: "x" }, async () => ({ content: [{ type: "text", text: "{}" }] }));
+  const inside = await runWithPromptSnapshot(pinned, () => pinnedTools.get("get_note").handler());
+  assert.match(inside.content.at(-1).text, /PINNED BEFORE REQUEST/);
+  assert.doesNotMatch(inside.content.at(-1).text, /PUBLISHED DURING REQUEST/);
+});

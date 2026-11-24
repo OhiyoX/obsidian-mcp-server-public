@@ -18,7 +18,8 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-const env = await (await import("./helpers/permission-baseline-env.js")).seedPermissionBaselineEnv();
+const { removeBaselineRoot, seedPermissionBaselineEnv } = await import("./helpers/permission-baseline-env.js");
+const env = await seedPermissionBaselineEnv();
 const {
   createPermissionPlane,
   observeCase,
@@ -26,7 +27,7 @@ const {
 } = await import("./helpers/permission-plane.js");
 const { RESOURCE_URIS, observedVaultOf } = await import("./helpers/permission-baseline-collect.js");
 
-test.after(async () => fs.rm(env.root, { recursive: true, force: true }));
+test.after(async () => removeBaselineRoot(env.root));
 
 test("a Vault resource reads the primary Vault, and only a credential that holds it may read it", async (t) => {
   const plane = await createPermissionPlane({ envKey: process.env.API_KEY, primaryVault: env.primary });

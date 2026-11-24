@@ -407,7 +407,8 @@ test("hint subscribes to a supervisor and unsubscribes on destroy", async () => 
 test("reconnect supervisor source stays self-contained and listener-free", () => {
   const source = fs.readFileSync(SUPERVISOR_PATH, "utf8");
 
-  assert.ok(source.split(/\r?\n/).length <= 500, "file must fit the local 500-line cap");
+  // The hard code-line gate was retired by owner decision (2026-11-13); the shape checks below
+  // are the contract.
   assert.match(source, /export function createReconnectSupervisor\(/);
   assert.match(source, /export function createReconnectHint\(/);
   assert.doesNotMatch(source, /^\s*import\s/m, "module must be self-contained");

@@ -36,6 +36,50 @@ reused for another plan or author is rejected. If the process dies before
 `committed` is durable, recovery rolls back the batch and the caller must
 create a new plan.
 
+## Startup refusals
+
+A failed recovery stops the process on purpose. The failure looks like this:
+
+- the process exits with a non-zero status before it listens on its port; every
+  HTTP request fails with a connection error, so no client sees a half-recovered
+  Vault;
+- the log holds one error that names the transaction, for example
+  `Mutation journal recovery failed for <transaction-id>: Committed mutation changed externally: note.md`.
+  The path is relative to `DATA_PATH/mutation-journal/`, so the log carries no
+  absolute path and no note content.
+
+This is fail-closed: the journal says which bytes the batch wrote and which
+bytes it replaced. If the files on disk match neither, the process cannot know
+whether a later write would destroy an external edit or the last copy of a note.
+Serving in that state would answer reads and accept writes on top of an unknown
+state, so the service refuses to start.
+
+Distinguish the two failure kinds by the message:
+
+- **Recovery conflict**: the message names a note path and a comparison, such as
+  `Committed mutation changed externally: note.md`, `Recovery conflict: note.md`
+  or `Backup checksum mismatch: note.md`. The disks and the journal disagree.
+- **Configuration error**: the message is `VAULT_CONTEXT_MISMATCH` — the journal
+  belongs to another Vault namespace, or names a Vault this process does not
+  serve. The data is intact; `VAULT_PATH` and the multi-Vault configuration are
+  wrong for this journal.
+
+Handling, in order:
+
+1. Keep the service stopped. Do not start a second process against the same
+   `DATA_PATH`; the mutation lock is process-local.
+2. Read `DATA_PATH/mutation-journal/<transaction-id>/manifest.json` and compare
+   its `before`/`after` SHA-256 revisions with the current file and with the
+   protected backups and Vault/data backups.
+3. Restore or reconcile the file, then restart. Recovery runs again on every
+   start and retries the same journal. See **Operator recovery** below for the
+   comparison and rollback limits.
+
+Do not delete the journal to make the server start: the transaction is the only
+record of the original bytes. A journal that records no author skips Git
+mutation tracking during recovery instead of inventing an identity, so a missing
+author is not a reason to remove the journal.
+
 ## Operator recovery
 
 When startup reports a recovery conflict, keep the service stopped. Record
@@ -217,3 +261,27 @@ The tools that can replace a whole section or body (`write_note` with `overwrite
 Small notes are deliberately exempt so routine edits never prompt. Appends and prepends cannot shrink a note and are never intercepted; `append_to_note` reports `preWriteVersionId` without evaluating the guard.
 
 This guard covers the note-body write tools above plus `write_file` overwrites of existing Markdown notes. `write_file` on non-Markdown resources (`.canvas`, `.base`, JSON, attachments), `write_canvas`, `write_base`, and `create_from_template` keep their own explicit overwrite semantics and are not routed through this threshold.
+
+## Restore a Markdown note from Vault Git
+
+`restore_version` accepts exactly one source: a `versionId` from `list_versions`,
+or `path` plus `revision` from the selected Vault's own Git repository. Git revisions
+are a 4–40 character commit SHA, `HEAD`, or `HEAD~N`. Git must be enabled for that
+Vault and its repository must be rooted at the Vault root. Git restoration is
+Markdown-only; historical symlinks, invalid UTF-8, NUL and oversized blobs are refused.
+
+Example: `restore_version({path:"Notes/Example.md",revision:"HEAD~1",overwrite:true})`.
+Use `destination` for a different Markdown path. Existing destinations require
+`overwrite:true`; `ifMatch` checks their current content revision. Git reads immutable
+objects and never checks out or resets the repository. Whitespace, BOM and line
+endings in the committed blob are preserved. Git's clean filters may have
+normalized content before it was committed.
+
+`plan_restore_version` accepts the same source pair and freezes those bytes for
+review and `apply_note_plan`; later HEAD changes do not change the plan. The normal
+mutation journal handles optimistic concurrency and crash recovery. Existing-file
+Git restoration requires version history enabled and retains previous bytes.
+Direct `restore_version` returns `preWriteVersionId` when changing an existing file;
+pass that ID back to undo. `sourceRevision` is the Git commit; `revision` is the
+content revision after restoration. No-op restores do not create another snapshot.
+Existing `.bak` and attachment restore behavior remains available via `versionId`.

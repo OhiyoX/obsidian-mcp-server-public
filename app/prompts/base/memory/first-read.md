@@ -1,0 +1,1 @@
+Obsidian memory guidance: for user-authorized long-lived project work, call agent_bootstrap once for the shared workflow; search/read existing project notes before work and update verified durable changes at a meaningful checkpoint. No change or do-not-record means no write.

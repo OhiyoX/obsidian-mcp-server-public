@@ -19,6 +19,9 @@ function foldedRangeOn(state, from, to) {
   return found;
 }
 
+// Answers the level of the heading that STARTS on this line, 0 otherwise. A setext node spans
+// its later title lines and its underline too, and a folded range covers them as well, so only
+// the line the node begins on may take the control.
 function headingLevelAt(state, from) {
   const line = state.doc.lineAt(from);
   let level = 0;
@@ -26,9 +29,9 @@ function headingLevelAt(state, from) {
     from: line.from,
     to: line.to,
     enter(node) {
-      const match = /^ATXHeading([1-6])$/.exec(node.name);
+      const match = /^(?:ATXHeading([1-6])|SetextHeading([12]))$/.exec(node.name);
       if (match) {
-        level = Number(match[1]);
+        level = node.from >= line.from ? Number(match[1] ?? match[2]) : 0;
         return false;
       }
       return true;
@@ -117,7 +120,7 @@ class FoldIndicator extends WidgetType {
   }
 }
 
-function headingFoldDecorations(view) {
+export function headingFoldDecorations(view) {
   const builder = new RangeSetBuilder();
   const { doc } = view.state;
   const fmEnd = frontmatterEndOffset(doc);

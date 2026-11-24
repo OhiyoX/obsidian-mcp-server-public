@@ -13,7 +13,8 @@
     "check": "npm run check:syntax && npm run check:architecture",
     "check:syntax": "node scripts/check-js.mjs",
     "check:architecture": "node scripts/check-architecture.mjs",
-    "test": "node --test"
+    "admin-layout:shards": "node scripts/run-admin-layout-shards.mjs",
+    "test": "node scripts/run-node-tests-local.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.31.0",

@@ -331,6 +331,14 @@ a.li:hover{background:var(--hover);text-decoration:none}
 .tl .tr{position:relative;height:16px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px calc(100%/24)),var(--field)}
 .tl .tr .w{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.85}
 .tl .tr .now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--amber);border-radius:1px}
+.tl .tr .w:not([data-name]){pointer-events:none}
+.tl .tr .w .h{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:3px}
+.tl .tr .w .h[data-edge="from"]{left:0}
+.tl .tr .w .h[data-edge="to"]{right:0}
+.tl .tr .w .h::after{content:"";position:absolute;top:3px;bottom:3px;width:2px;border-radius:1px;background:rgba(255,255,255,.55)}
+.tl .tr .w .h[data-edge="from"]::after{left:2px}
+.tl .tr .w .h[data-edge="to"]::after{right:2px}
+.tl .tr .w .h:hover::after{background:rgba(255,255,255,.95)}
 .tl .ax{display:flex;justify-content:space-between;font:400 13px/16px var(--mono);color:var(--tx4)}
 .tl .today{color:var(--tx)}
 .sumbox{padding:var(--s3);border-radius:var(--r2);border:1px solid var(--line);background:var(--pane);font-size:13px;line-height:20px;color:var(--tx2)}

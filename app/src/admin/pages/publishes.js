@@ -8,11 +8,11 @@
 // Honest-data notes:
 //   * the service publishes no document *title*, so the primary line is the file name derived from
 //     `path` (the full path stays visible beside it, and in `title`);
-//   * the service publishes no view counter, so the prototype's "N 次访问" keeps only its
-//     `futonly` 规划中 marker — no number is invented;
+//   * the view counter is the record's own `views` / `lastViewedAt`, counted by the public routes
+//     (`PublishService.recordView`), so a number in this cell is always a page that was served;
 //   * the actor is the real `createdBy` string (`web:<user>`, `mcp:<agent>/<model>`,
 //     `mcp:<clientId>`, `admin-session`), never a guessed publisher.
-import { pageBar, emptyState, table, mcards, moreMenu, confirmPage, esc, fut, ic } from "../ui.js";
+import { pageBar, emptyState, table, mcards, moreMenu, confirmPage, esc, ic } from "../ui.js";
 import { fmtFull, rel } from "../presentation/format.js";
 import { t } from "../../i18n/context.js";
 import { readSort, sortRows } from "../table-sort.js";
@@ -129,6 +129,25 @@ function kindLabel(record) {
     : t("adm.publishes.kind.document");
 }
 
+/**
+ * The 访问统计 view: the served-page count as plain text (nobody opened it ⇒ `—`), and the last
+ * open time as a `title`. One source for the table cell and the phone card, and no script.
+ */
+function viewsText(record) {
+  const views = Number.isInteger(record?.views) && record.views > 0 ? record.views : 0;
+  // An unopened record keeps the page's empty-value dash rather than a 0 that reads as data.
+  return views ? t("adm.publishes.views", { count: views }) : "—";
+}
+
+function viewsTitleAttr(record) {
+  const title = record?.lastViewedAt ? t("adm.publishes.viewsLast", { time: fmtFull(record.lastViewedAt) }) : "";
+  return title ? ` title="${esc(title)}"` : "";
+}
+
+function viewsCell(record) {
+  return `<div class="muted"${viewsTitleAttr(record)}>${esc(viewsText(record))}</div>`;
+}
+
 function row(ctx, record, { index = 0, rows = 1 } = {}) {
   const state = stateOf(record);
   const path = String(record?.path || "");
@@ -149,14 +168,14 @@ function row(ctx, record, { index = 0, rows = 1 } = {}) {
 <td><span class="st ${esc(state.cls)}" title="${esc(state.title)}"><span class="dot"></span>${esc(state.label)}</span></td>
 <td class="cellt"><span class="mono">${esc(shortAddress)}</span> ${link}</td>
 <td class="cellt">${esc(actor.name)}<div class="muted">${esc(actor.kind || "—")}</div></td>
-<td class="cellt">${stamp}<div class="muted futonly">${fut(t("adm.publishes.plannedViews"))}</div></td>
+<td class="cellt">${stamp}${viewsCell(record)}</td>
 ${ACT_CELL}${rowMenu(recordMenuItems(ctx, record, url), { up: openUpwards(index, rows, 2) })}</td></tr>`;
 }
 
 function card(ctx, record) {
   const state = stateOf(record);
   const actor = actorView(ctx.model, record?.createdBy);
-  return `<div class="mc"><div class="b"><div class="nm"><b>${esc(docTitle(record?.path))}</b><span class="sub2">${esc(kindLabel(record))} · ${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")} · ${esc(record?.path || "—")}</span></div><div class="meta"><span class="st ${esc(state.cls)}"><span class="dot"></span>${esc(state.label)}</span><span>${esc(actor.name)}</span><span>${esc(rel(record?.createdAt))}</span></div></div>${rowMenu(recordMenuItems(ctx, record, publicHref(ctx, record)), { up: false })}</div>`;
+  return `<div class="mc"><div class="b"><div class="nm"><b>${esc(docTitle(record?.path))}</b><span class="sub2">${esc(kindLabel(record))} · ${esc(ctx.model.vaultLabel(record?.vaultId) || record?.vaultId || "—")} · ${esc(record?.path || "—")}</span></div><div class="meta"><span class="st ${esc(state.cls)}"><span class="dot"></span>${esc(state.label)}</span><span>${esc(actor.name)}</span><span>${esc(rel(record?.createdAt))}</span><span${viewsTitleAttr(record)}>${esc(viewsText(record))}</span></div></div>${rowMenu(recordMenuItems(ctx, record, publicHref(ctx, record)), { up: false })}</div>`;
 }
 
 function confirmRevoke(ctx) {

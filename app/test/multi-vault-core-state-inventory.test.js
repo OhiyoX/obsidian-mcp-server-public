@@ -81,7 +81,9 @@ const FROZEN = Object.freeze({
       "src/vault.js",
     ]),
     // Extension beyond the brief's six: vault-derived layout paths (vaultLayout).
-    MEMORY_PATH: Object.freeze(["src/agent-bootstrap.js", "src/tools/intelligence.js"]),
+    // `src/memory-guidance.js` fills the `{{memoryPath}}` placeholder of the structured-memory
+    // tool copy (prompt registry, #825): the value stays code-owned, the text stays in the pack.
+    MEMORY_PATH: Object.freeze(["src/agent-bootstrap.js", "src/memory-guidance.js", "src/tools/intelligence.js"]),
     SKILLS_PATH: Object.freeze(["src/agent-bootstrap.js", "src/skills.js", "src/tools/intelligence.js"]),
     // Wave F / F1 (2026): the two Web multi-Vault reads moved into `config.js` helpers
     // (`configuredWebVaultsRoot` / `configuredWebDefaultVault`) — `server.js`'s inline 1-line read

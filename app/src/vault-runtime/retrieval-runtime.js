@@ -28,13 +28,15 @@
 // module-level binding.
 
 import { randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { unavailable } from "./descriptor.js";
 import { chunkMarkdown, metadataFor, rankRecall, tokenize } from "./retrieval-rank.js";
+import { prepareLexicalStats } from "./retrieval-lexical-stats.js";
 import { retrievalStatusPayload, unavailableIndexPayload, unavailableJobPayload, unavailableRecallPayload } from "./retrieval-status.js";
+import { computeRetrievalDelta } from "./retrieval-index-delta.js";
+import { legacyIndexState, RETRIEVAL_INDEX_MIGRATION_REQUIRED } from "./retrieval-index-migration.js";
+import { openIndexStore } from "./retrieval-index-store.js";
 
-const INDEX_VERSION = 1;
+const INDEX_VERSION = 2;
 
 /**
  * Fallback tunables, used only when a caller omits `deps.retrievalConfig`. The compatibility
@@ -138,6 +140,31 @@ export function createRetrievalRuntime(input = {}) {
   // Per-instance state — BASE's `retrieval.js` module globals, now closure-local (§12/§43-7).
   let state;
   let loading;
+  // Set when the index on disk cannot be trusted: a non-empty legacy v1 with no
+  // published v2 (migration required) or an unreadable v2 generation. Both make
+  // retrieval refuse to write instead of pretending the Vault is empty.
+  let indexBlockedReason;
+  const store = openIndexStore({ legacyIndexPath: indexPath });
+  // Generation-scoped BM25 statistics: one prepared set per committed state object and
+  // filter combination. WeakMap, so a replaced generation is collected with the state.
+  const lexicalStatsCache = new WeakMap();
+  // A prepared set is ~60 MiB on production data, so the cache holds at most two
+  // (the unfiltered key and the filter shape in use) and evicts the oldest.
+  const LEXICAL_CACHE_ENTRIES = 2;
+  function lexicalStatsFor(current, documents, filterKey) {
+    let perState = lexicalStatsCache.get(current);
+    if (perState === undefined) {
+      perState = new Map();
+      lexicalStatsCache.set(current, perState);
+    }
+    let prepared = perState.get(filterKey);
+    if (prepared === undefined) {
+      while (perState.size >= LEXICAL_CACHE_ENTRIES) perState.delete(perState.keys().next().value);
+      prepared = prepareLexicalStats(documents);
+      perState.set(filterKey, prepared);
+    }
+    return prepared;
+  }
   let operationQueue = Promise.resolve();
   let activeIndexJob;
   let lastRefreshAt = 0;
@@ -188,26 +215,32 @@ export function createRetrievalRuntime(input = {}) {
     if (loading) return loading;
     loading = (async () => {
       try {
-        const parsed = JSON.parse(await fs.readFile(indexPath, "utf-8"));
-        state = parsed.version === INDEX_VERSION ? parsed : emptyState();
+        const published = await store.load();
+        if (published !== null) {
+          state = published;
+          indexBlockedReason = undefined;
+          return state;
+        }
       } catch (error) {
-        if (error?.code !== "ENOENT") log.error("Retrieval index load failed:", error.message);
+        // A corrupt v2 generation must never read as an empty index.
+        log.error("Retrieval index v2 load failed:", error.message);
+        indexBlockedReason = `retrieval index v2 is unreadable: ${error.message}`;
         state = emptyState();
+        return state;
       }
+      const legacy = await legacyIndexState(indexPath);
+      if (legacy.present && legacy.bytes > 0) {
+        // M2 keeps the conversion offline: parsing 383 MiB here is exactly the GB spike
+        // this work removes. An operator converts a copy and switches the runtime to it.
+        indexBlockedReason = RETRIEVAL_INDEX_MIGRATION_REQUIRED;
+        state = emptyState();
+        return state;
+      }
+      indexBlockedReason = undefined;
+      state = emptyState();
       return state;
     })();
     return loading;
-  }
-
-  async function saveState(index) {
-    await fs.mkdir(path.dirname(indexPath), { recursive: true });
-    const temp = `${indexPath}.${randomUUID()}.tmp`;
-    try {
-      await fs.writeFile(temp, `${JSON.stringify(index)}\n`, "utf-8");
-      await fs.rename(temp, indexPath);
-    } finally {
-      await fs.rm(temp, { force: true }).catch(() => {});
-    }
   }
 
   async function addEmbeddings(chunks, job) {
@@ -219,7 +252,7 @@ export function createRetrievalRuntime(input = {}) {
       while (nextBatch < batches.length) {
         const batch = batches[nextBatch++];
         const vectors = await embeddingProvider.embedTexts(batch.map((chunk) => `${chunk.heading}\n${chunk.text}`), { priority: "background" });
-        batch.forEach((chunk, index) => { chunk.embedding = vectors[index]; });
+        batch.forEach((chunk, index) => { chunk.embedding = vectors[index]; delete chunk.norm; });
         if (job) { job.embeddedChunks += batch.length; job.completedBatches += 1; job.currentBatchSize = batch.length; job.updatedAt = new Date().toISOString(); }
       }
     }
@@ -237,13 +270,54 @@ export function createRetrievalRuntime(input = {}) {
       if (job) { job.status = "cancelled"; job.updatedAt = new Date().toISOString(); }
       return unavailableIndexPayload(RETRIEVAL_AUTHORIZATION_REVOKED);
     }
-    const current = structuredClone(await loadState());
+    const committed = await loadState();
+    if (indexBlockedReason !== undefined) {
+      if (job) { job.status = "cancelled"; job.updatedAt = new Date().toISOString(); job.error = indexBlockedReason; }
+      return blockedIndexPayload(indexBlockedReason);
+    }
     const vault = await indexProvider({ force: options.force });
     if (job) { job.status = "running"; job.totalNotes = vault.records.length; job.updatedAt = new Date().toISOString(); }
     const semantic = semanticConfiguration();
+    // M1: decide from the committed state before any clone. A refresh that changes nothing
+    // (a recall schedules one every 10 s) must not copy, stringify or rewrite the index.
+    const delta = computeRetrievalDelta({
+      current: committed,
+      records: vault.records,
+      force: options.force === true,
+      embeddings: options.embeddings === true,
+      semantic,
+    });
+    if (!delta.changed) {
+      if (job) { job.processedNotes = vault.records.length; job.updatedAt = new Date().toISOString(); }
+      const notes = Object.values(committed.notes);
+      return {
+        notes: notes.length,
+        chunks: notes.reduce((sum, note) => sum + (note.chunks || []).length, 0),
+        added: 0,
+        updated: 0,
+        removed: 0,
+        reused: vault.records.length,
+        embeddedChunks: 0,
+        semanticError: null,
+        updatedAt: committed.updatedAt,
+        vaultIndex: vault.stats,
+      };
+    }
+    // M3: copy on write. Unchanged notes are shared with the committed state (the store
+    // reuses their manifest entry), so a one-note change never clones the whole index.
+    const current = { ...committed, notes: { ...committed.notes } };
+    const copyNote = (notePath) => {
+      const note = current.notes[notePath];
+      if (note !== undefined) current.notes[notePath] = { ...note, chunks: note.chunks.map((chunk) => ({ ...chunk })) };
+    };
     if (semantic.enabled && current.embeddingModel !== semantic.identity) {
-      for (const note of Object.values(current.notes)) for (const chunk of note.chunks || []) delete chunk.embedding;
+      for (const notePath of Object.keys(current.notes)) {
+        copyNote(notePath);
+        for (const chunk of current.notes[notePath].chunks) delete chunk.embedding;
+      }
       current.embeddingModel = semantic.identity;
+    } else {
+      for (const notePath of delta.changedPaths) copyNote(notePath);
     }
     const seen = new Set();
     let added = 0;
@@ -292,7 +366,8 @@ export function createRetrievalRuntime(input = {}) {
       }
     }
     current.updatedAt = new Date().toISOString();
-    await saveState(current);
+    const published = await store.commit(current, delta.changedPaths);
+    current.generation = published.generation;
     state = current;
     return { notes: Object.keys(current.notes).length, chunks: Object.values(current.notes).reduce((sum, note) => sum + note.chunks.length, 0), added, updated, removed, reused, embeddedChunks, semanticError, updatedAt: current.updatedAt, vaultIndex: vault.stats };
   }
@@ -342,6 +417,9 @@ export function createRetrievalRuntime(input = {}) {
       job.finishedAt = job.updatedAt;
       startPendingIndexJob();
     }).catch((error) => {
+      // A background publish can fail (for example a read-only data directory); say so
+      // instead of leaving only a status field nobody reads.
+      log.error("Retrieval index job failed:", error.message);
       job.status = "failed";
       job.error = error.message;
       job.updatedAt = new Date().toISOString();
@@ -409,7 +487,8 @@ export function createRetrievalRuntime(input = {}) {
 
   async function retrievalIndexStatus() {
     if (!capability.available) return statusPayload(null, capability.reason);
-    return statusPayload(await loadState());
+    const current = await loadState();
+    return statusPayload(current, indexBlockedReason);
   }
 
   // Snapshot-only status: reads the in-memory committed state and performs no disk IO. Returns
@@ -417,7 +496,11 @@ export function createRetrievalRuntime(input = {}) {
   // must not cold-load the retrieval JSON can report unavailability instead of forcing a read.
   function retrievalIndexStatusSnapshot() {
     if (!capability.available || !state) return null;
-    return statusPayload(state);
+    return statusPayload(state, indexBlockedReason);
+  }
+
+  function blockedIndexPayload(reason) {
+    return { ...unavailableIndexPayload(reason), ...(state ? { updatedAt: state.updatedAt ?? null } : {}) };
   }
 
   function chunkMarkdownForVault(record, options = {}) {
@@ -431,9 +514,12 @@ export function createRetrievalRuntime(input = {}) {
     if (!String(query || "").trim()) throw new Error("Recall query is required");
     if (!capability.available) return unavailableRecallPayload({ query, reason: capability.reason, index: statusPayload(null, capability.reason) });
     await loadState();
+    // A blocked index rejects instead of answering an empty result set: the tool
+    // degrades to exact matches and reports this message verbatim.
+    if (indexBlockedReason !== undefined) throw new Error(indexBlockedReason);
     requestRetrievalRefresh();
     const current = await loadState();
-    return { ...(await rankRecall(current, query, options, { semanticConfiguration, embedTexts: embeddingProvider?.embedTexts })), index: await retrievalIndexStatus() };
+    return { ...(await rankRecall(current, query, options, { semanticConfiguration, embedTexts: embeddingProvider?.embedTexts, lexicalStats: lexicalStatsFor })), index: await retrievalIndexStatus() };
   }
 
   // Snapshot-only recall: never schedules a refresh or cold-loads the JSON. Throws when the
@@ -443,7 +529,8 @@ export function createRetrievalRuntime(input = {}) {
     if (!String(query || "").trim()) throw new Error("Recall query is required");
     if (!capability.available) return unavailableRecallPayload({ query, reason: capability.reason, index: statusPayload(null, capability.reason) });
     if (!state) throw new Error("Retrieval snapshot unavailable");
-    return { ...(await rankRecall(state, query, options, { semanticConfiguration, embedTexts: embeddingProvider?.embedTexts })), unavailable: false };
+    if (indexBlockedReason !== undefined) throw new Error(indexBlockedReason);
+    return { ...(await rankRecall(state, query, options, { semanticConfiguration, embedTexts: embeddingProvider?.embedTexts, lexicalStats: lexicalStatsFor })), unavailable: false };
   }
 
   return Object.freeze({

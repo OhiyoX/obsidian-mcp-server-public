@@ -1,0 +1,1 @@
+Read a note as content, full structured data, document map, metadata, or a single section. Pass ifRevision to get {path, revision, notModified: true} instead of the note when that revision is still current.

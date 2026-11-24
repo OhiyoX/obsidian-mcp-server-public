@@ -30,14 +30,18 @@ import { listenFetchSafeOrigin } from "../../scripts/fetch-safe-listen.mjs";
 
 // D0 (approved 2026-10-18) script policy, in one place:
 //   * a fragment (a page module's content) renders no script at all;
-//   * an authenticated document renders exactly one same-origin, whitelisted enhancement module;
+//   * an authenticated document renders exactly one same-origin, whitelisted enhancement module,
+//     plus the pre-paint column-widths script `layout.js` injects before it (that one is classic,
+//     on purpose: it must run before the first paint, `admin-layout-noscript.mjs` asserts it);
 //   * neither may contain an inline handler or a javascript: URL.
 const D0_MODULE_SCRIPT = /^<script type="module" src="\/admin\/auth\/assets\/[a-z-]+\.js"><\/script>$/i;
+const D0_PREPAINT_SCRIPT = /^<script src="\/admin\/auth\/assets\/admin-column-widths\.js"><\/script>$/i;
 function assertScriptPolicy(html) {
   const scripts = [...html.matchAll(/<script\b[^>]*>(?:<\/script>)?/gi)].map((match) => match[0]);
-  if (scripts.length > 0) {
-    assert.equal(scripts.length, 1, "no script beyond the one whitelisted same-origin module");
-    assert.match(scripts[0], D0_MODULE_SCRIPT, "the single script is the whitelisted same-origin module");
+  const enhancement = scripts.filter((script) => !D0_PREPAINT_SCRIPT.test(script));
+  if (enhancement.length > 0) {
+    assert.equal(enhancement.length, 1, "no script beyond the one whitelisted same-origin module");
+    assert.match(enhancement[0], D0_MODULE_SCRIPT, "the single script is the whitelisted same-origin module");
   }
   assert.doesNotMatch(html, /[\s"']on(?:click|change|input|submit|load|error|mouseover|focus|blur|toggle|keydown|keyup)\s*=/i, "no inline event handlers");
   assert.doesNotMatch(html, /javascript:/i, "no javascript: URLs");
@@ -158,7 +162,9 @@ function checkList(html, input = model()) {
     assert.ok(headText.includes(header), `column ${header} (saw ${JSON.stringify(headText)})`);
   }
   assert.ok(html.includes('<th class="act"></th>'), "row-action column");
-  assert.ok(html.includes('<col style="width:20%">') && html.includes('<col style="width:24%">'), "prototype column widths");
+  // 2026-11-16: the table helper emits the prototype width as the `--admin-col-N` fallback
+  // (`ui.js` table(), the #401 column contract), so the assertion reads the real attribute.
+  assert.ok(html.includes('<col style="width:var(--admin-col-0,20%)">') && html.includes('<col style="width:var(--admin-col-1,24%)">'), "prototype column widths");
   assert.ok(html.includes('<table class="tbl">') && html.includes('<div class="tw hide-m">'), "prototype table shell");
   assert.ok(html.includes('<div class="mcards">') && html.includes('<div class="mc">'), "mobile cards mirror the table");
   assert.ok(html.includes('class="lede"'), "page lede");
@@ -171,8 +177,11 @@ function checkList(html, input = model()) {
   // #437 shipped: the scan placeholder is gone, because the page-header refresh runs the one
   // manual reconciliation and nothing would differ between the two controls.
   assert.equal(html.includes("扫描新 Vault"), false, "no planned scan placeholder is left");
-  assert.ok(html.includes("从 GitHub 仓库添加 Vault") && html.includes("<button class=\"btn\" disabled>添加…</button>"), "GitHub-backed futbox keeps a disabled CTA");
-  assert.ok(html.includes('class="sect futonly"'), "planned blocks stay behind .futonly");
+  // Design C (2026-11-16): the GitHub-backed placeholder is a real read-only fact card now. The
+  // fixture Vault has no remote URL from the service, so the card must say 未提供 rather than guess.
+  assert.ok(html.includes("GitHub-backed Vault") && html.includes("最近 fetch：未记录"), "GitHub-backed fact card is rendered");
+  assert.ok(html.includes("<span class=\"st off\"><span class=\"dot\"></span>未提供</span>"), "an unread remote URL is 未提供, never a guessed host");
+  assert.equal(html.includes("Architecture TODO"), false, "the architecture placeholder is gone");
   assert.ok(html.includes('<details class="mn">'), "row menu is a details element (no script)");
   assert.ok(html.includes(`href="${BASE}?id=vault"`), "row entry point is the ?id= drawer");
   assert.ok(html.includes(`<form method="post" action="${ACTIONS.verify}">`), "row menu offers 验证 (POST)");

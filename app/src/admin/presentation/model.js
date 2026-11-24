@@ -234,7 +234,10 @@ export function createModel({ now = Date.now(), snapshot = {}, keys = [], vaults
   }
 
   const scopeOptions = (selected = []) => SCOPES.map((scope) => `<label class="chk"><input type="checkbox" name="allowedScope" value="${esc(scope.key)}"${selected.includes(scope.key) ? " checked" : ""}><span><b>${esc(scope.name)}</b><span class="d">${esc(scope.key)} · ${esc(scope.desc)}</span></span></label>`).join("");
-  const vaultOptions = (selected = []) => vaults.map((vault) => `<label class="chk"><input type="checkbox" name="allowedVault" value="${esc(vault.id)}"${selected.includes(vault.id) ? " checked" : ""}><span><b>${esc(vault.name || vault.label || vault.id)}</b><span class="d">${esc(vault.id)}</span></span></label>`).join("");
+  const vaultOptions = (selected = []) => vaults.map((vault) => {
+    const name = vault.name || vault.label || vault.id;
+    return `<label class="chk"><input type="checkbox" name="allowedVault" value="${esc(vault.id)}"${selected.includes(vault.id) ? " checked" : ""}><span><b>${esc(name)}</b>${name === vault.id ? "" : `<span class="d">${esc(vault.id)}</span>`}</span></label>`;
+  }).join("");
 
   return {
     ...state,

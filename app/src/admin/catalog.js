@@ -61,7 +61,6 @@ function deriveNav(rows) {
       tokens: rows.grants.length,
       publishes: rows.publishCounts.total ?? rows.publishCounts.active ?? 0,
       audit: rows.audit.length,
-      authz: rows.authz.count,
       vaults: rows.vaults.length,
     },
     attention: {
@@ -76,29 +75,16 @@ function deriveNav(rows) {
 }
 
 /**
- * Read the access-policy admin store. Never throws: a broken store renders as `broken` so the
- * page can still show the repair surface (the Admin plane must never be gated by what it manages).
+ * The legacy policies, read only for the atom provenance of an imported constraint. Never throws:
+ * an unreadable store yields `[]`, and the constraint page then shows no atom chip.
  */
-async function readAuthz(accessPolicyAdmin, configuredApiKeyEnabled) {
-  if (!accessPolicyAdmin || typeof accessPolicyAdmin.listPolicies !== "function") {
-    return { available: false, enabled: false, status: "not-configured", revision: null, policies: [], orphaned: [], count: 0, enabledCount: 0 };
-  }
+async function readLegacyPolicies(accessPolicyAdmin) {
+  if (!accessPolicyAdmin || typeof accessPolicyAdmin.listPolicies !== "function") return [];
   try {
     const listed = await accessPolicyAdmin.listPolicies();
-    const policies = Array.isArray(listed?.policies) ? listed.policies : [];
-    const enabledCount = policies.filter((policy) => policy.enabled !== false && policy.enabled !== 0).length;
-    return {
-      available: true,
-      enabled: listed?.status === "ready",
-      status: listed?.status || "unknown",
-      revision: listed?.revision ?? null,
-      policies,
-      orphaned: Array.isArray(listed?.orphaned) ? listed.orphaned : [],
-      count: policies.length,
-      enabledCount,
-    };
-  } catch (error) {
-    return { available: true, enabled: false, status: "broken", revision: null, policies: [], orphaned: [], count: 0, enabledCount: 0, error: String(error?.message || error) };
+    return Array.isArray(listed?.policies) ? listed.policies : [];
+  } catch {
+    return [];
   }
 }
 
@@ -201,10 +187,10 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
   const vaults = vaultGit.vaults;
   const keys = [...(configuredApiKeyEnabled ? [configuredEnvKey(vaults, snapshot.configuredApiKeyUsage || {})] : []), ...(snapshot.apiKeys || [])];
   const grants = mergeTokenGrants(snapshot.tokens || []);
-  const authz = await readAuthz(accessPolicyAdmin, configuredApiKeyEnabled);
+  const legacyPolicies = await readLegacyPolicies(accessPolicyAdmin);
   const constraints = readConstraints(authorizationAdmin);
   const audit = snapshot.audit || [];
-  const nav = deriveNav({ accounts: snapshot.oauthUsers || [], clients: snapshot.clients || [], keys, grants, publishCounts, audit, authz, vaults, transfers });
+  const nav = deriveNav({ accounts: snapshot.oauthUsers || [], clients: snapshot.clients || [], keys, grants, publishCounts, audit, vaults, transfers });
   const capabilities = capabilityCatalog();
   const themeCookie = parseCookies(req)["omcp-admin.theme"];
   const theme = themeCookie === "light" ? "light" : themeCookie === "dark" ? "dark" : "dark";
@@ -228,7 +214,7 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
     ...constraints,
     vaults: vaults.map((vault) => ({ id: vault.id, name: vault.name || vault.label || vault.id })),
     operations: constraintOperations(),
-    importedAtoms: importedAtoms(constraints.constraints, authz.policies),
+    importedAtoms: importedAtoms(constraints.constraints, legacyPolicies),
     subjects: snapshotSubjects(snapshot, { configuredApiKeyEnabled }),
     presentation: model,
   };
@@ -245,7 +231,6 @@ export async function buildCatalog({ deps, req, query = {}, now = Date.now() }) 
     vaults,
     vaultGit,
     transfers,
-    authz,
     constraintPage,
     capabilities,
     // The sidebar's 定时授权 entry opens the constraint page (Task 7 item B), so its badge counts

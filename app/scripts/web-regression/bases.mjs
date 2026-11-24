@@ -78,7 +78,10 @@ export async function registerBasesChecks(ctx) {
         const accounts=await webBasesPage.request.get(`${webBasesBase}/admin/auth?tab=accounts`);
         const html=await accounts.text();
         const csrf=html.match(/name="csrf" value="([^"]+)"/)?.[1];
-        const userId=html.match(/name="id" value="([0-9a-f-]{36})"/)?.[1];
+        // The list page links each account by ?id=<uuid>; the hidden `name="id"` field only exists
+        // inside a selected account's drawer, so read the link first and keep the field as fallback.
+        const userId=html.match(/tab=accounts&amp;id=([0-9a-f-]{36})/)?.[1]
+          ??html.match(/name="id" value="([0-9a-f-]{36})"/)?.[1];
         assert.ok(csrf,'Web Bases admin CSRF token not found');
         assert.ok(userId,'Web Bases OAuth user id not found');
         const grantBody=new URLSearchParams();

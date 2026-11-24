@@ -172,11 +172,13 @@ export async function registerLiveSourceFidelityChecks(ctx) {
   // escape. `LP-13` follows the editor-scene numbering (`LP-12` is the editing envelope in
   // `editing-envelope.mjs`); this module owns the #484 Live source-fidelity scenarios.
   //
-  // Measured, not assumed (see the #484 report): the trailing `HeaderMark` is hidden by the same
-  // `selectionActivatesContext` rule as the opening one, so the *asymmetric* symptom the issue
-  // describes ("the head mark hides, the tail mark leaks") does not reproduce on this head. The
-  // check therefore pins the idle contract, including the reveal half, so a future edit cannot
-  // turn it into the reported leak unnoticed.
+  // Measured, not assumed: this scene first recorded "the asymmetric symptom does not reproduce"
+  // (#484 report), and #747 showed that reading was wrong (the tail mark DID leak while the
+  // opening one hid). The idle chrome gate asked for the character after the mark's own end,
+  // which on a closing `##` is the newline. `live-decorations.js` now asks both of a heading's
+  // marks the one question its line class asks (the character after the *opening* mark), so
+  // this check pins both halves: idle hides the tail, and the caret on that heading line
+  // brings it back. The escape half is pinned the same way.
   await check("LP-13 idle Live hides the closing ## of a heading and the escape backslashes", async () => {
     await open("A.md");
     await mode("live");
@@ -219,6 +221,31 @@ export async function registerLiveSourceFidelityChecks(ctx) {
       `with the caret on that line Desktop shows the hard-break backslash again; lines were ${JSON.stringify(editing)}`,
     );
     assert.equal(await value(), source, "moving the caret must not rewrite the source");
+
+    // #747: the tail mark shares the heading's gate, so editing that line reveals it too,
+    // the same half the opening mark already had. Idle again hides it once the caret leaves.
+    await page.evaluate(() => {
+      const view = window.__testEditor._view;
+      view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf("Render") } });
+      view.focus();
+    });
+    await sleep(200);
+    const headingEditing = await visibleLines(page);
+    assert.ok(
+      headingEditing.some((line) => line === "# Render parity fixture ##"),
+      `with the caret on the heading line Desktop shows its closing ## again; lines were ${JSON.stringify(headingEditing)}`,
+    );
+    await page.evaluate(() => {
+      const view = window.__testEditor._view;
+      view.dispatch({ selection: { anchor: view.state.doc.length } });
+    });
+    await sleep(200);
+    const headingIdleAgain = await visibleLines(page);
+    assert.ok(
+      headingIdleAgain.includes("Render parity fixture") && headingIdleAgain.every((line) => !line.includes("##")),
+      `leaving the heading line hides the closing ## again; lines were ${JSON.stringify(headingIdleAgain)}`,
+    );
+    assert.equal(await value(), source, "revealing the tail mark must not rewrite the source");
     await page.evaluate((text) => window.__testEditor.setValue(text, { resetHistory: true, silent: true }), ctx.fixture);
     await caretToStart(page);
   });

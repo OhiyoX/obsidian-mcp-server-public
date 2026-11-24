@@ -42,7 +42,6 @@ import {
   VAULT_REGISTRY_INVENTORY_UNREADABLE,
   createVaultRegistry,
 } from "../src/vault-runtime/registry.js";
-import { countLines, LINE_BUDGET } from "../scripts/line-budget.mjs";
 import { importSpecifiers, maskSource } from "./helpers/vault-runtime-source-scan.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -465,7 +464,7 @@ test("source scanner self-proof: comments and foreign strings produce no specifi
   assert.ok(!/process\s*\.\s*env/.test(maskSource(fixture)), "negative control: a string/comment mention must be masked out");
 });
 
-test("registry.js is pure: node:* + ./descriptor.js only, no config.js, no process.env, within the line budget", () => {
+test("registry.js is pure: node:* + ./descriptor.js only, no config.js, no process.env", () => {
   const source = MODULE_SOURCE();
   const specifiers = importSpecifiers(source);
   assert.ok(!specifiers.includes("../config.js"), "registry.js must not import config.js");
@@ -476,19 +475,17 @@ test("registry.js is pure: node:* + ./descriptor.js only, no config.js, no proce
   const masked = maskSource(source);
   assert.ok(!/process\s*\.\s*env/.test(masked), "registry.js must not read process.env (all inputs are explicit parameters)");
   assert.ok(!/config\.js/.test(masked), "registry.js must not import the global path constants (contract §43-5)");
-  assert.ok(countLines(source) <= LINE_BUDGET, `${MODULE_RELATIVE} exceeds the ${LINE_BUDGET}-line budget`);
   assert.ok(!/\bVAULT\b\s*[,}]/.test(masked), "no global VAULT constant may be reachable from this module");
 });
 
 // W2FIX5 (#437 W2FIX4 item A / R1): the ONE composed commit record is a leaf module — the shared
 // pointer must not be able to pull an ambient collaborator (config.js / process.env) into the three
 // faces that read it.
-test("composed-commit.js is a pure leaf: no imports, no process.env, within the line budget", () => {
+test("composed-commit.js is a pure leaf: no imports, no process.env", () => {
   const relative = "src/vault-runtime/composed-commit.js";
   const source = fs.readFileSync(path.join(APP_ROOT, relative), "utf8");
   assert.deepEqual(importSpecifiers(source), [], "the composed commit record must stay a leaf module");
   const masked = maskSource(source);
   assert.ok(!/process\s*\.\s*env/.test(masked), "composed-commit.js must not read process.env");
   assert.ok(!/config\.js/.test(masked), "composed-commit.js must not import config.js");
-  assert.ok(countLines(source) <= LINE_BUDGET, `${relative} exceeds the ${LINE_BUDGET}-line budget`);
 });

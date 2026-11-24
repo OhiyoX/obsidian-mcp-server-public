@@ -198,6 +198,18 @@ kbd{font:400 13px/16px var(--mono);color:var(--tx3);border:1px solid var(--line2
 .tbl tbody tr.dim td > *:not(.act){opacity:.55}
 .tbl td.act{width:48px;text-align:right;padding-right:var(--s2)}
 .tbl th.act{width:48px}
+
+/* 可排序表头 + 列宽拖拽（2026-10-31 owner request）：表头链接继承单元格文字色，仅在悬停/已排序时
+   变色；方向字形只出现在正在排序的那一列。th 的 ::after 是右侧 7px 的不可见抓取区（拖拽光标由它给出，
+   JS 不往 DOM 里塞任何节点，因此形状对照与脚本禁用时都完全不变）。 */
+.tbl th.ths-h{cursor:default}
+.tbl th a.ths{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;max-width:100%;white-space:nowrap}
+.tbl th a.ths:hover{color:var(--tx)}
+.tbl th a.ths .ind{font-size:10px;line-height:1;color:var(--acc);flex:none}
+.tbl th{position:relative}
+.tbl th::after{content:"";position:absolute;top:0;bottom:0;right:-3px;width:7px;cursor:col-resize}
+.tbl th.act::after{display:none}
+.tbl.rz-active{user-select:none;cursor:col-resize}
 .nm{display:flex;flex-direction:column;min-width:0}
 .nm b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nm .sub2{font-size:13px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:6px;align-items:center}
@@ -320,6 +332,14 @@ a.li:hover{background:var(--hover);text-decoration:none}
 .tl .tr{position:relative;height:16px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px calc(100%/24)),var(--field)}
 .tl .tr .w{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.85}
 .tl .tr .now{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--amber);border-radius:1px}
+.tl .tr .w:not([data-name]){pointer-events:none}
+.tl .tr .w .h{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;border-radius:3px}
+.tl .tr .w .h[data-edge="from"]{left:0}
+.tl .tr .w .h[data-edge="to"]{right:0}
+.tl .tr .w .h::after{content:"";position:absolute;top:3px;bottom:3px;width:2px;border-radius:1px;background:rgba(255,255,255,.55)}
+.tl .tr .w .h[data-edge="from"]::after{left:2px}
+.tl .tr .w .h[data-edge="to"]::after{right:2px}
+.tl .tr .w .h:hover::after{background:rgba(255,255,255,.95)}
 .tl .ax{display:flex;justify-content:space-between;font:400 13px/16px var(--mono);color:var(--tx4)}
 .tl .today{color:var(--tx)}
 .sumbox{padding:var(--s3);border-radius:var(--r2);border:1px solid var(--line);background:var(--pane);font-size:13px;line-height:20px;color:var(--tx2)}
@@ -617,7 +637,6 @@ const POLICIES = [
 const AUTHZ = { enabled: true, revision: 3 };
 </script>
 <script>
-
 "use strict";
 // ---------------------------------------------------------------- helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -716,7 +735,7 @@ function timeline(p) {
   let rows = "";
   for (const d of [1, 2, 3, 4, 5, 6, 0]) {
     const ws = p.weekly.length ? p.weekly.filter((w) => w.day === d && w.to > w.from) : [{ from: "00:00", to: "24:00" }];
-    rows += `<span class="${d === today ? "today" : ""}">${DAYS[d].slice(1)}</span><div class="tr">${ws.map((w) => `<div class="w" style="left:${toPct(w.from)}%;width:${toPct(w.to) - toPct(w.from)}%" title="${w.from}–${w.to}"></div>`).join("")}${d === today ? `<div class="now" style="left:${nowPct}%" title="现在"></div>` : ""}</div>`;
+    rows += `<span class="${d === today ? "today" : ""}">${DAYS[d].slice(1)}</span><div class="tr">${ws.map((w) => `<div class="w" style="left:${toPct(w.from)}%;width:${toPct(w.to) - toPct(w.from)}%" title="${w.from}–${w.to}"><span class="h" data-edge="from"></span><span class="h" data-edge="to"></span></div>`).join("")}${d === today ? `<div class="now" style="left:${nowPct}%" title="现在"></div>` : ""}</div>`;
   }
   return `<div class="tl">${rows}<span></span><div class="ax"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div></div>`;
 }
@@ -895,6 +914,7 @@ function renderClients() {
     <td><div class="nm"><b style="${c.clientName ? "" : "font-style:italic;font-weight:400;color:var(--tx2)"}">${esc(clientName(c))}</b><span class="sub2">${idc(c.clientId)}</span></div></td>
     <td class="cellt">${la.length ? la.map((a) => `<a href="#/accounts/${a.id}" data-stop>${esc(acctName(a))}</a>`).join("、") : `<span class="muted">无有效授权</span>`}${c.transfer ? `<div><span class="tag amber" title="已撤销原账户授权，等待目标账户在客户端重新同意">转移中 → ${esc(acctName(acct(c.transfer.to)))}</span></div>` : ""}</td>
     <td class="cellt">${c.domains.length ? c.domains.map((d) => `<span title="来源：${d.src.join("、")}">${esc(d.host)}</span>`).join("") : `<span class="muted">—</span>`}</td>
+    <td class="cellt"><span title="${fmtFull(c.createdAt)}">${rel(c.createdAt)}</span></td>
     <td class="cellt">${c.lastCall ? `${rel(c.lastCall.at)} <span class="muted mono">${c.lastCall.ip}</span>` : `<span class="muted">从未调用</span>`}</td>
     <td class="cellt mono muted" title="${esc(c.redirectUris.join("\n"))}">${esc(c.redirectUris[0].replace(/^https?:\/\//, ""))}${c.redirectUris.length > 1 ? ` <span class="tag">+${c.redirectUris.length - 1}</span>` : ""}</td>
     <td class="act">${moreBtn("client", c.clientId)}</td></tr>`;
@@ -903,7 +923,7 @@ function renderClients() {
   return pageBar("OAuth 客户端", "", CLIENTS.length) + `<div class="content scroll"><div class="page">
   <p class="lede">客户端通过动态注册（DCR）自动出现。连接域名来自实际授权与调用，不从回调地址推测。</p>
   <div class="toolbar">${searchBox("搜索客户端名称或回调地址", S.q.clients, "clients")}</div>
-  ${table([["客户端", "24%", "", "client"], ["已授权账户", "22%", "", "accounts"], ["连接域名", "18%", "", "domains"], ["最后调用", "16%", "", "lastUsed"], ["回调地址", "20%", "", "callbacks"], ["", "", "act"]], rows, emptyState("app", "没有匹配的客户端", "换个关键词试试"), { base: "#/clients", defaultKey: "client" })}${mcards(cards)}
+  ${table([["客户端", "22%", "", "client"], ["已授权账户", "20%", "", "accounts"], ["连接域名", "16%", "", "domains"], ["创建", "14%", "", "created"], ["最后调用", "14%", "", "lastUsed"], ["回调地址", "14%", "", "callbacks"], ["", "", "act"]], rows, emptyState("app", "没有匹配的客户端", "换个关键词试试"), { base: "#/clients", defaultKey: "client" })}${mcards(cards)}
   </div></div>`;
 }
 
@@ -1131,7 +1151,6 @@ function renderVaults() {
   <div class="sect futonly"><div class="futbox" style="display:flex;gap:12px;align-items:center"><div class="grow"><b style="font-weight:600">从 GitHub 仓库添加 Vault</b> ${fut("Architecture TODO")}<div class="help">以远端仓库为存储后端的 Vault（GitHub-backed Vault），只读克隆或双向同步。</div></div><button class="btn" disabled>添加…</button></div></div>
   </div></div>`;
 }
-
 </script>
 <script>
 "use strict";
@@ -1377,7 +1396,6 @@ function subjectAuthzSection(subject) {
     <div style="margin-top:12px"><a class="btn ghost sm" href="#/authz/new">${ic("plus")}新建规则</a></div></div>`;
 }
 
-
 function drawerHtml() {
   const { kind, id, mode } = drawerCtx;
   if (kind === "new-account") return dhead("新建 OAuth 账户") + `<form class="dbody scroll" data-form="new-account" onsubmit="return false"><div class="dsec"><div class="grid2"><div class="fld"><label>用户名 <small>username</small></label><input class="inp" name="username" placeholder="3–64 位，例如 carol" required></div><div class="fld"><label>显示名 <span class="muted">可选</span></label><input class="inp" name="displayName" placeholder="例如 Carol Wu"></div></div>
@@ -1395,6 +1413,9 @@ function drawerHtml() {
     <form class="dsec" data-form="acct-perm" onsubmit="return false"><h3>权限上限与 Vault</h3>${scopeChecks(a.scopes, "scope")}<div style="height:8px"></div>${vaultChecks(a.vaults)}
       <div class="banner amber" style="margin:12px 0 0">${ic("alert")}<div>保存后将<b>撤销该账户已有的全部授权</b>（${lc.length} 个客户端需重新授权）。</div></div>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" data-act="save-acct-perm">保存权限</button></div></form>
+    <!-- 「默认 Vault」分节：账户层默认库（2026-11-05 owner 决定：客户端默认优先，未设置时继承账户默认）。
+         与客户端抽屉同名分节同构：form.dsec > h3 + .fld>(label + select.sel + span.help) + 提交按钮。
+         参照前推而不是给实现发区域豁免（docs/admin-ui-proto/README.md 的规则）。 -->
     <form class="dsec" data-form="acct-default-vault" onsubmit="return false" id="dvsec-acct"><h3>默认 Vault</h3>
       <div class="fld"><label for="default-vault-acct">默认 Vault</label><select class="sel" id="default-vault-acct" name="defaultVaultId"><option value="" selected>继承（账户、客户端或服务默认）</option><option value="vault">vault (vault)</option></select><span class="help">MCP 调用不指定 vaultId 时使用此库；明确指定其他有权访问的 Vault 仍然有效。默认库不会授予访问权限。</span></div>
       <div style="display:flex;gap:8px;margin-top:12px"><button class="btn primary" type="submit">保存默认 Vault</button></div></form>

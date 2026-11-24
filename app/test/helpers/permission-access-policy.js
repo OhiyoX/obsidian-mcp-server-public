@@ -14,33 +14,6 @@ import path from "node:path";
 
 const WEEKDAY = Object.freeze(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 
-/** The form body the Admin editor posts for one policy. `weekly` is `{mon:[["09:00","18:00"]]}`. */
-export function policyForm({ csrf, ...fields }) {
-  const body = new URLSearchParams();
-  body.set("csrf", csrf);
-  body.set("label", fields.label);
-  for (const subject of fields.subjects ?? []) body.append("subjects", subject);
-  body.set("mode", fields.mode ?? "suspend");
-  for (const capability of fields.capabilities ?? []) body.append("capabilities", capability);
-  body.set("timezone", fields.timezone ?? "UTC");
-  body.set("enabled", fields.enabled === false ? "false" : "true");
-  if (fields.startsAt) body.set("startsAt", fields.startsAt);
-  if (fields.expiresAt) body.set("expiresAt", fields.expiresAt);
-  let dayIndex = 0;
-  for (const day of WEEKDAY) {
-    const intervals = fields.weekly?.[day] ?? [];
-    intervals.forEach(([from, to], slot) => {
-      body.set(`w_${day}_from_${slot}`, from);
-      body.set(`w_${day}_to_${slot}`, to);
-      dayIndex += 1;
-    });
-  }
-  (fields.dateRanges ?? []).forEach((range, index) => {
-    body.set(`range_from_${index + 1}`, range.from);
-    body.set(`range_to_${index + 1}`, range.to);
-  });
-  return body.toString();
-}
 
 const FORM = { "Content-Type": "application/x-www-form-urlencoded" };
 
@@ -59,15 +32,6 @@ export async function removePolicyThroughService({ service, label }) {
   return service.deletePolicy(found.id, listed.revision);
 }
 
-/** Create one policy the way the Admin editor does. Returns the redirect response. */
-export async function createPolicyThroughAdmin({ request, cookie, csrf, policy }) {
-  return request({
-    method: "POST",
-    urlPath: "/admin/auth/access-policy/create",
-    headers: { Cookie: cookie, ...FORM },
-    body: policyForm({ csrf, ...policy }),
-  });
-}
 
 /** Read the committed policy document straight from disk (the Admin surface's own file). */
 export async function readPolicyDocument(dataPath) {
@@ -82,17 +46,6 @@ export async function findPolicyByLabel(dataPath, label) {
   return policy ? { id: policy.id, revision: document.revision, policy } : null;
 }
 
-/** Remove a policy with the typed confirmation the delete route requires. */
-export async function deletePolicyThroughAdmin({ request, cookie, csrf, dataPath, label }) {
-  const found = await findPolicyByLabel(dataPath, label);
-  if (!found) return null;
-  return request({
-    method: "POST",
-    urlPath: "/admin/auth/access-policy/delete",
-    headers: { Cookie: cookie, ...FORM },
-    body: new URLSearchParams({ csrf, id: found.id, expectedRevision: String(found.revision), confirm: label }).toString(),
-  });
-}
 
 /**
  * Run `fn` with exactly one extra policy in the store, then remove it. Every time row is collected

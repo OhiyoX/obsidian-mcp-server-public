@@ -84,7 +84,9 @@ test("ITEM 5 (control): a live handle's index invalidation really arms and compl
   assert.equal(await exists(search.retrieval.indexPath), false, "the debounced refresh is still pending, not yet written");
   await search.drain();
   assert.equal((await search.retrieval.retrievalIndexStatus())?.indexJob?.status, "completed", "a live handle's scheduled refresh runs to completion — the observation is valid");
-  assert.equal(await exists(search.retrieval.indexPath), true, "the completed refresh wrote this Vault's index");
+  // M2: the index is a v2 generation, published as current.json beside the legacy path.
+  const published = await exists(path.join(path.dirname(search.retrieval.indexPath), "retrieval-index-v2", "current.json"));
+  assert.equal(published, true, "the completed refresh wrote this Vault's index");
 });
 
 test("ITEM 5: a revoked handle never arms a background refresh (no post-drain resurrection)", async () => {
