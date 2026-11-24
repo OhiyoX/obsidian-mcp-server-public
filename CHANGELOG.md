@@ -4,6 +4,51 @@ Public snapshots of Obsidian MCP Server. Each entry lists what changed for users
 of this repository since the previous snapshot. Deployment details and internal
 records stay private.
 
+## 2026-11-24 — snapshot
+
+### Agent connection, on the overview page
+
+The Admin overview now shows what an agent needs to connect: the MCP endpoint
+built from your public base URL, the transport, the auth modes your deployment
+enables, and two copy-ready client templates — one for an API-key host, one for
+an OAuth host that only needs the URL. The page also says plainly when the
+deployment has no public HTTPS base URL, because OAuth cannot start without one.
+
+### Prompt Registry: editable base prompt
+
+The Developer Base prompt is now a published, versioned artifact instead of
+compiled-in text. Operators publish a pack from the Admin console with a
+revision check (and can roll back to an earlier revision); a new image never
+overwrites a published pack, and `/healthz` reports when the shipped copy and
+the active one differ. Agents see the change on their next `tools/list`,
+`agent_bootstrap` or `prompts/get`.
+
+### Restore from Vault Git
+
+`restore_version` and `plan_restore_version` accept `path` + `revision` (a commit
+or `HEAD~N`) for Markdown, so a mistaken write can be rolled back from the
+Vault's own Git history when no snapshot fits. A restore reports which commit it
+read and which snapshot of the replaced bytes it wrote, so the restore itself can
+be undone.
+
+### Replacements say what they do
+
+`replace_in_note` now states that a search text is not an anchor: it replaces
+every match in the whole note unless that replacement sets `replaceAll: false`.
+
+### Timed authorization, easier to scan
+
+The constraint editor gives the text rows and the timeline the same row height,
+keeps one weekday on one line on a phone, and puts a subject's checkbox on its
+name line instead of between the two.
+
+### Smaller things
+
+- The vault search index warms up in the background after start, so the first
+  search after a restart no longer pays the full build.
+- Connected clients get an Admin「Agent 接入」 block instead of a bare URL.
+- `get_file` can return page-cited PDF text.
+
 ## 2026-11-10 — snapshot
 
 ### Timed authorization, per Vault
